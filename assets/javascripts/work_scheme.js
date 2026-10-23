@@ -582,7 +582,7 @@
           index += 1;
           self.timer(step, self.playbackDelay(node.type === 'decision' ? 1050 : 420));
         };
-        self.animateMarker(pathEl, node, afterEdge);
+        self.animateMarker(pathEl, node, afterEdge, prev);
       } else {
         self.highlightNode(node);
         self.showPlaybackToken(node);
@@ -649,7 +649,7 @@
     this.playbackPoint = { x: point.x, y: point.y };
   };
 
-  WorkSchemeView.prototype.animateMarker = function (pathEl, node, done) {
+  WorkSchemeView.prototype.animateMarker = function (pathEl, node, done, transitNode) {
     var self = this;
     var reduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     var marker = self.playbackToken;
@@ -660,8 +660,20 @@
     var startPoint = pathEl.getPointAtLength(0);
     var fromPoint = self.playbackPoint || startPoint;
     var bridgeDistance = Math.hypot(fromPoint.x - startPoint.x, fromPoint.y - startPoint.y);
-    var bridgeDuration = reduced || bridgeDistance < 1 ? 0 : this.playbackDelay(180);
+    var bridgeDuration = reduced || bridgeDistance < 1 ? 0 : this.playbackDelay(420);
     var bridgeStart = null;
+    var center = transitNode ? self.nodeCenter(transitNode) : startPoint;
+
+    var ease = function (value) {
+      return value * value * (3 - 2 * value);
+    };
+
+    var between = function (a, b, progress) {
+      return {
+        x: a.x + (b.x - a.x) * progress,
+        y: a.y + (b.y - a.y) * progress
+      };
+    };
 
     var move = function (point) {
       self.setPlaybackPoint({ x: point.x, y: point.y });
@@ -686,11 +698,11 @@
       if (!self.playing) return;
       if (bridgeStart === null) bridgeStart = timestamp;
       var linear = bridgeDuration === 0 ? 1 : Math.min(1, (timestamp - bridgeStart) / bridgeDuration);
-      var progress = linear * linear * (3 - 2 * linear);
-      move({
-        x: fromPoint.x + (startPoint.x - fromPoint.x) * progress,
-        y: fromPoint.y + (startPoint.y - fromPoint.y) * progress
-      });
+      var progress = ease(linear);
+      var point = progress < 0.5
+        ? between(fromPoint, center, ease(progress * 2))
+        : between(center, startPoint, ease((progress - 0.5) * 2));
+      move(point);
       if (progress < 1) {
         window.requestAnimationFrame(bridge);
       } else if (duration === 0) {
