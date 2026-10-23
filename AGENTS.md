@@ -1,0 +1,125 @@
+# Память проекта «Redmine Work Scheme»
+
+Этот файл — долговременная память проекта. Обязателен к прочтению в каждой новой
+сессии: здесь правила, статус, грабли и точка входа в код.
+
+## О проекте
+
+- Плагин **Redmine Work Scheme**: интерактивная SVG-схема процесса работы отдела
+  (подсказки, страницы этапов, проигрывание сценариев, живые счётчики — в планах).
+- Репозиторий: https://github.com/kirilljan985-debug/redmine_work_scheme
+- Локально: `C:\Users\Степановы\Desktop\redmine_work_scheme` (корень репо = корень плагина).
+- Совместимость: Redmine 6.0+ (CI гоняет на `7.0-stable` и `master`), Ruby 3.2+
+  (Redmine 7 = Rails 8, ассеты через Propshaft). Лицензия MIT.
+- Полностью офлайн: никаких CDN, ванильный JS, всё в ассетах плагина.
+
+## Правила работы
+
+1. **Изменение = коммит + push + зелёный CI.** CI (`.github/workflows/test.yml`)
+   ставит Redmine из ветки, копирует плагин в `plugins/redmine_work_scheme`,
+   гоняет `rake redmine:plugins:test NAME=redmine_work_scheme`.
+2. **Тесты обязательны** к каждому изменению: unit — валидатор схемы
+   (`test/unit/scheme_test.rb`), integration — страницы и save
+   (`test/integration/work_scheme_pages_test.rb`).
+3. **Локальная проверка без Redmine** (Redmine целиком на этой машине не поднимается —
+   нет MSYS2 для нативных гемов; авторитетная среда — CI на Linux):
+   `ruby -c` по .rb, `node --check` по .js, `erb -x -T- файл.erb | ruby -c`,
+   чистый minitest по валидатору (`ruby /tmp/...` c `$LOAD_PATH.unshift "lib"`).
+4. **Диагностика падений CI:** скачать логи без авторизации нельзя. Workflow
+   («Report failure details») печатает хвост тестового лога в `::error::` —
+   аннотации читаем браузером на странице прогона (GitHub API аннотации без
+   токена отдаёт пустыми). URL прогона: repo → Actions → последний run.
+5. Сервер-функции плагина не трогаем без нужды: `server.py`… — не относится,
+   это Redmine-плагин: ядро Redmine не патчим, вью ядра не переопределяем.
+6. **План и память обязательны для каждого изменения.** Перед работой обновить
+   `PLAN.md` с задачей и критериями готовности; после работы записать туда
+   фактический результат, проверки и статус CI, а в `AGENTS.md` — новый статус,
+   решения и найденные грабли. Даже небольшое изменение должно оставить
+   краткую отметку в обоих файлах.
+
+## Архитектура: где что лежит
+
+| Файл | Роль |
+|---|---|
+| `init.rb` | регистрация плагина; `requires_redmine >= 6.0`; настройки: `settings default: {'json' => DefaultScheme.json}, partial: 'settings/work_scheme'` |
+| `lib/redmine_work_scheme/scheme.rb` | парсер/валидатор схемы (чистая логика, без Rails; свои MESSAGES + `format()`; методы `parse/node/outgoing_edges/scenario/safe_json`) |
+| `lib/redmine_work_scheme/default_scheme.rb` | схема по умолчанию: сценарий отдела (10 узлов, от «Заказчика» до «Опытной эксплуатации», ромб проверки, дуга возврата) + 2 сценария проигрывания |
+| `app/controllers/work_scheme_controller.rb` | `show` (страница схемы), `stage` (страница этапа), `edit` (редактор, только админ), `save` (POST, админ+валидация, пишет `Setting.plugin_redmine_work_scheme`) |
+| `config/routes.rb` | `/work_scheme`, `/work_scheme/stages/:id`, `/work_scheme/edit`, POST `/work_scheme/save` |
+| `app/views/work_scheme/_block.html.erb` | блок схемы: ошибки валидации или контейнер + JSON (`safe_json`) + data-атрибуты (адреса, подписи кнопок, editable) |
+| `app/views/work_scheme/edit.html.erb` | страница редактора (layout + боковая панель + кнопки) |
+| `app/views/settings/_work_scheme.html.erb` | JSON-поле в настройках плагина + ошибки валидации |
+| `assets/javascripts/work_scheme.js` | SVG-рендерер (ванильный JS): узлы/ромбы/стрелки/дуги/колена/подписи, тултипы, проигрывание сценариев, drag узлов, экспорт `window.WorkScheme.View` |
+| `assets/javascripts/work_scheme_editor.js` | визуальный редактор: панели свойств (рус.), добавление/удаление, маркеры перепривязки концов стрелок, сценарии, save/download |
+| `assets/stylesheets/work_scheme.css` | вся стилизация схемы, тултипов, редактора |
+| `config/locales/ru.yml, en.yml` | ключи `ws_*` |
+| `dev/preview.html`, `dev/editor.html` | dev-превью рендера и редактора без Redmine (данные — `dev/scheme.json`, генерируется из DefaultScheme) |
+| `.github/ci/database.yml` | sqlite-конфиг для CI |
+| `PLAN.md` | рабочий план, критерии готовности и журнал выполнения задач |
+
+Формат схемы (JSON в настройках, ключ `json`): `title`, `nodes[]` (id, title,
+type start|process|decision|end, dept, description, page, url, query_id, x, y,
+w, h), `edges[]` (from, to, label, dashed, route straight|arc|elbow, from_side,
+to_side, bend 0–200), `scenarios[]` (id, title, steps[]). Подробно — в README.
+
+## Статус (хронология)
+
+- 2026-10-22 — **W1** (052b218): каркас, валидатор, дефолтная схема, рендерер,
+  подсказки, страницы этапов, настройки, тесты, CI. Зелёный.
+- 2026-10-22 — **W2** (96a9ec7): проигрывание сценариев (панель «сценарий →
+  Проиграть → Сброс», маркер движется по рёбрам, prefers-reduced-motion). Зелёный.
+- 2026-10-22 — редактор, этап 1 (bbb6b0c): route `elbow`, `from_side`/`to_side`,
+  режим правки с перетаскиванием узлов и панелью координат. Зелёный.
+- 2026-10-22 — **полное редактирование** (ffbd88f, фикс теста ffbd88f→
+  «разбили editor-тест»): страница `/work_scheme/edit` (админ), панели свойств,
+  add/delete узлов и стрелок, сценарии, POST-save с CSRF+валидацией, download JSON,
+  `bend` в валидаторе/рендерере. Зелёный (ffbd88f).
+- 2026-10-23 — русификация панелей редактора + перепривязка концов стрелок
+  перетаскиванием (оранжевые маркеры, подсветка цели) (1731cfa, затем фикс
+  pointer-events у временных элементов). Зелёный.
+
+## Что дальше (не начато)
+
+- **W3 — живые счётчики:** у узла `query_id` → серверный эндпоинт (например
+  `GET /work_scheme/counts?ids=1,2,3`), считает задачи сохранённых запросов с
+  учётом прав (`Query#visible`), JS вешает бейдж на узел; нет запроса/прав —
+  бейдж не показывается, без ошибок (покрыть тестами).
+- **W4 — блок в дашборд additionals:** зарегистрировать блок «Схема» в
+  дашбордах additionals. API блоков смотреть в клоне
+  `C:\Users\Степановы\Desktop\additionals-source` (уже склонирован). Fallback —
+  хук `view_welcome_index_left` (в Redmine 7 есть). Плюс финализировать README.
+
+## Известные грабли (проверено на своей шкуре)
+
+- `WorkSchemeView.render()` **обязан очищать контейнер** перед отрисовкой —
+  иначе панели/svg дублируются при каждой перерисовке.
+- В конструкторе редактора — `this.redraw()`, не `render()` (у Editor нет render).
+- Временные элементы при перетаскивании (линия/точка) — `pointer-events: none`,
+  иначе `elementFromPoint` видит их вместо узла-цели.
+- `log_user` в тестах Redmine содержит `assert_nil session[:user_id]` — второй
+  `log_user` в одном тесте падает на живой сессии. Один логин на тест.
+- `assert_match` чувствителен к регистру — русский текст проверять через `/.../i`.
+- Standalone `erb -x -T-` даёт ложную «синтаксическую ошибку» на шаблонах с
+  блочной формой `<%= form_tag ... do %>` — ActionView компилирует нормально;
+  проверять только глазами/CI.
+- **Windows-машина:** `ruby -e '...кириллица...'` → Encoding::CompatibilityError
+  (IBM866): файлы генерить инструментом записи, в `-e`-скриптах кириллицы не
+  держать; JSON-пейлоады curl — только ASCII (кириллица ломает GitHub API).
+- Руби на машине: `C:\Ruby34-x64\bin` (добавлять в PATH), Node есть,
+  `python -m http.server 8123` — для dev-превью.
+- Push в GitHub работает через сохранённые креды Git Credential Manager; репо
+  создавали через API с токеном из `git credential fill`.
+- Справочные клоны (не пушить, можно удалить): `Desktop\redmine-7-source`
+  (исходники Redmine 7.0-stable), `Desktop\additionals-source` (для W4).
+- Dev-превью: `python -m http.server 8123` из папки плагина →
+  `/dev/preview.html` (рендер), `/dev/editor.html` (редактор). При правках JS
+  поднимать `?v=N` в html — иначе браузер отдаст старый скрипт из кэша.
+  «Сохранить схему» в dev-превью не работает (некуда POSTить) — это норма.
+
+## Как проверить вручную (чек-лист агента)
+
+1. `python -m http.server 8123` в папке плагина → открыть `/dev/preview.html`
+   (схема рисуется, подсказки, проигрывание) и `/dev/editor.html` (панели,
+   drag, маркеры, сценарии).
+2. Push → дождаться CI (≈4–5 мин) → зелёный на обеих матрицах. При падении —
+   аннотации на странице прогона.
