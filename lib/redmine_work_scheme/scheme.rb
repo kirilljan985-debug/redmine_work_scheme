@@ -5,6 +5,8 @@ module RedmineWorkScheme
   # Чистая логика без Rails-зависимостей — покрывается обычным minitest.
   module Scheme
     NODE_TYPES = %w(start process decision end).freeze
+    EDGE_SIDES = %w(left right top bottom).freeze
+    EDGE_ROUTES = %w(straight arc elbow).freeze
     DEFAULT_NODE_WIDTH = 140
     DEFAULT_NODE_HEIGHT = 56
 
@@ -149,12 +151,23 @@ module RedmineWorkScheme
           errors << format(I18n_error(:ws_error_edge_bad_nodes), index: index + 1, from: from, to: to)
           next nil
         end
+        from_side = normalize_side(raw['from_side'])
+        to_side = normalize_side(raw['to_side'])
+        if from_side == :invalid || to_side == :invalid
+          errors << format(I18n_error(:ws_error_edge_bad_side),
+                           index: index + 1, side: from_side == :invalid ? raw['from_side'] : raw['to_side'])
+          next nil
+        end
+        route = raw['route'].to_s.strip
+        route = 'straight' unless EDGE_ROUTES.include?(route)
         {
           'from' => from,
           'to' => to,
           'label' => raw['label'].to_s.strip,
           'dashed' => raw['dashed'] == true,
-          'route' => %w(straight arc).include?(raw['route'].to_s.strip) ? raw['route'].to_s.strip : 'straight'
+          'route' => route,
+          'from_side' => from_side,
+          'to_side' => to_side
         }
       end.compact
     end
@@ -193,6 +206,12 @@ module RedmineWorkScheme
       end.compact
     end
 
+    def normalize_side(value)
+      side = value.to_s.strip.downcase
+      return '' if side.empty?
+      EDGE_SIDES.include?(side) ? side : :invalid
+    end
+
     def positive_int_or_nil(value)
       int = int_value(value, 0)
       int.positive? ? int : nil
@@ -227,6 +246,7 @@ module RedmineWorkScheme
       'ws_error_edges_not_array' => '"edges" должен быть массивом.',
       'ws_error_edge_not_object' => 'Связь №%{index} — не объект.',
       'ws_error_edge_bad_nodes' => 'Связь №%{index} ссылается на неизвестные узлы (from: "%{from}", to: "%{to}").',
+      'ws_error_edge_bad_side' => 'Связь №%{index}: недопустимая сторона "%{side}" (допустимо: left, right, top, bottom или пусто).',
       'ws_error_scenarios_not_array' => '"scenarios" должен быть массивом.',
       'ws_error_scenario_not_object' => 'Сценарий №%{index} — не объект.',
       'ws_error_scenario_invalid' => 'Сценарий №%{index} заполнен неверно (нужны id, title и steps существующих узлов; неизвестные узлы: %{unknown}).',

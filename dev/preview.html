@@ -3,23 +3,35 @@
 <head>
 <meta charset="utf-8">
 <title>Work Scheme preview (dev)</title>
-<link rel="stylesheet" href="../assets/stylesheets/work_scheme.css?v=3">
+<link rel="stylesheet" href="../assets/stylesheets/work_scheme.css?v=5">
 <style>
   body { font-family: system-ui, sans-serif; margin: 20px; max-width: 1100px; }
 </style>
 </head>
 <body>
 <h2>Схема (dev-превью)</h2>
-<div class="ws-container" data-work-scheme data-stage-base-url="/work_scheme/stages/" data-more-label="Подробнее">
+<div class="ws-container" data-work-scheme
+     data-stage-base-url="/work_scheme/stages/"
+     data-editable="true"
+     data-label-play="Проиграть" data-label-reset="Сброс"
+     data-label-edit="Правка узлов" data-label-edit-hint="Тащите узлы, потом скопируйте координаты"
+     data-label-coords="Координаты узлов — перенесите x/y в настройки схемы:"
+     data-label-copy="Копировать" data-more-label="Подробнее">
   <script type="application/json" class="ws-data"></script>
 </div>
-<script src="../assets/javascripts/work_scheme.js?v=3"></script>
+<script src="../assets/javascripts/work_scheme.js?v=5"></script>
 <script>
-  // dev-обвязка: подтягиваем схему из scheme.json и инициализируем рендерер
+  // dev-обвязка: схема из scheme.json + демо-стрелка elbow; инициализация
   fetch('scheme.json')
     .then(function (r) { return r.text(); })
     .then(function (text) {
-      document.querySelector('script.ws-data').textContent = text;
+      var scheme = JSON.parse(text);
+      // демонстрация elbow-маршрута и явных сторон (только в dev-превью)
+      scheme.edges.push({
+        from: 'check', to: 'cert', label: 'пример elbow',
+        route: 'elbow', from_side: 'bottom', to_side: 'right', dashed: true
+      });
+      document.querySelector('script.ws-data').textContent = JSON.stringify(scheme);
       window.WorkScheme.init();
     })
     .catch(function (e) { document.body.appendChild(document.createTextNode('load error: ' + e)); });

@@ -66,7 +66,9 @@
         to: String(raw.to || ''),
         label: String(raw.label || ''),
         dashed: raw.dashed === true,
-        route: raw.route === 'arc' ? 'arc' : 'straight'
+        route: raw.route === 'arc' ? 'arc' : (raw.route === 'elbow' ? 'elbow' : 'straight'),
+        fromSide: raw.from_side || '',
+        toSide: raw.to_side || ''
       };
     });
     this.byId = {};
@@ -74,6 +76,7 @@
     this.pathByEdge = {};
     this.playing = false;
     this.timers = [];
+    this.editMode = false;
     this.render();
   }
 
@@ -89,19 +92,21 @@
     return { x: c.x, y: node.y + node.h }; // bottom
   };
 
-  WorkSchemeView.prototype.sidesFor = function (a, b) {
+  WorkSchemeView.prototype.sidesFor = function (a, b, edge) {
     var ac = this.nodeCenter(a);
     var bc = this.nodeCenter(b);
+    var auto;
     if (Math.abs(ac.y - bc.y) < 20) {
-      return ac.x <= bc.x ? ['right', 'left'] : ['left', 'right'];
+      auto = ac.x <= bc.x ? ['right', 'left'] : ['left', 'right'];
+    } else if (Math.abs(ac.x - bc.x) < 20) {
+      auto = ac.y <= bc.y ? ['bottom', 'top'] : ['top', 'bottom'];
+    } else if (Math.abs(ac.x - bc.x) > Math.abs(ac.y - bc.y)) {
+      auto = ac.x < bc.x ? ['right', 'left'] : ['left', 'right'];
+    } else {
+      auto = ac.y < bc.y ? ['bottom', 'top'] : ['top', 'bottom'];
     }
-    if (Math.abs(ac.x - bc.x) < 20) {
-      return ac.y <= bc.y ? ['bottom', 'top'] : ['top', 'bottom'];
-    }
-    if (Math.abs(ac.x - bc.x) > Math.abs(ac.y - bc.y)) {
-      return ac.x < bc.x ? ['right', 'left'] : ['left', 'right'];
-    }
-    return ac.y < bc.y ? ['bottom', 'top'] : ['top', 'bottom'];
+    if (!edge) return auto;
+    return [edge.fromSide || auto[0], edge.toSide || auto[1]];
   };
 
   WorkSchemeView.prototype.bounds = function () {
@@ -130,7 +135,7 @@
     var a = this.byId[edge.from];
     var b = this.byId[edge.to];
     if (!a || !b) return null;
-    var sides = this.sidesFor(a, b);
+    var sides = this.sidesFor(a, b, edge);
     var s = this.anchor(a, sides[0]);
     var t = this.anchor(b, sides[1]);
     var labelPoint;
@@ -148,12 +153,72 @@
       };
     }
 
+    if (edge.route === 'elbow') {
+      var gap = 26;
+      var p1 = this.offsetPoint(s, sides[0], gap);
+      var p2 = this.offsetPoint(t, sides[1], gap);
+      var verticalFrom = sides[0] === 'top' || sides[0] === 'bottom';
+      var verticalTo = sides[1] === 'top' || sides[1] === 'bottom';
+      var mid;
+
+      if (verticalFrom && verticalTo) {
+        mid = { x: (p1.x + p2.x) / 2, y: (p1.y + p2.y) / 2 };
+        labelPoint = { x: mid.x, y: mid.y };
+        return {
+          d: 'M ' + s.x + ' ' + s.y + ' L ' + p1.x + ' ' + p1.y +
+             ' L ' + p1.x + ' ' + mid.y + ' L ' + p2.x + ' ' + mid.y +
+             ' L ' + p2.x + ' ' + p2.y + ' L ' + t.x + ' ' + t.y,
+          label: labelPoint
+        };
+      }
+      if (!verticalFrom && !verticalTo) {
+        mid = { x: (p1.x + p2.x) / 2, y: (p1.y + p2.y) / 2 };
+        labelPoint = { x: mid.x, y: mid.y };
+        return {
+          d: 'M ' + s.x + ' ' + s.y + ' L ' + p1.x + ' ' + p1.y +
+             ' L ' + mid.x + ' ' + p1.y + ' L ' + mid.x + ' ' + p2.y +
+             ' L ' + p2.x + ' ' + p2.y + ' L ' + t.x + ' ' + t.y,
+          label: labelPoint
+        };
+      }
+      if (verticalFrom && !verticalTo) {
+        var corner1 = { x: p1.x, y: p2.y };
+        labelPoint = { x: (p1.x + p2.x) / 2, y: p2.y };
+        return {
+          d: 'M ' + s.x + ' ' + s.y + ' L ' + p1.x + ' ' + p1.y +
+             ' L ' + corner1.x + ' ' + corner1.y +
+             ' L ' + p2.x + ' ' + p2.y + ' L ' + t.x + ' ' + t.y,
+          label: labelPoint
+        };
+      }
+      var corner2 = { x: p2.x, y: p1.y };
+      labelPoint = { x: p2.x, y: (p1.y + p2.y) / 2 };
+      return {
+        d: 'M ' + s.x + ' ' + s.y + ' L ' + p1.x + ' ' + p1.y +
+           ' L ' + corner2.x + ' ' + corner2.y +
+           ' L ' + p2.x + ' ' + p2.y + ' L ' + t.x + ' ' + t.y,
+        label: labelPoint
+      };
+    }
+
     var mid = { x: (s.x + t.x) / 2, y: (s.y + t.y) / 2 };
     return { d: 'M ' + s.x + ' ' + s.y + ' L ' + t.x + ' ' + t.y, label: mid };
   };
 
+  WorkSchemeView.prototype.offsetPoint = function (point, side, gap) {
+    if (side === 'right') return { x: point.x + gap, y: point.y };
+    if (side === 'left') return { x: point.x - gap, y: point.y };
+    if (side === 'top') return { x: point.x, y: point.y - gap };
+    return { x: point.x, y: point.y + gap }; // bottom
+  };
+
   WorkSchemeView.prototype.render = function () {
     var self = this;
+    // очистка предыдущего рендера (svg, панели управления, правки, подсказки)
+    var dataEl = self.container.querySelector('script.ws-data');
+    Array.prototype.slice.call(self.container.children).forEach(function (child) {
+      if (child !== dataEl) self.container.removeChild(child);
+    });
     var bounds = self.bounds();
     var pad = 34;
     var width = bounds.maxX - bounds.minX + pad * 2;
@@ -212,6 +277,16 @@
     self.container.appendChild(svg);
     self.attachTooltip();
     self.buildControls();
+
+    if (self.editMode) {
+      self.container.classList.add('ws-edit-mode');
+      self.attachDrag();
+      self.buildEditPanel();
+    } else {
+      self.container.classList.remove('ws-edit-mode');
+      var oldPanel = self.container.querySelector('.ws-edit-panel');
+      if (oldPanel) oldPanel.remove();
+    }
   };
 
   WorkSchemeView.prototype.renderNode = function (node) {
@@ -288,8 +363,100 @@
     reset.addEventListener('click', function () { self.resetPlayback(); });
     controls.appendChild(reset);
 
+    if (self.container.getAttribute('data-editable') === 'true') {
+      var edit = document.createElement('button');
+      edit.type = 'button';
+      edit.className = 'ws-edit-toggle' + (self.editMode ? ' ws-active' : '');
+      edit.textContent = self.label('edit', 'Правка узлов');
+      edit.title = self.label('edit-hint', 'Перетаскивайте узлы мышкой, затем скопируйте координаты в настройки');
+      edit.addEventListener('click', function () {
+        self.resetPlayback();
+        self.editMode = !self.editMode;
+        self.render();
+      });
+      controls.appendChild(edit);
+    }
+
     self.container.insertBefore(controls, self.container.firstChild);
     self.playButton = play;
+  };
+
+  /* ---- Режим правки: перетаскивание узлов и координаты ---- */
+
+  WorkSchemeView.prototype.attachDrag = function () {
+    var self = this;
+    Array.prototype.forEach.call(self.container.querySelectorAll('.ws-node'), function (group) {
+      var node = self.byId[group.getAttribute('data-id')];
+      if (!node) return;
+      group.addEventListener('pointerdown', function (event) {
+        if (!self.editMode) return;
+        event.preventDefault();
+        var startX = event.clientX;
+        var startY = event.clientY;
+
+        var onMove = function (ev) {
+          var dx = ev.clientX - startX;
+          var dy = ev.clientY - startY;
+          group.setAttribute('transform', 'translate(' + dx + ',' + dy + ')');
+          group._wsDrag = { x: dx, y: dy };
+        };
+        var onUp = function () {
+          document.removeEventListener('pointermove', onMove);
+          document.removeEventListener('pointerup', onUp);
+          var delta = group._wsDrag || { x: 0, y: 0 };
+          delete group._wsDrag;
+          if (delta.x || delta.y) {
+            node.x = Math.round((node.x + delta.x) / 2) * 2;
+            node.y = Math.round((node.y + delta.y) / 2) * 2;
+            self.render();
+          }
+        };
+        document.addEventListener('pointermove', onMove);
+        document.addEventListener('pointerup', onUp);
+      });
+    });
+  };
+
+  WorkSchemeView.prototype.buildEditPanel = function () {
+    var self = this;
+    var panel = document.createElement('div');
+    panel.className = 'ws-edit-panel';
+
+    var title = document.createElement('div');
+    title.className = 'ws-edit-title';
+    title.textContent = self.label('coords', 'Координаты узлов — перенесите x/y в настройки схемы:');
+    panel.appendChild(title);
+
+    var textarea = document.createElement('textarea');
+    textarea.className = 'ws-edit-textarea';
+    textarea.readOnly = true;
+    textarea.rows = 8;
+    textarea.value = self.nodes.map(function (node) {
+      return JSON.stringify({ id: node.id, x: node.x, y: node.y, w: node.w, h: node.h });
+    }).join('\n');
+    panel.appendChild(textarea);
+
+    var copy = document.createElement('button');
+    copy.type = 'button';
+    copy.className = 'ws-copy';
+    copy.textContent = self.label('copy', 'Копировать');
+    copy.addEventListener('click', function () {
+      textarea.focus();
+      textarea.select();
+      var copied = false;
+      try { copied = document.execCommand('copy'); } catch (e) { copied = false; }
+      if (!copied && navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(textarea.value);
+        copied = true;
+      }
+      copy.textContent = copied ? '✓' : self.label('copy', 'Копировать');
+      self.timer(function () {
+        copy.textContent = self.label('copy', 'Копировать');
+      }, 1200);
+    });
+    panel.appendChild(copy);
+
+    self.container.appendChild(panel);
   };
 
   WorkSchemeView.prototype.timer = function (fn, ms) {
@@ -475,6 +642,7 @@
       group.addEventListener('mouseenter', function (event) { show(node, event); });
       group.addEventListener('mouseleave', hide);
       group.addEventListener('click', function () {
+        if (self.editMode) return; // в режиме правки клик не уводит со страницы
         var target = self.stageTarget(node);
         if (target) window.location.href = target;
       });

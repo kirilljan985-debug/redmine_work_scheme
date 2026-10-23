@@ -69,6 +69,8 @@ class RedmineWorkSchemeSchemeTest < ActiveSupport::TestCase
     edge = parsed[:data]['edges'].first
     assert_equal false, edge['dashed']
     assert_equal 'straight', edge['route']
+    assert_equal '', edge['from_side']
+    assert_equal '', edge['to_side']
   end
 
   test 'arc route is preserved' do
@@ -78,6 +80,28 @@ class RedmineWorkSchemeSchemeTest < ActiveSupport::TestCase
     )
     parsed = RedmineWorkScheme::Scheme.parse(json)
     assert_equal 'arc', parsed[:data]['edges'].first['route']
+  end
+
+  test 'elbow route and explicit sides are preserved' do
+    json = valid_scheme_json_with_nodes(
+      [{ 'id' => 'a', 'title' => 'A', 'x' => 0, 'y' => 0 }],
+      [{ 'from' => 'a', 'to' => 'a', 'route' => 'elbow', 'from_side' => 'Bottom', 'to_side' => 'right' }]
+    )
+    parsed = RedmineWorkScheme::Scheme.parse(json)
+    assert_empty parsed[:errors]
+    edge = parsed[:data]['edges'].first
+    assert_equal 'elbow', edge['route']
+    assert_equal 'bottom', edge['from_side']
+    assert_equal 'right', edge['to_side']
+  end
+
+  test 'invalid side returns error' do
+    json = valid_scheme_json_with_nodes(
+      [{ 'id' => 'a', 'title' => 'A', 'x' => 0, 'y' => 0 }],
+      [{ 'from' => 'a', 'to' => 'a', 'from_side' => 'diagonal' }]
+    )
+    parsed = RedmineWorkScheme::Scheme.parse(json)
+    assert parsed[:errors].any? { |e| e.include?('diagonal') }
   end
 
   test 'scenario with unknown node returns error' do
