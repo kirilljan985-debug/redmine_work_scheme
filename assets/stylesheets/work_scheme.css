@@ -1,5 +1,22 @@
 /* Redmine Work Scheme */
 
+:root {
+  --ws-surface: #ffffff;
+  --ws-surface-muted: #f5f8fb;
+  --ws-border: #d6e0e8;
+  --ws-border-strong: #b8c8d4;
+  --ws-text: #1f2d38;
+  --ws-muted: #647482;
+  --ws-primary: #356fa8;
+  --ws-primary-dark: #285985;
+  --ws-primary-soft: #eaf3fb;
+  --ws-success: #39835a;
+  --ws-warning: #b37a20;
+  --ws-danger: #b34a4a;
+  --ws-radius: 7px;
+  --ws-shadow: 0 4px 14px rgba(36, 59, 78, .12);
+}
+
 .ws-container {
   position: relative;
   overflow-x: auto;
@@ -390,4 +407,159 @@
 
 #ws-obj-panel .ws-dashed-label {
   font-size: 12px;
+}
+
+/* Единый визуальный слой просмотра и редактора */
+.ws-container,
+#ws-editor {
+  color: var(--ws-text);
+}
+
+.ws-controls {
+  gap: 8px;
+  padding: 7px 9px;
+  border: 1px solid var(--ws-border);
+  border-radius: var(--ws-radius);
+  background: var(--ws-surface);
+  box-shadow: 0 2px 8px rgba(36, 59, 78, .06);
+}
+
+.ws-controls button,
+.ws-controls select,
+.ws-edit-link,
+.ws-editor-actions button,
+#ws-add-scenario,
+.ws-copy {
+  min-height: 30px;
+  box-sizing: border-box;
+  border: 1px solid var(--ws-border-strong);
+  border-radius: 6px;
+  padding: 5px 11px;
+  background: var(--ws-surface);
+  color: var(--ws-text);
+  font-size: 12px;
+  line-height: 1.2;
+  cursor: pointer;
+  transition: background-color .15s ease, border-color .15s ease, box-shadow .15s ease, color .15s ease;
+}
+
+.ws-controls .ws-play,
+.ws-edit-link,
+#ws-save {
+  border-color: var(--ws-primary);
+  background: var(--ws-primary);
+  color: #fff;
+}
+
+.ws-controls .ws-play:hover,
+.ws-edit-link:hover,
+#ws-save:hover {
+  border-color: var(--ws-primary-dark);
+  background: var(--ws-primary-dark);
+}
+
+.ws-controls .ws-reset:hover,
+.ws-controls select:hover,
+.ws-editor-actions button:hover,
+#ws-add-scenario:hover,
+.ws-copy:hover {
+  border-color: var(--ws-primary);
+  background: var(--ws-primary-soft);
+}
+
+.ws-controls button:focus-visible,
+.ws-controls select:focus-visible,
+.ws-edit-link:focus-visible,
+#ws-editor button:focus-visible,
+#ws-editor input:focus-visible,
+#ws-editor select:focus-visible,
+#ws-editor textarea:focus-visible {
+  outline: 3px solid rgba(53, 111, 168, .25);
+  outline-offset: 1px;
+}
+
+.ws-controls button:disabled {
+  opacity: .55;
+  cursor: wait;
+}
+
+.ws-playback-status {
+  border-left-color: var(--ws-primary);
+  border-radius: 5px;
+  background: var(--ws-primary-soft);
+  color: var(--ws-primary-dark);
+}
+
+.ws-tooltip,
+.ws-edit-panel,
+.ws-palette,
+.ws-background-control {
+  border-color: var(--ws-border);
+  border-radius: var(--ws-radius);
+  box-shadow: var(--ws-shadow);
+}
+
+#ws-editor {
+  gap: 16px;
+}
+
+.ws-editor-main {
+  border-color: var(--ws-border);
+  border-radius: var(--ws-radius);
+  padding: 8px;
+  background: var(--ws-surface-muted);
+  box-shadow: var(--ws-shadow);
+}
+
+.ws-editor-side {
+  padding: 10px;
+  border: 1px solid var(--ws-border);
+  border-radius: var(--ws-radius);
+  background: var(--ws-surface);
+  box-shadow: var(--ws-shadow);
+}
+
+.ws-palette {
+  background: var(--ws-surface-muted);
+}
+
+.ws-palette-item {
+  min-height: 30px;
+  border-color: var(--ws-border-strong);
+  border-radius: 6px;
+  transition: transform .15s ease, box-shadow .15s ease, border-color .15s ease;
+}
+
+.ws-palette-item:hover {
+  border-color: var(--ws-primary);
+  box-shadow: 0 2px 6px rgba(53, 111, 168, .16);
+  transform: translateY(-1px);
+}
+
+.ws-field input[type="text"],
+.ws-field input[type="number"],
+.ws-field select,
+.ws-field textarea,
+.ws-title-control input,
+.ws-scenario-row input {
+  border: 1px solid var(--ws-border);
+  border-radius: 5px;
+  background: var(--ws-surface);
+  color: var(--ws-text);
+}
+
+.ws-field input[type="text"]:focus,
+.ws-field input[type="number"]:focus,
+.ws-field select:focus,
+.ws-field textarea:focus,
+.ws-title-control input:focus,
+.ws-scenario-row input:focus {
+  border-color: var(--ws-primary);
+  box-shadow: 0 0 0 3px rgba(53, 111, 168, .12);
+  outline: none;
+}
+
+.ws-node rect,
+.ws-node polygon {
+  filter: drop-shadow(0 2px 2px rgba(36, 59, 78, .08));
 }
