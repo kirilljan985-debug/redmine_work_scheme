@@ -76,7 +76,7 @@
     this.nodes.forEach(function (node) { this.byId[node.id] = node; }, this);
     this.pathByEdge = {};
     this.playing = false;
-    this.playbackSpeed = 1;
+    this.playbackSpeed = 0.5;
     this.timers = [];
     this.editMode = false;
     this.render();
@@ -414,7 +414,7 @@
     [0.5, 1, 1.5, 2].forEach(function (value) {
       var option = document.createElement('option');
       option.value = String(value);
-      option.textContent = String(value).replace('.', ',') + '×';
+      option.textContent = String(value / 0.5).replace('.', ',') + '×';
       if (value === self.playbackSpeed) option.selected = true;
       speed.appendChild(option);
     });
@@ -555,9 +555,10 @@
     var step = function () {
       if (!self.playing) return;
       if (index >= steps.length) {
-        self.updatePlaybackStatus(scenario, steps.length - 1, self.byId[steps[steps.length - 1]], steps.length, true);
-        self.markNodeComplete(self.byId[steps[steps.length - 1]]);
-        self.finishPlayback();
+        var finalNode = self.byId[steps[steps.length - 1]];
+        self.updatePlaybackStatus(scenario, steps.length - 1, finalNode, steps.length, true);
+        self.markNodeComplete(finalNode);
+        self.settlePlaybackToken(finalNode, function () { self.finishPlayback(); });
         return;
       }
       var node = self.byId[steps[index]];
@@ -647,6 +648,34 @@
     if (!this.playbackToken || !point) return;
     this.playbackToken.setAttribute('transform', 'translate(' + point.x + ' ' + point.y + ')');
     this.playbackPoint = { x: point.x, y: point.y };
+  };
+
+  WorkSchemeView.prototype.settlePlaybackToken = function (node, done) {
+    var self = this;
+    if (!node) { done(); return; }
+    if (!self.playbackToken || !self.playbackToken.parentNode) {
+      self.showPlaybackToken(node);
+      done();
+      return;
+    }
+    var reduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    var from = self.playbackPoint || self.nodeCenter(node);
+    var to = self.nodeCenter(node);
+    var duration = reduced ? 0 : self.playbackDelay(420);
+    var start = null;
+    var tick = function (timestamp) {
+      if (!self.playing) return;
+      if (start === null) start = timestamp;
+      var linear = duration === 0 ? 1 : Math.min(1, (timestamp - start) / duration);
+      var progress = linear * linear * (3 - 2 * linear);
+      self.setPlaybackPoint({
+        x: from.x + (to.x - from.x) * progress,
+        y: from.y + (to.y - from.y) * progress
+      });
+      if (progress < 1) window.requestAnimationFrame(tick);
+      else { self.showPlaybackToken(node, true); done(); }
+    };
+    if (duration === 0) tick(0); else window.requestAnimationFrame(tick);
   };
 
   WorkSchemeView.prototype.animateMarker = function (pathEl, node, done, transitNode) {
