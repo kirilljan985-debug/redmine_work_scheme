@@ -398,20 +398,6 @@
     controls.appendChild(speedLabel);
     controls.appendChild(speed);
 
-    if (self.container.getAttribute('data-editable') === 'true') {
-      var edit = document.createElement('button');
-      edit.type = 'button';
-      edit.className = 'ws-edit-toggle' + (self.editMode ? ' ws-active' : '');
-      edit.textContent = self.label('edit', 'Правка узлов');
-      edit.title = self.label('edit-hint', 'Перетаскивайте узлы мышкой, затем скопируйте координаты в настройки');
-      edit.addEventListener('click', function () {
-        self.resetPlayback();
-        self.editMode = !self.editMode;
-        self.render();
-      });
-      controls.appendChild(edit);
-    }
-
     var status = document.createElement('div');
     status.className = 'ws-playback-status';
     status.setAttribute('aria-live', 'polite');
