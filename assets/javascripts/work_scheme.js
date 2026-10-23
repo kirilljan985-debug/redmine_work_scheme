@@ -411,10 +411,10 @@
     var speed = document.createElement('select');
     speed.className = 'ws-speed-select';
     speed.setAttribute('aria-label', speedLabel.textContent);
-    [0.5, 1, 1.5, 2].forEach(function (value) {
+    [0.25, 0.5, 1].forEach(function (value) {
       var option = document.createElement('option');
       option.value = String(value);
-      option.textContent = String(value / 0.5).replace('.', ',') + '×';
+      option.textContent = String(value * 2).replace('.', ',') + '×';
       if (value === self.playbackSpeed) option.selected = true;
       speed.appendChild(option);
     });
