@@ -302,6 +302,13 @@
 }
 .ws-palette-item:active, .ws-palette-item.ws-dragging { cursor: grabbing; opacity: .55; }
 .ws-palette-icon { border-color: #8a7ab8; background: #f5f1ff; }
+.ws-help { margin-bottom: 10px; padding: 7px 9px; border: 1px solid var(--ws-border); border-radius: var(--ws-radius); background: var(--ws-surface-muted); color: var(--ws-muted); font-size: 11px; }
+.ws-help summary { cursor: pointer; color: var(--ws-text); font-weight: 600; }
+.ws-help p { margin: 6px 0 0; }
+.ws-help-swatch { display: inline-block; width: 10px; height: 10px; margin: 0 2px; border-radius: 50%; vertical-align: -1px; }
+.ws-help-swatch-active { background: #d66f2c; }
+.ws-help-swatch-done { background: #6aa57a; }
+.ws-help-swatch-rework { background: #7c4dff; }
 .ws-palette-node-start { border-color: #7c9cc4; background: #eef4fb; }
 .ws-palette-node-process { border-color: #8a949e; }
 .ws-palette-node-decision { border-color: #c9a75a; background: #fdf6e3; }
@@ -369,6 +376,10 @@
 @media (max-width: 900px) {
   #ws-editor { flex-direction: column; }
   .ws-editor-side { flex: 1 1 auto; width: 100%; }
+  .ws-editor-main { width: 100%; box-sizing: border-box; }
+  .ws-editor-actions { position: static; }
+  .ws-palette-items { overflow-x: auto; flex-wrap: nowrap; padding-bottom: 3px; }
+  .ws-palette-item { flex: 0 0 auto; }
 }
 
 /* Маркеры перепривязки стрелок и русские подписи панелей */

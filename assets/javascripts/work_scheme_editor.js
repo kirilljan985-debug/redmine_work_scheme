@@ -43,6 +43,8 @@
     this.view.showCoordPanel = false; // панель координат не нужна — есть полноценный редактор
     this.sel = null;                  // {type:'node', id} | {type:'edge', key}
     this.dirty = false;
+    this.history = [];
+    this.future = [];
     this.pendingFrom = null;          // режим добавления стрелки: {from: id}
     this.seq = this.maxNodeSeq() + 1;
     this.redraw();
@@ -78,8 +80,68 @@
 
   Editor.prototype.markDirty = function () {
     if (this.dirty) return;
+    this.history.push(JSON.stringify(this.serialize()));
+    this.future = [];
     this.dirty = true;
     this.setStatus('Есть несохранённые изменения', 'dirty');
+  };
+
+  Editor.prototype.restoreSnapshot = function (snapshot) {
+    var data;
+    try { data = JSON.parse(snapshot); } catch (_) { return; }
+    var View = window.WorkScheme.View;
+    this.view = new View(this.root.querySelector('.ws-container'), data);
+    this.view.editMode = true;
+    this.view.showCoordPanel = false;
+    this.view.render();
+    this.seq = this.maxNodeSeq() + 1;
+    this.sel = null;
+    var titleInput = this.root.querySelector('#ws-title');
+    if (titleInput) titleInput.value = data.title || 'Схема';
+    var backgroundInput = this.root.querySelector('#ws-background');
+    if (backgroundInput) backgroundInput.value = data.background || '#f3f7fa';
+    this.renderScenarios();
+    this.dirty = true;
+    this.setStatus('Есть несохранённые изменения', 'dirty');
+  };
+
+  Editor.prototype.undo = function () {
+    if (!this.history.length) return;
+    this.future.push(JSON.stringify(this.serialize()));
+    this.restoreSnapshot(this.history.pop());
+  };
+
+  Editor.prototype.redo = function () {
+    if (!this.future.length) return;
+    this.history.push(JSON.stringify(this.serialize()));
+    this.restoreSnapshot(this.future.pop());
+  };
+
+  Editor.prototype.alignNodes = function (axis) {
+    if (!this.view.nodes.length) return;
+    var value = axis === 'x'
+      ? this.view.nodes.reduce(function (sum, n) { return sum + n.x + n.w / 2; }, 0) / this.view.nodes.length
+      : this.view.nodes.reduce(function (sum, n) { return sum + n.y + n.h / 2; }, 0) / this.view.nodes.length;
+    this.view.nodes.forEach(function (node) {
+      if (axis === 'x') node.x = Math.round(value - node.w / 2);
+      else node.y = Math.round(value - node.h / 2);
+    });
+    this.markDirty();
+    this.redraw();
+  };
+
+  Editor.prototype.duplicateSelected = function () {
+    var node = this.selectedNode();
+    if (!node) return;
+    var copy = JSON.parse(JSON.stringify(node));
+    copy.id = 'n' + (this.seq++);
+    copy.x += 24; copy.y += 24;
+    this.view.nodes.push(copy);
+    this.view.byId[copy.id] = copy;
+    this.sel = { type: 'node', id: copy.id };
+    this.markDirty();
+    this.renderNodePanel();
+    this.redraw();
   };
 
   Editor.prototype.maxNodeSeq = function () {
@@ -314,6 +376,25 @@
     };
     self.root.addEventListener('input', markFormDirty);
     self.root.addEventListener('change', markFormDirty);
+    self.root.addEventListener('keydown', function (ev) {
+      if ((ev.ctrlKey || ev.metaKey) && ev.key.toLowerCase() === 'z') {
+        ev.preventDefault();
+        if (ev.shiftKey) self.redo(); else self.undo();
+        return;
+      }
+      if ((ev.ctrlKey || ev.metaKey) && ev.key.toLowerCase() === 'y') {
+        ev.preventDefault(); self.redo(); return;
+      }
+      var node = self.selectedNode();
+      if (!node || ev.target.tagName === 'INPUT' || ev.target.tagName === 'TEXTAREA') return;
+      var delta = ev.shiftKey ? 10 : 2;
+      if (ev.key === 'ArrowLeft') node.x -= delta;
+      else if (ev.key === 'ArrowRight') node.x += delta;
+      else if (ev.key === 'ArrowUp') node.y -= delta;
+      else if (ev.key === 'ArrowDown') node.y += delta;
+      else return;
+      ev.preventDefault(); self.markDirty(); self.redraw();
+    });
 
     container.addEventListener('click', function (ev) {
       var nodeGroup = ev.target.closest ? ev.target.closest('.ws-node') : null;
@@ -353,6 +434,17 @@
     var dlBtn = document.getElementById('ws-download');
     dlBtn.textContent = self.labels.download;
     dlBtn.addEventListener('click', function () { self.download(); });
+
+    var undoBtn = document.getElementById('ws-undo');
+    var redoBtn = document.getElementById('ws-redo');
+    if (undoBtn) undoBtn.addEventListener('click', function () { self.undo(); });
+    if (redoBtn) redoBtn.addEventListener('click', function () { self.redo(); });
+    var alignX = document.getElementById('ws-align-x');
+    var alignY = document.getElementById('ws-align-y');
+    if (alignX) alignX.addEventListener('click', function () { self.alignNodes('x'); });
+    if (alignY) alignY.addEventListener('click', function () { self.alignNodes('y'); });
+    var duplicate = document.getElementById('ws-duplicate');
+    if (duplicate) duplicate.addEventListener('click', function () { self.duplicateSelected(); });
   };
 
   Editor.prototype.wirePalette = function () {
@@ -791,6 +883,8 @@
   Editor.prototype.save = function () {
     var self = this;
     if (!self.saveUrl) { self.setStatus('Адрес сохранения не задан (dev-превью)', 'err'); return; }
+    var saveButton = document.getElementById('ws-save');
+    if (saveButton) saveButton.disabled = true;
     var csrf = document.querySelector('meta[name="csrf-token"]');
     var body = new URLSearchParams();
     body.append('json', JSON.stringify(self.serialize(), null, 2));
@@ -811,7 +905,9 @@
         var errs = (res.data && res.data.errors) || ['HTTP ' + res.status];
         self.setStatus(errs.join('; '), 'err');
       }
+      if (saveButton) saveButton.disabled = false;
     }).catch(function (e) {
+      if (saveButton) saveButton.disabled = false;
       self.setStatus(String(e), 'err');
     });
   };
