@@ -704,6 +704,7 @@
 
   WorkSchemeView.prototype.attachTooltip = function () {
     var self = this;
+    if (self.container.closest && self.container.closest('#ws-editor')) return;
     var tooltip = document.createElement('div');
     tooltip.className = 'ws-tooltip';
     self.container.appendChild(tooltip);
