@@ -529,6 +529,7 @@
       if (!self.playing) return;
       if (index >= steps.length) {
         self.updatePlaybackStatus(scenario, steps.length - 1, self.byId[steps[steps.length - 1]], steps.length, true);
+        self.markNodeComplete(self.byId[steps[steps.length - 1]]);
         self.finishPlayback();
         return;
       }
@@ -543,11 +544,13 @@
         if (prev) pathEl = self.pathByEdge[prev.id + '>' + node.id];
       }
       if (pathEl) {
+        self.markNodeComplete(prev);
         self.highlightNode(node);
         self.showPlaybackToken(prev);
         var isRework = steps.slice(0, index).indexOf(node.id) !== -1;
         self.highlightEdge(pathEl, isRework);
         var afterEdge = function () {
+          self.markEdgeComplete(pathEl);
           self.showPlaybackToken(node, true);
           index += 1;
           self.timer(step, self.playbackDelay(node.type === 'decision' ? 1050 : 420));
@@ -568,9 +571,30 @@
     if (group) group.classList.add('ws-node-active');
   };
 
+  WorkSchemeView.prototype.markNodeComplete = function (node) {
+    if (!node) return;
+    var group = this.container.querySelector('.ws-node[data-id="' + node.id + '"]');
+    if (group) group.classList.add('ws-node-complete');
+  };
+
   WorkSchemeView.prototype.highlightEdge = function (pathEl, rework) {
     pathEl.classList.add('ws-edge-active');
     if (rework) pathEl.classList.add('ws-edge-rework');
+    var reduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    var length = pathEl.getTotalLength ? pathEl.getTotalLength() : 0;
+    if (length > 0) {
+      pathEl.style.strokeDasharray = length + ' ' + length;
+      pathEl.style.strokeDashoffset = reduced ? '0' : String(length);
+      if (!reduced) window.requestAnimationFrame(function () {
+        pathEl.style.strokeDashoffset = '0';
+      });
+    }
+  };
+
+  WorkSchemeView.prototype.markEdgeComplete = function (pathEl) {
+    if (!pathEl) return;
+    pathEl.classList.add('ws-edge-complete');
+    pathEl.style.strokeDashoffset = '0';
   };
 
   WorkSchemeView.prototype.showPlaybackToken = function (node, preservePoint) {
@@ -672,9 +696,17 @@
     Array.prototype.forEach.call(self.container.querySelectorAll('.ws-node-active'), function (el) {
       el.classList.remove('ws-node-active');
     });
+    Array.prototype.forEach.call(self.container.querySelectorAll('.ws-node-complete'), function (el) {
+      el.classList.remove('ws-node-complete');
+    });
     Array.prototype.forEach.call(self.container.querySelectorAll('.ws-edge-active'), function (el) {
       el.classList.remove('ws-edge-active');
       el.classList.remove('ws-edge-rework');
+    });
+    Array.prototype.forEach.call(self.container.querySelectorAll('.ws-edge-complete'), function (el) {
+      el.classList.remove('ws-edge-complete');
+      el.style.strokeDasharray = '';
+      el.style.strokeDashoffset = '';
     });
     var token = self.playbackToken;
     if (token) token.remove();
