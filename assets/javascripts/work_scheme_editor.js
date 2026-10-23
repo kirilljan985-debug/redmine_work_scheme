@@ -42,6 +42,7 @@
     this.view.editMode = true;        // перетаскивание узлов включено
     this.view.showCoordPanel = false; // панель координат не нужна — есть полноценный редактор
     this.sel = null;                  // {type:'node', id} | {type:'edge', key}
+    this.selectedIds = [];
     this.dirty = false;
     this.history = [];
     this.future = [];
@@ -96,6 +97,7 @@
     this.view.render();
     this.seq = this.maxNodeSeq() + 1;
     this.sel = null;
+    this.selectedIds = [];
     var titleInput = this.root.querySelector('#ws-title');
     if (titleInput) titleInput.value = data.title || 'Схема';
     var backgroundInput = this.root.querySelector('#ws-background');
@@ -118,11 +120,15 @@
   };
 
   Editor.prototype.alignNodes = function (axis) {
-    if (!this.view.nodes.length) return;
+    var nodes = this.selectedNodes();
+    if (nodes.length < 2) {
+      this.setStatus('Выберите минимум два блока через Shift+клик', '');
+      return;
+    }
     var value = axis === 'x'
-      ? this.view.nodes.reduce(function (sum, n) { return sum + n.x + n.w / 2; }, 0) / this.view.nodes.length
-      : this.view.nodes.reduce(function (sum, n) { return sum + n.y + n.h / 2; }, 0) / this.view.nodes.length;
-    this.view.nodes.forEach(function (node) {
+      ? nodes.reduce(function (sum, n) { return sum + n.x + n.w / 2; }, 0) / nodes.length
+      : nodes.reduce(function (sum, n) { return sum + n.y + n.h / 2; }, 0) / nodes.length;
+    nodes.forEach(function (node) {
       if (axis === 'x') node.x = Math.round(value - node.w / 2);
       else node.y = Math.round(value - node.h / 2);
     });
@@ -139,6 +145,7 @@
     this.view.nodes.push(copy);
     this.view.byId[copy.id] = copy;
     this.sel = { type: 'node', id: copy.id };
+    this.selectedIds = [copy.id];
     this.markDirty();
     this.renderNodePanel();
     this.redraw();
@@ -157,8 +164,10 @@
     var self = this;
     self.view.render();
     if (self.sel && self.sel.type === 'node') {
-      var g = self.view.container.querySelector('.ws-node[data-id="' + self.sel.id + '"]');
-      if (g) g.classList.add('ws-selected');
+      self.selectedIds.forEach(function (id) {
+        var g = self.view.container.querySelector('.ws-node[data-id="' + id + '"]');
+        if (g) g.classList.add('ws-selected');
+      });
     }
     if (self.sel && self.sel.type === 'edge') {
       var p = self.view.pathByEdge[self.sel.key];
@@ -398,7 +407,7 @@
 
     container.addEventListener('click', function (ev) {
       var nodeGroup = ev.target.closest ? ev.target.closest('.ws-node') : null;
-      if (nodeGroup) { self.selectNode(nodeGroup.getAttribute('data-id')); return; }
+      if (nodeGroup) { self.selectNode(nodeGroup.getAttribute('data-id'), ev.shiftKey); return; }
       if (ev.target.closest && ev.target.closest('.ws-edge-hit')) return; // свой обработчик
       if (ev.target === container.querySelector('svg')) { self.deselect(); }
     });
@@ -538,11 +547,12 @@
 
   Editor.prototype.deselect = function () {
     this.sel = null;
+    this.selectedIds = [];
     document.getElementById('ws-obj-panel').innerHTML = '<em>Кликните узел или стрелку на схеме</em>';
     this.redraw();
   };
 
-  Editor.prototype.selectNode = function (id) {
+  Editor.prototype.selectNode = function (id, additive) {
     var self = this;
     if (self.pendingFrom) {
       if (!self.pendingFrom.from) {
@@ -565,12 +575,21 @@
       self.selectEdge(edge.from + '>' + edge.to);
       return;
     }
-    self.sel = { type: 'node', id: id };
+    if (additive) {
+      var index = self.selectedIds.indexOf(id);
+      if (index === -1) self.selectedIds.push(id); else self.selectedIds.splice(index, 1);
+      if (!self.selectedIds.length) { self.deselect(); return; }
+      self.sel = { type: 'node', id: self.selectedIds[0] };
+    } else {
+      self.selectedIds = [id];
+      self.sel = { type: 'node', id: id };
+    }
     self.renderNodePanel();
     self.redraw();
   };
 
   Editor.prototype.selectEdge = function (key) {
+    this.selectedIds = [];
     this.sel = { type: 'edge', key: key };
     this.renderEdgePanel();
     this.redraw();
@@ -579,6 +598,12 @@
   Editor.prototype.selectedNode = function () {
     var self = this;
     return self.sel && self.sel.type === 'node' ? self.view.byId[self.sel.id] : null;
+  };
+
+  Editor.prototype.selectedNodes = function () {
+    var self = this;
+    var ids = self.selectedIds.length ? self.selectedIds : (self.sel && self.sel.type === 'node' ? [self.sel.id] : []);
+    return ids.map(function (id) { return self.view.byId[id]; }).filter(Boolean);
   };
 
   Editor.prototype.selectedEdge = function () {
