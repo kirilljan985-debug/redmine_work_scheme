@@ -529,14 +529,20 @@
 
     var geom = document.createElement('div');
     geom.className = 'ws-field ws-geom';
-    [['x', 'x'], ['y', 'y'], ['w', 'ширина'], ['h', 'высота']].forEach(function (pair) {
+    [['x', 'X'], ['y', 'Y'], ['w', 'Ширина'], ['h', 'Высота']].forEach(function (pair) {
+      var cell = document.createElement('label');
+      cell.className = 'ws-geom-cell';
+      var caption = document.createElement('span');
+      caption.textContent = pair[1];
+      cell.appendChild(caption);
       var input = document.createElement('input');
-      input.type = 'number'; input.value = n[pair[0]]; input.title = pair[1];
+      input.type = 'number'; input.value = n[pair[0]]; input.setAttribute('aria-label', pair[1]);
       input.addEventListener('change', function () {
         n[pair[0]] = num(input.value, n[pair[0]]);
         self.redraw();
       });
-      geom.appendChild(input);
+      cell.appendChild(input);
+      geom.appendChild(cell);
     });
     panel.appendChild(geom);
 

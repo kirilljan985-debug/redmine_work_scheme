@@ -336,7 +336,8 @@
 }
 .ws-field textarea { height: 52px; font-family: monospace; }
 .ws-geom { display: flex; gap: 4px; }
-.ws-geom input { width: 25% !important; }
+.ws-geom-cell { display: flex; flex: 1 1 25%; flex-direction: column; gap: 2px; color: var(--ws-muted); font-size: 10px; }
+.ws-geom-cell input { width: 100% !important; }
 
 .ws-scenarios-block { margin-top: 10px; }
 .ws-scenario-row {
