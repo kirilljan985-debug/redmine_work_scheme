@@ -106,16 +106,26 @@
   stroke-width: 2.6 !important;
 }
 
-.ws-marker { fill: #d66f2c; stroke: #fff; stroke-width: 2; }
+.ws-edge-rework {
+  stroke: #7c4dff !important;
+  stroke-dasharray: 8 4;
+  animation: ws-rework-flow .8s linear infinite;
+}
+
+.ws-marker { fill: #d66f2c; stroke: #fff; stroke-width: 2; filter: drop-shadow(0 0 5px rgba(214,111,44,.75)); }
+.ws-marker-label { font-size: 11px; font-weight: 700; fill: #8a3d0c; paint-order: stroke; stroke: #fff; stroke-width: 3px; stroke-linejoin: round; }
 
 @keyframes ws-pulse {
   from { fill: #fdeee2; }
   to { fill: #f9dcc4; }
 }
 
+@keyframes ws-rework-flow { to { stroke-dashoffset: -12; } }
+
 @media (prefers-reduced-motion: reduce) {
   .ws-node-active rect,
   .ws-node-active polygon { animation: none; }
+  .ws-edge-rework { animation: none; }
 }
 
 /* Режим правки узлов */

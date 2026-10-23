@@ -503,6 +503,7 @@
       var node = self.byId[steps[index]];
       if (!node) { index += 1; step(); return; }
       self.highlightNode(node);
+      self.showPlaybackToken(node);
 
       var pathEl = null;
       if (index > 0) {
@@ -510,15 +511,16 @@
         if (prev) pathEl = self.pathByEdge[prev.id + '>' + node.id];
       }
       if (pathEl) {
-        self.highlightEdge(pathEl);
+        var isRework = steps.slice(0, index).indexOf(node.id) !== -1;
+        self.highlightEdge(pathEl, isRework);
         var afterEdge = function () {
           index += 1;
-          self.timer(step, 420);
+          self.timer(step, node.type === 'decision' ? 1050 : 420);
         };
-        self.animateMarker(pathEl, afterEdge);
+        self.animateMarker(pathEl, node, afterEdge);
       } else {
         index += 1;
-        self.timer(step, 850);
+        self.timer(step, node.type === 'decision' ? 1050 : 850);
       }
     };
     self.timer(step, 150);
@@ -529,15 +531,30 @@
     if (group) group.classList.add('ws-node-active');
   };
 
-  WorkSchemeView.prototype.highlightEdge = function (pathEl) {
+  WorkSchemeView.prototype.highlightEdge = function (pathEl, rework) {
     pathEl.classList.add('ws-edge-active');
+    if (rework) pathEl.classList.add('ws-edge-rework');
   };
 
-  WorkSchemeView.prototype.animateMarker = function (pathEl, done) {
+  WorkSchemeView.prototype.showPlaybackToken = function (node) {
+    var self = this;
+    if (!self.playbackToken || !self.playbackToken.parentNode) {
+      var group = svgEl('g', { 'class': 'ws-playback-token' });
+      group.appendChild(svgEl('circle', { r: 10, 'class': 'ws-marker' }));
+      group.appendChild(svgEl('text', { x: 16, y: 4, 'class': 'ws-marker-label' }, 'ТЗ'));
+      self.overlay.appendChild(group);
+      self.playbackToken = group;
+    }
+    self.playbackToken.querySelector('.ws-marker-label').textContent = node.title || node.id;
+    var center = self.nodeCenter(node);
+    self.playbackToken.setAttribute('transform', 'translate(' + center.x + ' ' + center.y + ')');
+  };
+
+  WorkSchemeView.prototype.animateMarker = function (pathEl, node, done) {
     var self = this;
     var reduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    var marker = svgEl('circle', { r: 8, 'class': 'ws-marker' });
-    self.overlay.appendChild(marker);
+    var marker = self.playbackToken;
+    if (!marker) { self.showPlaybackToken(node); marker = self.playbackToken; }
     var total = pathEl.getTotalLength();
     var duration = reduced ? 0 : 700;
     var start = null;
@@ -547,12 +564,11 @@
       if (start === null) start = timestamp;
       var progress = duration === 0 ? 1 : Math.min(1, (timestamp - start) / duration);
       var point = pathEl.getPointAtLength(total * progress);
-      marker.setAttribute('cx', point.x);
-      marker.setAttribute('cy', point.y);
+      marker.setAttribute('transform', 'translate(' + point.x + ' ' + point.y + ')');
       if (progress < 1) {
         window.requestAnimationFrame(tick);
       } else {
-        self.timer(function () { marker.remove(); }, 350);
+        self.timer(function () {}, 350);
         done();
       }
     };
@@ -578,9 +594,11 @@
     });
     Array.prototype.forEach.call(self.container.querySelectorAll('.ws-edge-active'), function (el) {
       el.classList.remove('ws-edge-active');
+      el.classList.remove('ws-edge-rework');
     });
-    var marker = self.overlay && self.overlay.querySelector('.ws-marker');
-    if (marker) marker.remove();
+    var token = self.playbackToken;
+    if (token) token.remove();
+    self.playbackToken = null;
   };
 
   WorkSchemeView.prototype.resetPlayback = function () {
@@ -670,6 +688,7 @@
         try {
           var dataEl = container.querySelector('script.ws-data');
           if (!dataEl) return;
+          if (!dataEl.textContent.trim()) return;
           var scheme = JSON.parse(dataEl.textContent);
           if (!scheme || !scheme.nodes || !scheme.nodes.length) return;
           new WorkSchemeView(container, scheme);
