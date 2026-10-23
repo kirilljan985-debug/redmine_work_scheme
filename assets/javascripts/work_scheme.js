@@ -76,6 +76,7 @@
     this.nodes.forEach(function (node) { this.byId[node.id] = node; }, this);
     this.pathByEdge = {};
     this.playing = false;
+    this.playbackSpeed = 1;
     this.timers = [];
     this.editMode = false;
     this.render();
@@ -377,6 +378,26 @@
     reset.addEventListener('click', function () { self.resetPlayback(); });
     controls.appendChild(reset);
 
+    var speedLabel = document.createElement('label');
+    speedLabel.className = 'ws-speed-label';
+    speedLabel.textContent = self.label('speed', 'Скорость');
+    var speed = document.createElement('select');
+    speed.className = 'ws-speed-select';
+    speed.setAttribute('aria-label', speedLabel.textContent);
+    [0.5, 1, 1.5, 2].forEach(function (value) {
+      var option = document.createElement('option');
+      option.value = String(value);
+      option.textContent = String(value).replace('.', ',') + '×';
+      if (value === self.playbackSpeed) option.selected = true;
+      speed.appendChild(option);
+    });
+    speed.addEventListener('change', function () {
+      var value = Number(speed.value);
+      if (isFinite(value) && value > 0) self.playbackSpeed = value;
+    });
+    controls.appendChild(speedLabel);
+    controls.appendChild(speed);
+
     if (self.container.getAttribute('data-editable') === 'true') {
       var edit = document.createElement('button');
       edit.type = 'button';
@@ -401,6 +422,11 @@
     self.container.insertBefore(controls, self.container.firstChild);
     self.playButton = play;
     self.playbackStatus = status;
+    self.speedSelect = speed;
+  };
+
+  WorkSchemeView.prototype.playbackDelay = function (ms) {
+    return Math.max(0, Math.round(ms / (this.playbackSpeed || 1)));
   };
 
   WorkSchemeView.prototype.updatePlaybackStatus = function (scenario, index, node, total, done) {
@@ -538,17 +564,17 @@
         var afterEdge = function () {
           self.showPlaybackToken(node, true);
           index += 1;
-          self.timer(step, node.type === 'decision' ? 1050 : 420);
+          self.timer(step, self.playbackDelay(node.type === 'decision' ? 1050 : 420));
         };
         self.animateMarker(pathEl, node, afterEdge);
       } else {
         self.highlightNode(node);
         self.showPlaybackToken(node);
         index += 1;
-        self.timer(step, node.type === 'decision' ? 1050 : 850);
+        self.timer(step, self.playbackDelay(node.type === 'decision' ? 1050 : 850));
       }
     };
-    self.timer(step, 150);
+    self.timer(step, self.playbackDelay(150));
   };
 
   WorkSchemeView.prototype.highlightNode = function (node) {
@@ -592,12 +618,12 @@
     var marker = self.playbackToken;
     if (!marker) { self.showPlaybackToken(node); marker = self.playbackToken; }
     var total = pathEl.getTotalLength();
-    var duration = reduced ? 0 : 900;
+    var duration = reduced ? 0 : this.playbackDelay(900);
     var start = null;
     var startPoint = pathEl.getPointAtLength(0);
     var fromPoint = self.playbackPoint || startPoint;
     var bridgeDistance = Math.hypot(fromPoint.x - startPoint.x, fromPoint.y - startPoint.y);
-    var bridgeDuration = reduced || bridgeDistance < 1 ? 0 : 180;
+    var bridgeDuration = reduced || bridgeDistance < 1 ? 0 : this.playbackDelay(180);
     var bridgeStart = null;
 
     var move = function (point) {
@@ -615,7 +641,7 @@
       if (progress < 1) {
         window.requestAnimationFrame(tick);
       } else {
-        self.timer(function () {}, 350);
+        self.timer(function () {}, self.playbackDelay(350));
         done();
       }
     };
