@@ -583,7 +583,7 @@
           index += 1;
           self.timer(step, self.playbackDelay(node.type === 'decision' ? 1050 : 420));
         };
-        self.animateMarker(pathEl, node, afterEdge, prev);
+        self.animateMarker(pathEl, node, afterEdge);
       } else {
         self.highlightNode(node);
         self.showPlaybackToken(node);
@@ -678,7 +678,7 @@
     if (duration === 0) tick(0); else window.requestAnimationFrame(tick);
   };
 
-  WorkSchemeView.prototype.animateMarker = function (pathEl, node, done, transitNode) {
+  WorkSchemeView.prototype.animateMarker = function (pathEl, node, done) {
     var self = this;
     var reduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     var marker = self.playbackToken;
@@ -691,7 +691,6 @@
     var bridgeDistance = Math.hypot(fromPoint.x - startPoint.x, fromPoint.y - startPoint.y);
     var bridgeDuration = reduced || bridgeDistance < 1 ? 0 : this.playbackDelay(420);
     var bridgeStart = null;
-    var center = transitNode ? self.nodeCenter(transitNode) : startPoint;
 
     var ease = function (value) {
       return value * value * (3 - 2 * value);
@@ -728,10 +727,7 @@
       if (bridgeStart === null) bridgeStart = timestamp;
       var linear = bridgeDuration === 0 ? 1 : Math.min(1, (timestamp - bridgeStart) / bridgeDuration);
       var progress = ease(linear);
-      var point = progress < 0.5
-        ? between(fromPoint, center, ease(progress * 2))
-        : between(center, startPoint, ease((progress - 0.5) * 2));
-      move(point);
+      move(between(fromPoint, startPoint, progress));
       if (progress < 1) {
         window.requestAnimationFrame(bridge);
       } else if (duration === 0) {
