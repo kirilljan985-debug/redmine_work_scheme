@@ -98,6 +98,7 @@
     this.seq = this.maxNodeSeq() + 1;
     this.sel = null;
     this.selectedIds = [];
+    this.root.classList.remove('ws-object-focus');
     var titleInput = this.root.querySelector('#ws-title');
     if (titleInput) titleInput.value = data.title || 'Схема';
     var backgroundInput = this.root.querySelector('#ws-background');
@@ -592,6 +593,7 @@
   Editor.prototype.deselect = function () {
     this.sel = null;
     this.selectedIds = [];
+    this.root.classList.remove('ws-object-focus');
     document.getElementById('ws-obj-panel').innerHTML = '<em>Кликните узел или стрелку на схеме</em>';
     this.redraw();
   };
@@ -628,6 +630,7 @@
       self.selectedIds = [id];
       self.sel = { type: 'node', id: id };
     }
+    self.root.classList.add('ws-object-focus');
     self.renderNodePanel();
     self.redraw();
   };
@@ -635,6 +638,7 @@
   Editor.prototype.selectEdge = function (key) {
     this.selectedIds = [];
     this.sel = { type: 'edge', key: key };
+    this.root.classList.add('ws-object-focus');
     this.renderEdgePanel();
     this.redraw();
   };
