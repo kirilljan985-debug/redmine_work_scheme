@@ -386,6 +386,9 @@
   stroke-width: 2;
   cursor: nwse-resize;
 }
+.ws-resize-n, .ws-resize-s { cursor: ns-resize; }
+.ws-resize-e, .ws-resize-w { cursor: ew-resize; }
+.ws-resize-ne, .ws-resize-sw { cursor: nesw-resize; }
 
 .ws-temp-line {
   stroke: #d66f2c;

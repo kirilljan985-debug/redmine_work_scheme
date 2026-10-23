@@ -114,34 +114,57 @@
     if (!node) return;
     var svg = self.view.container.querySelector('svg');
     if (!svg) return;
-    var handle = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
-    handle.setAttribute('x', node.x + node.w - 7);
-    handle.setAttribute('y', node.y + node.h - 7);
-    handle.setAttribute('width', 14);
-    handle.setAttribute('height', 14);
-    handle.setAttribute('rx', 3);
-    handle.setAttribute('class', 'ws-resize-handle');
-    handle.addEventListener('pointerdown', function (ev) {
-      ev.preventDefault();
-      ev.stopPropagation();
-      var start = self.svgPoint(ev.clientX, ev.clientY);
-      var width = node.w;
-      var height = node.h;
-      var onMove = function (moveEv) {
-        var p = self.svgPoint(moveEv.clientX, moveEv.clientY);
-        node.w = Math.max(node.type === 'decision' ? 90 : 80, Math.round(width + p.x - start.x));
-        node.h = Math.max(node.type === 'decision' ? 64 : 42, Math.round(height + p.y - start.y));
-        self.markDirty();
-        self.redraw();
-      };
-      var onUp = function () {
-        document.removeEventListener('pointermove', onMove);
-        document.removeEventListener('pointerup', onUp);
-      };
-      document.addEventListener('pointermove', onMove);
-      document.addEventListener('pointerup', onUp);
+    var minW = node.type === 'decision' ? 90 : 80;
+    var minH = node.type === 'decision' ? 64 : 42;
+    var handles = [
+      ['nw', node.x, node.y], ['n', node.x + node.w / 2, node.y], ['ne', node.x + node.w, node.y],
+      ['e', node.x + node.w, node.y + node.h / 2], ['se', node.x + node.w, node.y + node.h],
+      ['s', node.x + node.w / 2, node.y + node.h], ['sw', node.x, node.y + node.h],
+      ['w', node.x, node.y + node.h / 2]
+    ];
+    handles.forEach(function (item) {
+      var handle = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+      handle.setAttribute('x', item[1] - 6);
+      handle.setAttribute('y', item[2] - 6);
+      handle.setAttribute('width', 12);
+      handle.setAttribute('height', 12);
+      handle.setAttribute('rx', 3);
+      handle.setAttribute('class', 'ws-resize-handle ws-resize-' + item[0]);
+      handle.setAttribute('data-resize', item[0]);
+      handle.addEventListener('pointerdown', function (ev) {
+        ev.preventDefault();
+        ev.stopPropagation();
+        var start = self.svgPoint(ev.clientX, ev.clientY);
+        var x = node.x, y = node.y, width = node.w, height = node.h;
+        var onMove = function (moveEv) {
+          var p = self.svgPoint(moveEv.clientX, moveEv.clientY);
+          var dx = p.x - start.x, dy = p.y - start.y;
+          if (item[0].indexOf('w') !== -1) {
+            var nextW = Math.max(minW, width - dx);
+            node.x = x + width - nextW;
+            node.w = nextW;
+          } else if (item[0].indexOf('e') !== -1) {
+            node.w = Math.max(minW, width + dx);
+          }
+          if (item[0].indexOf('n') !== -1) {
+            var nextH = Math.max(minH, height - dy);
+            node.y = y + height - nextH;
+            node.h = nextH;
+          } else if (item[0].indexOf('s') !== -1) {
+            node.h = Math.max(minH, height + dy);
+          }
+          self.markDirty();
+          self.redraw();
+        };
+        var onUp = function () {
+          document.removeEventListener('pointermove', onMove);
+          document.removeEventListener('pointerup', onUp);
+        };
+        document.addEventListener('pointermove', onMove);
+        document.addEventListener('pointerup', onUp);
+      });
+      svg.appendChild(handle);
     });
-    svg.appendChild(handle);
   };
 
   /* Прозрачные широкие дорожки поверх стрелок — чтобы легко кликать */
