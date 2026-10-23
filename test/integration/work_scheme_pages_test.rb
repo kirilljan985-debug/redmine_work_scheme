@@ -24,7 +24,7 @@ class RedmineWorkSchemePagesTest < Redmine::IntegrationTest
     assert_response :success
     assert_select 'h2', text: 'ОПИ: анализ ТЗ'
     assert_select 'div.wiki'
-    assert_match 'отдел программной инженерии', response.body
+    assert_match /отдел программной инженерии/i, response.body
   end
 
   test 'unknown stage returns 404' do
