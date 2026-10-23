@@ -6,7 +6,7 @@ module RedmineWorkScheme
   module Scheme
     NODE_TYPES = %w(start process decision end).freeze
     EDGE_SIDES = %w(left right top bottom).freeze
-    EDGE_ROUTES = %w(straight arc elbow).freeze
+    EDGE_ROUTES = %w(straight arc elbow u).freeze
     DEFAULT_NODE_WIDTH = 140
     DEFAULT_NODE_HEIGHT = 56
 

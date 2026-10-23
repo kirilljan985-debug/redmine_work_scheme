@@ -212,6 +212,32 @@
   border-color: #d66f2c;
 }
 
+.ws-palette {
+  margin: 10px 0;
+  padding: 8px;
+  border: 1px solid #d5dce3;
+  border-radius: 4px;
+  background: #f8fafc;
+}
+.ws-palette h4 { margin: 0 0 2px; }
+.ws-palette-group { margin-top: 7px; }
+.ws-palette-group strong { display: block; font-size: 11px; color: #55606b; margin-bottom: 3px; }
+.ws-palette-items { display: flex; gap: 4px; flex-wrap: wrap; }
+.ws-palette-item {
+  border: 1px solid #b8c2cc;
+  border-radius: 3px;
+  padding: 4px 7px;
+  background: #fff;
+  cursor: grab;
+  font-size: 11px;
+}
+.ws-palette-item:active, .ws-palette-item.ws-dragging { cursor: grabbing; opacity: .55; }
+.ws-palette-node-start { border-color: #7c9cc4; background: #eef4fb; }
+.ws-palette-node-process { border-color: #8a949e; }
+.ws-palette-node-decision { border-color: #c9a75a; background: #fdf6e3; }
+.ws-palette-node-end { border-color: #6aa57a; background: #eefaf0; }
+.ws-container.ws-palette-over { outline: 2px dashed #2a9d4f; outline-offset: -2px; }
+
 .ws-field { margin-bottom: 6px; }
 .ws-field label { display: block; font-size: 11px; color: #55606b; margin-bottom: 2px; }
 .ws-field input[type="text"],

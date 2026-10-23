@@ -42,6 +42,28 @@
         <button type="button" id="ws-add-node" class="button"></button>
         <button type="button" id="ws-add-edge"></button>
       </div>
+      <div class="ws-palette">
+        <h4><%= l(:ws_label_palette) %></h4>
+        <p class="ws-panel-hint"><%= l(:ws_label_palette_hint) %></p>
+        <div class="ws-palette-group">
+          <strong><%= l(:ws_label_palette_nodes) %></strong>
+          <div class="ws-palette-items">
+            <button type="button" draggable="true" class="ws-palette-item ws-palette-node-start" data-palette-kind="node" data-node-type="start"><%= l(:ws_palette_start) %></button>
+            <button type="button" draggable="true" class="ws-palette-item ws-palette-node-process" data-palette-kind="node" data-node-type="process"><%= l(:ws_palette_process) %></button>
+            <button type="button" draggable="true" class="ws-palette-item ws-palette-node-decision" data-palette-kind="node" data-node-type="decision"><%= l(:ws_palette_decision) %></button>
+            <button type="button" draggable="true" class="ws-palette-item ws-palette-node-end" data-palette-kind="node" data-node-type="end"><%= l(:ws_palette_end) %></button>
+          </div>
+        </div>
+        <div class="ws-palette-group">
+          <strong><%= l(:ws_label_palette_edges) %></strong>
+          <div class="ws-palette-items">
+            <button type="button" draggable="true" class="ws-palette-item" data-palette-kind="edge" data-edge-route="straight"><%= l(:ws_palette_edge) %></button>
+            <button type="button" draggable="true" class="ws-palette-item" data-palette-kind="edge" data-edge-route="arc"><%= l(:ws_palette_arc) %></button>
+            <button type="button" draggable="true" class="ws-palette-item" data-palette-kind="edge" data-edge-route="elbow"><%= l(:ws_palette_elbow) %></button>
+            <button type="button" draggable="true" class="ws-palette-item" data-palette-kind="edge" data-edge-route="u" data-edge-bend="100"><%= l(:ws_palette_u) %></button>
+          </div>
+        </div>
+      </div>
       <div class="ws-scenarios-block">
         <h4><%= l(:ws_label_scenarios) %></h4>
         <div id="ws-scenarios-list"></div>

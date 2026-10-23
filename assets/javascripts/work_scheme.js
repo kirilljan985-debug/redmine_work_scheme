@@ -66,7 +66,7 @@
         to: String(raw.to || ''),
         label: String(raw.label || ''),
         dashed: raw.dashed === true,
-        route: raw.route === 'arc' ? 'arc' : (raw.route === 'elbow' ? 'elbow' : 'straight'),
+        route: raw.route === 'arc' ? 'arc' : (raw.route === 'elbow' ? 'elbow' : (raw.route === 'u' ? 'u' : 'straight')),
         fromSide: raw.from_side || '',
         toSide: raw.to_side || '',
         bend: num(raw.bend, 50)
@@ -122,11 +122,11 @@
     if (!isFinite(minX)) return { minX: 0, minY: 0, maxX: 300, maxY: 120 };
     // Дуги поверх схемы могут выходить за границы узлов — учитываем их вылет
     self.edges.forEach(function (edge) {
-      if (edge.route !== 'arc') return;
+      if (edge.route !== 'arc' && edge.route !== 'u') return;
       var a = self.byId[edge.from];
       var b = self.byId[edge.to];
       if (!a || !b) return;
-      var lift = Math.max(46, Math.abs(a.x + a.w / 2 - (b.x + b.w / 2)) / 4);
+      var lift = edge.route === 'u' ? 26 + num(edge.bend, 50) : Math.max(46, Math.abs(a.x + a.w / 2 - (b.x + b.w / 2)) / 4);
       minY = Math.min(minY, Math.min(a.y, b.y) - lift - 14);
     });
     return { minX: minX, minY: minY, maxX: maxX, maxY: maxY };
@@ -151,6 +151,17 @@
       return {
         d: 'M ' + topA.x + ' ' + topA.y +
            ' C ' + topA.x + ' ' + y + ', ' + topB.x + ' ' + y + ', ' + topB.x + ' ' + topB.y,
+        label: labelPoint
+      };
+    }
+
+    if (edge.route === 'u') {
+      var uLift = 26 + num(edge.bend, 50);
+      var uY = Math.min(s.y, t.y) - uLift;
+      labelPoint = { x: (s.x + t.x) / 2, y: uY };
+      return {
+        d: 'M ' + s.x + ' ' + s.y + ' L ' + s.x + ' ' + uY +
+           ' L ' + t.x + ' ' + uY + ' L ' + t.x + ' ' + t.y,
         label: labelPoint
       };
     }

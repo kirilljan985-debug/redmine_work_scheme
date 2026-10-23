@@ -28,6 +28,22 @@
       <button type="button" id="ws-add-node" class="button"></button>
       <button type="button" id="ws-add-edge"></button>
     </div>
+    <div class="ws-palette">
+      <h4>Готовые элементы</h4>
+      <p class="ws-panel-hint">Перетащите блок на холст. Стрелку бросьте на блок-источник, затем выберите блок-цель.</p>
+      <div class="ws-palette-group"><strong>Блоки</strong><div class="ws-palette-items">
+        <button type="button" draggable="true" class="ws-palette-item ws-palette-node-start" data-palette-kind="node" data-node-type="start">Старт</button>
+        <button type="button" draggable="true" class="ws-palette-item ws-palette-node-process" data-palette-kind="node" data-node-type="process">Процесс</button>
+        <button type="button" draggable="true" class="ws-palette-item ws-palette-node-decision" data-palette-kind="node" data-node-type="decision">Решение</button>
+        <button type="button" draggable="true" class="ws-palette-item ws-palette-node-end" data-palette-kind="node" data-node-type="end">Финиш</button>
+      </div></div>
+      <div class="ws-palette-group"><strong>Стрелки</strong><div class="ws-palette-items">
+        <button type="button" draggable="true" class="ws-palette-item" data-palette-kind="edge" data-edge-route="straight">Линия</button>
+        <button type="button" draggable="true" class="ws-palette-item" data-palette-kind="edge" data-edge-route="arc">Дуга</button>
+        <button type="button" draggable="true" class="ws-palette-item" data-palette-kind="edge" data-edge-route="elbow">Колено</button>
+        <button type="button" draggable="true" class="ws-palette-item" data-palette-kind="edge" data-edge-route="u" data-edge-bend="100">П‑образная</button>
+      </div></div>
+    </div>
     <div class="ws-scenarios-block">
       <h4>Сценарии проигрывания</h4>
       <div id="ws-scenarios-list"></div>

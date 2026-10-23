@@ -12,7 +12,7 @@
   function num(v, d) { var n = Number(v); return isFinite(n) ? n : d; }
 
   var NODE_TYPES = [['start', 'Старт'], ['process', 'Процесс'], ['decision', 'Решение (ромб)'], ['end', 'Финиш']];
-  var ROUTES = [['straight', 'Линия'], ['arc', 'Дуга (изгиб)'], ['elbow', 'Угловатая (колено)']];
+  var ROUTES = [['straight', 'Линия'], ['arc', 'Дуга (изгиб)'], ['elbow', 'Угловатая (колено)'], ['u', 'П‑образная']];
   var SIDES = [['', 'авто'], ['left', 'слева'], ['right', 'справа'], ['top', 'сверху'], ['bottom', 'снизу']];
 
   function Editor(root) {
@@ -46,6 +46,7 @@
     this.redraw();
     this.wire();
     this.renderScenarios();
+    this.wirePalette();
   }
 
   Editor.prototype.maxNodeSeq = function () {
@@ -248,6 +249,78 @@
     dlBtn.addEventListener('click', function () { self.download(); });
   };
 
+  Editor.prototype.wirePalette = function () {
+    var self = this;
+    var container = self.view.container;
+    var items = document.querySelectorAll('#ws-editor .ws-palette-item');
+    Array.prototype.forEach.call(items, function (item) {
+      item.addEventListener('dragstart', function (ev) {
+        ev.dataTransfer.effectAllowed = 'copy';
+        ev.dataTransfer.setData('text/plain', JSON.stringify({
+          kind: item.getAttribute('data-palette-kind'),
+          type: item.getAttribute('data-node-type') || '',
+          route: item.getAttribute('data-edge-route') || 'straight',
+          dashed: item.getAttribute('data-edge-dashed') === 'true',
+          fromSide: item.getAttribute('data-edge-from-side') || '',
+          toSide: item.getAttribute('data-edge-to-side') || '',
+          bend: num(item.getAttribute('data-edge-bend'), 50)
+        }));
+        item.classList.add('ws-dragging');
+      });
+      item.addEventListener('dragend', function () { item.classList.remove('ws-dragging'); });
+    });
+    container.addEventListener('dragover', function (ev) {
+      ev.preventDefault();
+      ev.dataTransfer.dropEffect = 'copy';
+      container.classList.add('ws-palette-over');
+    });
+    container.addEventListener('dragleave', function () { container.classList.remove('ws-palette-over'); });
+    container.addEventListener('drop', function (ev) {
+      ev.preventDefault();
+      container.classList.remove('ws-palette-over');
+      var raw = ev.dataTransfer.getData('text/plain');
+      var item;
+      try { item = JSON.parse(raw); } catch (_) { return; }
+      if (item.kind === 'node') {
+        self.addPaletteNode(item.type, ev.clientX, ev.clientY);
+        return;
+      }
+      var target = ev.target.closest ? ev.target.closest('.ws-node') : null;
+      if (item.kind === 'edge' && target) {
+        var targetId = target.getAttribute('data-id');
+        if (self.selectedNode() && self.selectedNode().id !== targetId) {
+          self.addPaletteEdge(item.route, item.dashed, self.selectedNode().id, targetId, item.fromSide, item.toSide, item.bend);
+        } else {
+          self.pendingFrom = { from: targetId, palette: item };
+          self.setStatus('Стрелка готова: выберите блок-цель', '');
+        }
+      }
+    });
+  };
+
+  Editor.prototype.addPaletteNode = function (type, clientX, clientY) {
+    var self = this;
+    var p = self.svgPoint(clientX, clientY);
+    var id = 'n' + (self.seq++);
+    var titles = { start: 'Старт', process: 'Процесс', decision: 'Решение', end: 'Финиш' };
+    var node = { id: id, type: type || 'process', title: titles[type] || 'Процесс', dept: '', description: '', page: '', url: '', queryId: null,
+      x: Math.max(0, Math.round(p.x - 70)), y: Math.max(0, Math.round(p.y - 28)), w: 140, h: 56 };
+    if (node.type === 'decision') { node.w = 150; node.h = 88; }
+    self.view.nodes.push(node);
+    self.view.byId[id] = node;
+    self.selectNode(id);
+  };
+
+  Editor.prototype.addPaletteEdge = function (route, dashed, from, to, fromSide, toSide, bend) {
+    var self = this;
+    var edge = { from: from, to: to, label: '', dashed: dashed === true, route: route || 'straight', fromSide: fromSide || '', toSide: toSide || '', bend: num(bend, 50) };
+    self.view.edges.push(edge);
+    self.pendingFrom = null;
+    self.setStatus('', '');
+    self.redraw();
+    self.selectEdge(edge.from + '>' + edge.to);
+  };
+
   Editor.prototype.setStatus = function (text, cls) {
     var el = document.getElementById('ws-save-status');
     el.innerHTML = '';
@@ -272,12 +345,13 @@
         return;
       }
       if (self.pendingFrom.from === id) return;
-      var edge = {
-        from: self.pendingFrom.from, to: id, label: '', dashed: false,
-        route: 'straight', fromSide: '', toSide: '', bend: 50
-      };
-      self.view.edges.push(edge);
-      self.pendingFrom = null;
+      var palette = self.pendingFrom.palette;
+      if (palette) {
+        self.addPaletteEdge(palette.route, palette.dashed, self.pendingFrom.from, id, palette.fromSide, palette.toSide, palette.bend);
+        return;
+      }
+      var edge = { from: self.pendingFrom.from, to: id, label: '', dashed: false, route: 'straight', fromSide: '', toSide: '', bend: 50 };
+      self.view.edges.push(edge); self.pendingFrom = null;
       var btn = document.getElementById('ws-add-edge');
       if (btn) btn.classList.remove('ws-active');
       self.setStatus('', '');
@@ -494,7 +568,7 @@
     dashedWrap.appendChild(dashedCheck); dashedWrap.appendChild(dashedLabel);
     panel.appendChild(dashedWrap);
 
-    if (e.route === 'arc' || e.route === 'elbow') {
+    if (e.route === 'arc' || e.route === 'elbow' || e.route === 'u') {
       var bendWrap = document.createElement('div');
       bendWrap.className = 'ws-field';
       var bendLabel = document.createElement('label');

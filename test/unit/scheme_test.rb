@@ -95,6 +95,17 @@ class RedmineWorkSchemeSchemeTest < ActiveSupport::TestCase
     assert_equal 'right', edge['to_side']
   end
 
+  test 'u route is preserved' do
+    json = valid_scheme_json_with_nodes(
+      [{ 'id' => 'a', 'title' => 'A', 'x' => 0, 'y' => 0 },
+       { 'id' => 'b', 'title' => 'B', 'x' => 200, 'y' => 0 }],
+      [{ 'from' => 'a', 'to' => 'b', 'route' => 'u', 'bend' => 80 }]
+    )
+    parsed = RedmineWorkScheme::Scheme.parse(json)
+    assert_empty parsed[:errors]
+    assert_equal 'u', parsed[:data]['edges'].first['route']
+  end
+
   test 'invalid side returns error' do
     json = valid_scheme_json_with_nodes(
       [{ 'id' => 'a', 'title' => 'A', 'x' => 0, 'y' => 0 }],
