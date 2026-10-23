@@ -11,7 +11,8 @@
   «возврат на доработку» с циклом;
 - **живые счётчики** — число задач на этапе (опционально, см. ниже; если
   трекеры/запросы ещё не заведены — просто не показываются, без ошибок);
-- редактирование схемы — администратором в настройках плагина, без правки кода.
+- редактирование схемы — визуальным редактором (`/work_scheme/edit`, только
+  администратор) или JSON в настройках плагина, без правки кода.
 
 ## Установка
 
@@ -139,6 +140,44 @@ bundle exec rake redmine:plugins:test NAME=redmine_work_scheme RAILS_ENV=test
 ```
 
 CI: GitHub Actions гоняет тесты на Redmine `7.0-stable` и `master` при каждом push.
+При падении хвост тестового лога выводится в аннотации прогона.
+
+## Разработка и dev-превью (без Redmine)
+
+```
+python -m http.server 8123        # запустить из папки плагина
+```
+
+- `http://127.0.0.1:8123/dev/preview.html` — схема: рендер, подсказки,
+  проигрывание сценариев (данные — `dev/scheme.json`, генерируется из схемы
+  по умолчанию).
+- `http://127.0.0.1:8123/dev/editor.html` — редактор (кнопка «Сохранить схему»
+  в превью не работает — некуда отправлять; на живом Redmine работает).
+
+Локальные проверки без Redmine: `ruby -c` (.rb), `node --check` (.js),
+`erb -x -T- файл.erb | ruby -c`, чистый minitest по валидатору. Полный прогон —
+только CI (Linux).
+
+## Структура
+
+```
+init.rb                                    регистрация плагина + настройки
+lib/redmine_work_scheme/scheme.rb          валидатор схемы (чистая логика)
+lib/redmine_work_scheme/default_scheme.rb  схема по умолчанию (сценарий отдела)
+app/controllers/work_scheme_controller.rb  show / stage / edit / save
+app/views/work_scheme/_block.html.erb      блок схемы
+app/views/work_scheme/edit.html.erb        страница редактора
+app/views/settings/_work_scheme.html.erb   JSON в настройках плагина
+assets/javascripts/work_scheme.js          SVG-рендерер (холст, подсказки, проигрывание)
+assets/javascripts/work_scheme_editor.js   визуальный редактор
+assets/stylesheets/work_scheme.css         стили
+config/locales/en.yml, ru.yml              локализация
+test/unit, test/integration                тесты (minitest, в окружении Redmine)
+.github/workflows/test.yml                 CI (Redmine 7.0-stable + master)
+dev/preview.html, dev/editor.html          dev-превью без Redmine
+AGENTS.md                                  память проекта: правила, грабли, статус
+PLAN.md                                    живой план задач с критериями готовности
+```
 
 ## Лицензия
 
