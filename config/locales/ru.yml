@@ -2,6 +2,8 @@ ru:
   ws_label_scheme: "Схема"
   ws_label_back_to_scheme: "К схеме"
   ws_label_more: "Подробнее"
+  ws_label_play: "Проиграть"
+  ws_label_reset: "Сброс"
   ws_settings_json: "JSON схемы"
   ws_settings_hint: "Отредактируйте узлы (nodes), связи (edges) и сценарии проигрывания (scenarios). Формат описан в README плагина. Ошибки валидации показываются здесь и на странице схемы."
   ws_error_invalid_scheme: "Схема содержит ошибки:"

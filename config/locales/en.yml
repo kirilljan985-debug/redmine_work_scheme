@@ -2,6 +2,8 @@ en:
   ws_label_scheme: "Scheme"
   ws_label_back_to_scheme: "Back to scheme"
   ws_label_more: "Details"
+  ws_label_play: "Play"
+  ws_label_reset: "Reset"
   ws_settings_json: "Scheme JSON"
   ws_settings_hint: "Edit nodes, edges and playback scenarios here. The format is documented in the plugin README. Validation errors are shown here and on the scheme page."
   ws_error_invalid_scheme: "The scheme contains errors:"

@@ -42,6 +42,7 @@
 
   function WorkSchemeView(container, scheme) {
     this.container = container;
+    this.scheme = scheme || {};
     this.stageBase = container.getAttribute('data-stage-base-url') || '';
     this.nodes = (scheme.nodes || []).map(function (raw) {
       return {
@@ -70,6 +71,9 @@
     });
     this.byId = {};
     this.nodes.forEach(function (node) { this.byId[node.id] = node; }, this);
+    this.pathByEdge = {};
+    this.playing = false;
+    this.timers = [];
     this.render();
   }
 
@@ -179,9 +183,12 @@
       var pathAttrs = {
         d: drawn.d,
         'class': 'ws-edge' + (edge.dashed ? ' ws-edge-dashed' : ''),
+        'data-edge': edge.from + '>' + edge.to,
         'marker-end': 'url(#' + markerId + ')'
       };
-      edgeGroup.appendChild(svgEl('path', pathAttrs));
+      var pathEl = svgEl('path', pathAttrs);
+      edgeGroup.appendChild(pathEl);
+      self.pathByEdge[edge.from + '>' + edge.to] = pathEl;
       if (edge.label) {
         labelGroup.appendChild(svgEl('text', {
           x: drawn.label.x, y: drawn.label.y - 4,
@@ -199,8 +206,12 @@
     // Подписи связей — поверх узлов, чтобы не затирались
     svg.appendChild(labelGroup);
 
+    self.overlay = svgEl('g', { 'class': 'ws-overlay' });
+    svg.appendChild(self.overlay);
+
     self.container.appendChild(svg);
     self.attachTooltip();
+    self.buildControls();
   };
 
   WorkSchemeView.prototype.renderNode = function (node) {
@@ -236,6 +247,168 @@
       }, line));
     });
     return group;
+  };
+
+  /* ---- Проигрывание сценариев ---- */
+
+  WorkSchemeView.prototype.label = function (name, fallback) {
+    var value = this.container.getAttribute('data-label-' + name);
+    return value || fallback;
+  };
+
+  WorkSchemeView.prototype.buildControls = function () {
+    var self = this;
+    var scenarios = self.scheme.scenarios || [];
+    if (!scenarios.length) return;
+
+    var controls = document.createElement('div');
+    controls.className = 'ws-controls';
+
+    var select = document.createElement('select');
+    select.className = 'ws-scenario-select';
+    scenarios.forEach(function (scenario) {
+      var option = document.createElement('option');
+      option.value = scenario.id;
+      option.textContent = scenario.title;
+      select.appendChild(option);
+    });
+    controls.appendChild(select);
+
+    var play = document.createElement('button');
+    play.type = 'button';
+    play.className = 'ws-play button';
+    play.textContent = self.label('play', 'Проиграть');
+    play.addEventListener('click', function () { self.play(select.value); });
+    controls.appendChild(play);
+
+    var reset = document.createElement('button');
+    reset.type = 'button';
+    reset.className = 'ws-reset';
+    reset.textContent = self.label('reset', 'Сброс');
+    reset.addEventListener('click', function () { self.resetPlayback(); });
+    controls.appendChild(reset);
+
+    self.container.insertBefore(controls, self.container.firstChild);
+    self.playButton = play;
+  };
+
+  WorkSchemeView.prototype.timer = function (fn, ms) {
+    var self = this;
+    var id = window.setTimeout(function () {
+      self.timers = self.timers.filter(function (t) { return t !== id; });
+      fn();
+    }, ms);
+    self.timers.push(id);
+  };
+
+  WorkSchemeView.prototype.play = function (scenarioId) {
+    var self = this;
+    self.resetPlayback();
+    var scenario = (self.scheme.scenarios || []).filter(function (s) { return s.id === scenarioId; })[0];
+    if (!scenario || !scenario.steps.length) return;
+
+    self.playing = true;
+    if (self.playButton) self.playButton.disabled = true;
+
+    var steps = scenario.steps;
+    var index = 0;
+
+    var step = function () {
+      if (!self.playing) return;
+      if (index >= steps.length) {
+        self.finishPlayback();
+        return;
+      }
+      var node = self.byId[steps[index]];
+      if (!node) { index += 1; step(); return; }
+      self.highlightNode(node);
+
+      var pathEl = null;
+      if (index > 0) {
+        var prev = self.byId[steps[index - 1]];
+        if (prev) pathEl = self.pathByEdge[prev.id + '>' + node.id];
+      }
+      if (pathEl) {
+        self.highlightEdge(pathEl);
+        var afterEdge = function () {
+          index += 1;
+          self.timer(step, 420);
+        };
+        self.animateMarker(pathEl, afterEdge);
+      } else {
+        index += 1;
+        self.timer(step, 850);
+      }
+    };
+    self.timer(step, 150);
+  };
+
+  WorkSchemeView.prototype.highlightNode = function (node) {
+    var group = this.container.querySelector('.ws-node[data-id="' + node.id + '"]');
+    if (group) group.classList.add('ws-node-active');
+  };
+
+  WorkSchemeView.prototype.highlightEdge = function (pathEl) {
+    pathEl.classList.add('ws-edge-active');
+  };
+
+  WorkSchemeView.prototype.animateMarker = function (pathEl, done) {
+    var self = this;
+    var reduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    var marker = svgEl('circle', { r: 8, 'class': 'ws-marker' });
+    self.overlay.appendChild(marker);
+    var total = pathEl.getTotalLength();
+    var duration = reduced ? 0 : 700;
+    var start = null;
+
+    var tick = function (timestamp) {
+      if (!self.playing) return;
+      if (start === null) start = timestamp;
+      var progress = duration === 0 ? 1 : Math.min(1, (timestamp - start) / duration);
+      var point = pathEl.getPointAtLength(total * progress);
+      marker.setAttribute('cx', point.x);
+      marker.setAttribute('cy', point.y);
+      if (progress < 1) {
+        window.requestAnimationFrame(tick);
+      } else {
+        self.timer(function () { marker.remove(); }, 350);
+        done();
+      }
+    };
+    if (duration === 0) {
+      tick(0);
+    } else {
+      window.requestAnimationFrame(tick);
+    }
+  };
+
+  WorkSchemeView.prototype.finishPlayback = function () {
+    var self = this;
+    self.playing = false;
+    if (self.playButton) self.playButton.disabled = false;
+    // Финальная подсветка гаснет сама через пару секунд
+    self.timer(function () { self.clearHighlights(); }, 2500);
+  };
+
+  WorkSchemeView.prototype.clearHighlights = function () {
+    var self = this;
+    Array.prototype.forEach.call(self.container.querySelectorAll('.ws-node-active'), function (el) {
+      el.classList.remove('ws-node-active');
+    });
+    Array.prototype.forEach.call(self.container.querySelectorAll('.ws-edge-active'), function (el) {
+      el.classList.remove('ws-edge-active');
+    });
+    var marker = self.overlay && self.overlay.querySelector('.ws-marker');
+    if (marker) marker.remove();
+  };
+
+  WorkSchemeView.prototype.resetPlayback = function () {
+    var self = this;
+    self.playing = false;
+    self.timers.forEach(function (id) { window.clearTimeout(id); });
+    self.timers = [];
+    if (self.playButton) self.playButton.disabled = false;
+    self.clearHighlights();
   };
 
   WorkSchemeView.prototype.stageTarget = function (node) {
