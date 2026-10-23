@@ -425,6 +425,15 @@
     controls.appendChild(speedLabel);
     controls.appendChild(speed);
 
+    var editUrl = self.container.getAttribute('data-edit-url') || '';
+    if (editUrl) {
+      var editLink = document.createElement('a');
+      editLink.className = 'ws-edit-link button';
+      editLink.href = editUrl;
+      editLink.textContent = self.label('edit-page', 'Редактор схемы');
+      controls.appendChild(editLink);
+    }
+
     var status = document.createElement('div');
     status.className = 'ws-playback-status';
     status.setAttribute('aria-live', 'polite');

@@ -22,6 +22,8 @@
        data-label-playback-step="<%= l(:ws_label_playback_step) %>"
        data-label-playback-done="<%= l(:ws_label_playback_done) %>"
        data-label-speed="<%= l(:ws_label_speed) %>"
+       data-label-edit-page="<%= l(:ws_label_edit_page) %>"
+       data-edit-url="<%= User.current.admin? ? work_scheme_edit_path : '' %>"
        data-editable="<%= User.current.admin? %>"
        data-more-label="<%= l(:ws_label_more) %>">
     <script type="application/json" class="ws-data"><%= RedmineWorkScheme::Scheme.safe_json(scheme[:data]) %></script>
