@@ -1,0 +1,10 @@
+<div class="contextual">
+  <%= link_to(l(:ws_label_back_to_scheme), work_scheme_path, class: 'icon icon-back') %>
+</div>
+<h2><%= @node['title'] %></h2>
+<% if @node['dept'].present? %>
+  <p><em><%= @node['dept'] %></em></p>
+<% end %>
+<div class="wiki ws-stage">
+  <%= textilizable(@node['page'].to_s) %>
+</div>

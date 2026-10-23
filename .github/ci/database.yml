@@ -1,0 +1,4 @@
+# Конфиг БД для CI (GitHub Actions): тестовая база sqlite3
+test:
+  adapter: sqlite3
+  database: db/test.sqlite3

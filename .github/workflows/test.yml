@@ -1,0 +1,52 @@
+name: Tests
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  redmine:
+    name: Redmine ${{ matrix.redmine }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        redmine: ['7.0-stable', 'master']
+    steps:
+      - name: Check out plugin
+        uses: actions/checkout@v4
+        with:
+          path: plugin
+
+      - name: Install Redmine (${{ matrix.redmine }})
+        run: |
+          git clone --depth 1 --branch ${{ matrix.redmine }} https://github.com/redmine/redmine.git redmine
+          mv plugin redmine/plugins/redmine_work_scheme
+          cp redmine/plugins/redmine_work_scheme/.github/ci/database.yml redmine/config/database.yml
+
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.3'
+          working-directory: redmine
+
+      - name: Bundle install
+        run: bundle install --jobs 4 --retry 3
+        working-directory: redmine
+
+      - name: Prepare test database
+        run: |
+          bundle exec rake generate_secret_token
+          bundle exec rake db:migrate RAILS_ENV=test
+        working-directory: redmine
+
+      - name: Run plugin tests
+        run: |
+          set -o pipefail
+          bundle exec rake redmine:plugins:test NAME=redmine_work_scheme RAILS_ENV=test 2>&1 | tee /tmp/test_output.log
+        working-directory: redmine
+
+      - name: Report failure details
+        if: failure()
+        run: |
+          echo "::error::$(python3 -c "import urllib.parse; data = open('/tmp/test_output.log', 'rb').read()[-4000:].decode('utf-8', 'replace'); print(urllib.parse.quote(data)[:6000])")"

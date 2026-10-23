@@ -1,0 +1,76 @@
+/* Redmine Work Scheme */
+
+.ws-container {
+  position: relative;
+  overflow-x: auto;
+  padding: 4px 2px;
+}
+
+.ws-container svg {
+  max-width: 100%;
+  height: auto;
+  display: block;
+  min-height: 200px;
+}
+
+.ws-node rect,
+.ws-node polygon {
+  stroke-width: 1.5;
+}
+
+.ws-node-start rect { fill: #eef4fb; stroke: #7c9cc4; }
+.ws-node-process rect { fill: #ffffff; stroke: #8a949e; }
+.ws-node-decision polygon { fill: #fdf6e3; stroke: #c9a75a; }
+.ws-node-end rect { fill: #eefaf0; stroke: #6aa57a; stroke-width: 2; }
+
+.ws-node text {
+  font-size: 12px;
+  fill: #1a232b;
+}
+
+.ws-node { cursor: pointer; }
+.ws-node:hover rect,
+.ws-node:hover polygon,
+.ws-node:focus rect,
+.ws-node:focus polygon { stroke-width: 2.5; }
+.ws-node:focus { outline: none; }
+
+.ws-edge {
+  stroke: #7a8691;
+  stroke-width: 1.4;
+  fill: none;
+}
+
+.ws-edge-dashed { stroke-dasharray: 6 4; }
+
+.ws-edge-label {
+  font-size: 11px;
+  fill: #45505a;
+  paint-order: stroke;
+  stroke: #ffffff;
+  stroke-width: 3px;
+}
+
+.ws-tooltip {
+  position: absolute;
+  display: none;
+  max-width: 300px;
+  background: #ffffff;
+  border: 1px solid #b8c2cc;
+  border-radius: 4px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  padding: 8px 10px;
+  font-size: 12px;
+  line-height: 1.45;
+  z-index: 99;
+  pointer-events: none;
+}
+
+.ws-tooltip-title { font-weight: bold; margin-bottom: 2px; }
+.ws-tooltip-dept { color: #64707c; font-style: italic; margin-bottom: 4px; }
+.ws-tooltip-desc { color: #333; }
+.ws-tooltip-more {
+  margin-top: 6px;
+  display: inline-block;
+  pointer-events: auto;
+}

@@ -1,0 +1,2 @@
+<h2><%= @scheme[:data] && @scheme[:data]['title'].present? ? @scheme[:data]['title'] : l(:ws_label_scheme) %></h2>
+<%= render partial: 'work_scheme/block', locals: { scheme: @scheme } %>

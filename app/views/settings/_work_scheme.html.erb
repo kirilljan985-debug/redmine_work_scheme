@@ -1,0 +1,14 @@
+<p><label><%= l(:ws_settings_json) %></label></p>
+<%= text_area_tag 'settings[json]', @settings['json'], size: '100x30' %>
+<% parsed = RedmineWorkScheme::Scheme.parse(@settings['json']) %>
+<% if parsed[:errors].any? %>
+  <div class="flash error">
+    <%= l(:ws_error_invalid_scheme) %>
+    <ul>
+      <% parsed[:errors].each do |error| %>
+        <li><%= error %></li>
+      <% end %>
+    </ul>
+  </div>
+<% end %>
+<p class="info"><%= l(:ws_settings_hint) %></p>

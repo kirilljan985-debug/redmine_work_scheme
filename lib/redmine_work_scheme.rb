@@ -1,0 +1,2 @@
+module RedmineWorkScheme
+end
