@@ -1,14 +1,19 @@
 /*
  * Redmine Work Scheme: визуальный редактор схемы (страница /work_scheme/edit).
  * Требует work_scheme.js (window.WorkScheme.View).
- * Возможности: выбор узлов/стрелок, правка всех свойств, добавление/удаление
- * узлов и стрелок, разворот направления, изгиб (bend), редактирование сценариев,
- * сохранение на сервер (POST /work_scheme/save) и выгрузка JSON.
+ * Возможности: выбор узлов/стрелок, правка всех свойств (по-русски),
+ * добавление/удаление узлов и стрелок, перетаскивание концов стрелок для
+ * перепривязки к другому блоку, разворот направления, изгиб (bend),
+ * редактирование сценариев, сохранение на сервер и выгрузка JSON.
  */
 (function () {
   'use strict';
 
   function num(v, d) { var n = Number(v); return isFinite(n) ? n : d; }
+
+  var NODE_TYPES = [['start', 'Старт'], ['process', 'Процесс'], ['decision', 'Решение (ромб)'], ['end', 'Финиш']];
+  var ROUTES = [['straight', 'Линия'], ['arc', 'Дуга (изгиб)'], ['elbow', 'Угловатая (колено)']];
+  var SIDES = [['', 'авто'], ['left', 'слева'], ['right', 'справа'], ['top', 'сверху'], ['bottom', 'снизу']];
 
   function Editor(root) {
     this.root = root;
@@ -20,24 +25,23 @@
       addNode: root.getAttribute('data-label-add-node') || 'Добавить узел',
       addEdge: root.getAttribute('data-label-add-edge') || 'Добавить стрелку',
       addEdgeHint: root.getAttribute('data-label-add-edge-hint') || 'Кликните исходный узел, затем целевой',
-      swap: root.getAttribute('data-label-swap') || 'Развернуть',
+      swap: root.getAttribute('data-label-swap') || 'Развернуть направление',
       del: root.getAttribute('data-label-delete') || 'Удалить',
       node: root.getAttribute('data-label-node') || 'Узел',
       edge: root.getAttribute('data-label-edge') || 'Стрелка',
       scenarios: root.getAttribute('data-label-scenarios') || 'Сценарии',
       stepsHint: root.getAttribute('data-label-steps-hint') || 'id узлов через запятую',
-      bend: root.getAttribute('data-label-bend') || 'Изгиб',
-      more: root.getAttribute('data-more-label') || 'Подробнее'
+      bend: root.getAttribute('data-label-bend') || 'Изгиб'
     };
     var dataEl = root.querySelector('script.ws-data');
     if (!dataEl) return; // страница показывает ошибки валидации
     var scheme = JSON.parse(dataEl.textContent);
     var View = window.WorkScheme.View;
     this.view = new View(root.querySelector('.ws-container'), scheme);
-    this.view.editMode = true;      // перетаскивание узлов включено
+    this.view.editMode = true;        // перетаскивание узлов включено
     this.view.showCoordPanel = false; // панель координат не нужна — есть полноценный редактор
-    this.sel = null;                // {type:'node', id} | {type:'edge', key}
-    this.pendingFrom = null;        // режим добавления стрелки: id исходного узла
+    this.sel = null;                  // {type:'node', id} | {type:'edge', key}
+    this.pendingFrom = null;          // режим добавления стрелки: {from: id}
     this.seq = this.maxNodeSeq() + 1;
     this.redraw();
     this.wire();
@@ -56,7 +60,6 @@
   Editor.prototype.redraw = function () {
     var self = this;
     self.view.render();
-    // подсветка выбранного элемента
     if (self.sel && self.sel.type === 'node') {
       var g = self.view.container.querySelector('.ws-node[data-id="' + self.sel.id + '"]');
       if (g) g.classList.add('ws-selected');
@@ -66,6 +69,7 @@
       if (p) p.classList.add('ws-selected');
     }
     self.addHitPaths();
+    if (self.sel && self.sel.type === 'edge') self.addEdgeHandles();
   };
 
   /* Прозрачные широкие дорожки поверх стрелок — чтобы легко кликать */
@@ -76,18 +80,133 @@
     self.view.edges.forEach(function (edge) {
       var base = self.view.pathByEdge[edge.from + '>' + edge.to];
       if (!base) return;
+      var key = edge.from + '>' + edge.to;
       var hit = base.cloneNode();
       hit.setAttribute('stroke', 'transparent');
       hit.setAttribute('stroke-width', '14');
       hit.setAttribute('fill', 'none');
       hit.removeAttribute('marker-end');
-      hit.setAttribute('class', 'ws-edge-hit' + (self.sel && self.sel.type === 'edge' && self.sel.key === edge.from + '>' + edge.to ? ' ws-selected' : ''));
+      hit.setAttribute('data-edge', key);
+      hit.setAttribute('class', 'ws-edge-hit' + (self.sel && self.sel.type === 'edge' && self.sel.key === key ? ' ws-selected' : ''));
       hit.addEventListener('click', function (ev) {
         ev.stopPropagation();
-        self.selectEdge(edge.from + '>' + edge.to);
+        self.selectEdge(key);
       });
       self.view.overlay.appendChild(hit);
     });
+  };
+
+  /* Оранжевые маркеры на концах выбранной стрелки — за них тянут, чтобы перепривязать */
+  Editor.prototype.addEdgeHandles = function () {
+    var self = this;
+    var edge = self.selectedEdge();
+    if (!edge) return;
+    var a = self.view.byId[edge.from];
+    var b = self.view.byId[edge.to];
+    if (!a || !b) return;
+    var sides = self.view.sidesFor(a, b, edge);
+    var s = self.view.anchor(a, sides[0]);
+    var t = self.view.anchor(b, sides[1]);
+    var svg = self.view.container.querySelector('svg');
+    if (!svg) return;
+
+    var mk = function (point, end) {
+      var c = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+      c.setAttribute('cx', point.x);
+      c.setAttribute('cy', point.y);
+      c.setAttribute('r', 7);
+      c.setAttribute('class', 'ws-handle');
+      c.setAttribute('data-end', end);
+      c.addEventListener('pointerdown', function (ev) {
+        ev.stopPropagation();
+        ev.preventDefault();
+        self.dragEdgeEnd(edge, end, ev);
+      });
+      svg.appendChild(c);
+    };
+    mk(s, 'from');
+    mk(t, 'to');
+  };
+
+  Editor.prototype.svgPoint = function (clientX, clientY) {
+    var svg = this.view.container.querySelector('svg');
+    var pt = svg.createSVGPoint();
+    pt.x = clientX;
+    pt.y = clientY;
+    return pt.matrixTransform(svg.getScreenCTM().inverse());
+  };
+
+  /* Перетаскивание конца стрелки: тянем маркер на другой блок — перепривязка */
+  Editor.prototype.dragEdgeEnd = function (edge, end, ev) {
+    var self = this;
+    var svg = self.view.container.querySelector('svg');
+    var NS = 'http://www.w3.org/2000/svg';
+    var startPt = self.svgPoint(ev.clientX, ev.clientY);
+    var opposite = end === 'from'
+      ? self.view.anchor(self.view.byId[edge.to], (self.view.sidesFor(self.view.byId[edge.from], self.view.byId[edge.to], edge))[1])
+      : self.view.anchor(self.view.byId[edge.from], (self.view.sidesFor(self.view.byId[edge.from], self.view.byId[edge.to], edge))[0]);
+
+    var tempLine = document.createElementNS(NS, 'line');
+    tempLine.setAttribute('x1', opposite.x);
+    tempLine.setAttribute('y1', opposite.y);
+    tempLine.setAttribute('x2', startPt.x);
+    tempLine.setAttribute('y2', startPt.y);
+    tempLine.setAttribute('class', 'ws-temp-line');
+    var tempDot = document.createElementNS(NS, 'circle');
+    tempDot.setAttribute('r', 8);
+    tempDot.setAttribute('cx', startPt.x);
+    tempDot.setAttribute('cy', startPt.y);
+    tempDot.setAttribute('class', 'ws-temp-dot');
+    self.view.overlay.appendChild(tempLine);
+    self.view.overlay.appendChild(tempDot);
+
+    var targetId = null;
+
+    var onMove = function (moveEv) {
+      var p = self.svgPoint(moveEv.clientX, moveEv.clientY);
+      tempLine.setAttribute('x2', p.x);
+      tempLine.setAttribute('y2', p.y);
+      tempDot.setAttribute('cx', p.x);
+      tempDot.setAttribute('cy', p.y);
+      var el = document.elementFromPoint(moveEv.clientX, moveEv.clientY);
+      var group = el && el.closest ? el.closest('.ws-node') : null;
+      var newTarget = group ? group.getAttribute('data-id') : null;
+      if (newTarget !== targetId) {
+        Array.prototype.forEach.call(self.view.container.querySelectorAll('.ws-drop-target'), function (x) {
+          x.classList.remove('ws-drop-target');
+        });
+        if (group && newTarget !== (end === 'from' ? edge.to : edge.from)) {
+          group.classList.add('ws-drop-target');
+        }
+        targetId = newTarget;
+      }
+    };
+
+    var onUp = function () {
+      document.removeEventListener('pointermove', onMove);
+      document.removeEventListener('pointerup', onUp);
+      Array.prototype.forEach.call(self.view.container.querySelectorAll('.ws-drop-target'), function (x) {
+        x.classList.remove('ws-drop-target');
+      });
+      tempLine.remove();
+      tempDot.remove();
+      if (!targetId) { self.redraw(); return; }
+      if (end === 'to' && targetId !== edge.from) {
+        edge.to = targetId;
+        edge.toSide = '';
+      } else if (end === 'from' && targetId !== edge.to) {
+        edge.from = targetId;
+        edge.fromSide = '';
+      } else {
+        self.redraw();
+        return;
+      }
+      self.sel = { type: 'edge', key: edge.from + '>' + edge.to };
+      self.redraw();
+      self.renderEdgePanel();
+    };
+    document.addEventListener('pointermove', onMove);
+    document.addEventListener('pointerup', onUp);
   };
 
   Editor.prototype.wire = function () {
@@ -108,8 +227,8 @@
     addEdgeBtn.textContent = self.labels.addEdge;
     addEdgeBtn.title = self.labels.addEdgeHint;
     addEdgeBtn.addEventListener('click', function () {
-      self.pendingFrom = null;
-      addEdgeBtn.classList.toggle('ws-active');
+      self.pendingFrom = { from: null };
+      addEdgeBtn.classList.add('ws-active');
       self.setStatus(self.labels.addEdgeHint, '');
     });
 
@@ -140,17 +259,16 @@
 
   Editor.prototype.deselect = function () {
     this.sel = null;
-    document.getElementById('ws-obj-panel').innerHTML = '<em>' + this.labels.node + ' / ' + this.labels.edge + '</em>';
+    document.getElementById('ws-obj-panel').innerHTML = '<em>Кликните узел или стрелку на схеме</em>';
     this.redraw();
   };
 
   Editor.prototype.selectNode = function (id) {
     var self = this;
     if (self.pendingFrom) {
-      // режим добавления стрелки: первый клик — источник, второй — цель
       if (!self.pendingFrom.from) {
         self.pendingFrom.from = id;
-        self.setStatus(self.labels.addEdgeHint + ' [from: ' + id + ']', '');
+        self.setStatus(self.labels.addEdgeHint + ' [откуда: ' + id + ']', '');
         return;
       }
       if (self.pendingFrom.from === id) return;
@@ -162,6 +280,7 @@
       self.pendingFrom = null;
       var btn = document.getElementById('ws-add-edge');
       if (btn) btn.classList.remove('ws-active');
+      self.setStatus('', '');
       self.redraw();
       self.selectEdge(edge.from + '>' + edge.to);
       return;
@@ -198,7 +317,7 @@
     panel.innerHTML = '';
 
     var head = document.createElement('h4');
-    head.textContent = self.labels.node + ': ' + n.id;
+    head.textContent = self.labels.node + ': ' + n.title + ' [' + n.id + ']';
     panel.appendChild(head);
 
     var field = function (labelText, value, onchg, isArea, readonly) {
@@ -217,34 +336,35 @@
       return input;
     };
 
-    field('id', n.id, function () {}, false, true);
-    field('title', n.title, function (v) { n.title = v; self.redraw(); });
+    field('ID (не меняется)', n.id, function () {}, false, true);
+    field('Заголовок', n.title, function (v) { n.title = v; self.redraw(); });
+
     var typeWrap = document.createElement('div');
     typeWrap.className = 'ws-field';
     var typeLabel = document.createElement('label');
-    typeLabel.textContent = 'type';
+    typeLabel.textContent = 'Тип';
     var typeSel = document.createElement('select');
-    ['start', 'process', 'decision', 'end'].forEach(function (t) {
+    NODE_TYPES.forEach(function (pair) {
       var o = document.createElement('option');
-      o.value = t; o.textContent = t;
-      if (n.type === t) o.selected = true;
+      o.value = pair[0]; o.textContent = pair[1];
+      if (n.type === pair[0]) o.selected = true;
       typeSel.appendChild(o);
     });
     typeSel.addEventListener('change', function () { n.type = typeSel.value; self.redraw(); });
     typeWrap.appendChild(typeLabel); typeWrap.appendChild(typeSel); panel.appendChild(typeWrap);
 
-    field('dept', n.dept, function (v) { n.dept = v; });
-    field('description', n.description, function (v) { n.description = v; }, true);
-    field('page', n.page, function (v) { n.page = v; }, true);
-    field('url', n.url, function (v) { n.url = v; });
-    field('query_id', n.queryId, function (v) {
+    field('Отдел (в подсказке)', n.dept, function (v) { n.dept = v; });
+    field('Описание — подсказка при наведении', n.description, function (v) { n.description = v; }, true);
+    field('Страница этапа (wiki-текст, открывается кликом)', n.page, function (v) { n.page = v; }, true);
+    field('Ссылка (вместо страницы этапа)', n.url, function (v) { n.url = v; });
+    field('ID запроса — живой счётчик', n.queryId, function (v) {
       var q = parseInt(v, 10);
       n.queryId = isFinite(q) && q > 0 ? q : null;
     });
 
     var geom = document.createElement('div');
     geom.className = 'ws-field ws-geom';
-    [['x', 'x'], ['y', 'y'], ['w', 'w'], ['h', 'h']].forEach(function (pair) {
+    [['x', 'x'], ['y', 'y'], ['w', 'ширина'], ['h', 'высота']].forEach(function (pair) {
       var input = document.createElement('input');
       input.type = 'number'; input.value = n[pair[0]]; input.title = pair[1];
       input.addEventListener('change', function () {
@@ -298,6 +418,11 @@
     head.textContent = self.labels.edge + ': ' + e.from + ' → ' + e.to;
     panel.appendChild(head);
 
+    var hint = document.createElement('div');
+    hint.className = 'ws-panel-hint';
+    hint.textContent = 'Тяните оранжевые точки на концах стрелки, чтобы привязать её к другому блоку.';
+    panel.appendChild(hint);
+
     var field = function (labelText, value, onchg, isArea) {
       var wrap = document.createElement('div');
       wrap.className = 'ws-field';
@@ -313,74 +438,59 @@
       return input;
     };
 
-    var nodeOptions = function (selectedId, onchg) {
+    var selectField = function (labelText, options, value, onchg) {
+      var wrap = document.createElement('div');
+      wrap.className = 'ws-field';
+      var label = document.createElement('label');
+      label.textContent = labelText;
+      wrap.appendChild(label);
       var sel = document.createElement('select');
-      self.view.nodes.forEach(function (n) {
+      options.forEach(function (pair) {
         var o = document.createElement('option');
-        o.value = n.id; o.textContent = n.title + ' (' + n.id + ')';
-        if (n.id === selectedId) o.selected = true;
+        o.value = pair[0]; o.textContent = pair[1];
+        if (value === pair[0]) o.selected = true;
         sel.appendChild(o);
       });
       sel.addEventListener('change', function () { onchg(sel.value); });
+      wrap.appendChild(sel);
+      panel.appendChild(wrap);
       return sel;
     };
 
-    var rowFrom = document.createElement('div');
-    rowFrom.className = 'ws-field';
-    rowFrom.appendChild(nodeOptions(e.from, function (v) { e.from = v; self.sel.key = e.from + '>' + e.to; self.redraw(); self.renderEdgePanel(); }));
-    var lblFrom = document.createElement('label'); lblFrom.textContent = 'from'; rowFrom.insertBefore(lblFrom, rowFrom.firstChild);
-    panel.appendChild(rowFrom);
-
-    var rowTo = document.createElement('div');
-    rowTo.className = 'ws-field';
-    rowTo.appendChild(nodeOptions(e.to, function (v) { e.to = v; self.sel.key = e.from + '>' + e.to; self.redraw(); self.renderEdgePanel(); }));
-    var lblTo = document.createElement('label'); lblTo.textContent = 'to'; rowTo.insertBefore(lblTo, rowTo.firstChild);
-    panel.appendChild(rowTo);
-
-    field('label', e.label, function (v) { e.label = v; self.redraw(); });
-
-    var sideSel = function (value, onchg) {
-      var sel = document.createElement('select');
-      ['', 'left', 'right', 'top', 'bottom'].forEach(function (s) {
-        var o = document.createElement('option');
-        o.value = s; o.textContent = s === '' ? 'auto' : s;
-        if (value === s) o.selected = true;
-        sel.appendChild(o);
+    var nodeSelect = function (labelText, selectedId, onchg) {
+      var options = self.view.nodes.map(function (n) {
+        return [n.id, n.title + ' (' + n.id + ')'];
       });
-      sel.addEventListener('change', function () { onchg(sel.value); self.redraw(); });
+      var sel = selectField(labelText, options, selectedId, function (v) { onchg(v); });
       return sel;
     };
-    var rowFs = document.createElement('div'); rowFs.className = 'ws-field';
-    var lblFs = document.createElement('label'); lblFs.textContent = 'from_side';
-    rowFs.appendChild(lblFs); rowFs.appendChild(sideSel(e.fromSide, function (v) { e.fromSide = v; }));
-    panel.appendChild(rowFs);
-    var rowTs = document.createElement('div'); rowTs.className = 'ws-field';
-    var lblTs = document.createElement('label'); lblTs.textContent = 'to_side';
-    rowTs.appendChild(lblTs); rowTs.appendChild(sideSel(e.toSide, function (v) { e.toSide = v; }));
-    panel.appendChild(rowTs);
 
-    var routeWrap = document.createElement('div');
-    routeWrap.className = 'ws-field';
-    var routeLabel = document.createElement('label');
-    routeLabel.textContent = 'route';
-    var routeSel = document.createElement('select');
-    [['straight', 'straight'], ['arc', 'arc'], ['elbow', 'elbow']].forEach(function (pair) {
-      var o = document.createElement('option');
-      o.value = pair[0]; o.textContent = pair[1];
-      if (e.route === pair[0]) o.selected = true;
-      routeSel.appendChild(o);
+    nodeSelect('Откуда (блок)', e.from, function (v) {
+      e.from = v; self.sel.key = e.from + '>' + e.to;
+      self.redraw(); self.renderEdgePanel();
     });
-    routeSel.addEventListener('change', function () { e.route = routeSel.value; self.redraw(); });
-    routeWrap.appendChild(routeLabel); routeWrap.appendChild(routeSel);
-    panel.appendChild(routeWrap);
+    nodeSelect('Куда (блок)', e.to, function (v) {
+      e.to = v; self.sel.key = e.from + '>' + e.to;
+      self.redraw(); self.renderEdgePanel();
+    });
+
+    field('Подпись на стрелке', e.label, function (v) { e.label = v; self.redraw(); });
+
+    selectField('Форма', ROUTES, e.route, function (v) {
+      e.route = v; self.redraw(); self.renderEdgePanel();
+    });
+
+    selectField('Стрелка выходит (сторона)', SIDES, e.fromSide, function (v) { e.fromSide = v; self.redraw(); });
+    selectField('Стрелка входит (сторона)', SIDES, e.toSide, function (v) { e.toSide = v; self.redraw(); });
 
     var dashedWrap = document.createElement('div');
     dashedWrap.className = 'ws-field';
     var dashedCheck = document.createElement('input');
-    dashedCheck.type = 'checkbox'; dashedCheck.checked = e.dashed === true;
+    dashedCheck.type = 'checkbox'; dashedCheck.checked = e.dashed === true; dashedCheck.id = 'ws-dashed-check';
     dashedCheck.addEventListener('change', function () { e.dashed = dashedCheck.checked; self.redraw(); });
     var dashedLabel = document.createElement('label');
-    dashedLabel.textContent = 'dashed (пунктир)';
+    dashedLabel.setAttribute('for', 'ws-dashed-check');
+    dashedLabel.textContent = 'Пунктирная линия';
     dashedWrap.appendChild(dashedCheck); dashedWrap.appendChild(dashedLabel);
     panel.appendChild(dashedWrap);
 
@@ -433,13 +543,13 @@
       row.className = 'ws-scenario-row';
 
       var title = document.createElement('input');
-      title.type = 'text'; title.value = scenario.title; title.placeholder = 'title';
+      title.type = 'text'; title.value = scenario.title; title.placeholder = 'Название';
       title.addEventListener('change', function () { scenario.title = title.value; });
       row.appendChild(title);
 
       var steps = document.createElement('input');
       steps.type = 'text'; steps.value = (scenario.steps || []).join(', ');
-      steps.placeholder = self.labels.stepsHint;
+      steps.placeholder = 'Шаги: ' + self.labels.stepsHint;
       steps.addEventListener('change', function () {
         scenario.steps = steps.value.split(',').map(function (s) { return s.trim(); }).filter(Boolean);
       });
@@ -485,7 +595,7 @@
 
   Editor.prototype.save = function () {
     var self = this;
-    if (!self.saveUrl) { self.setStatus('save url не задан', 'err'); return; }
+    if (!self.saveUrl) { self.setStatus('Адрес сохранения не задан (dev-превью)', 'err'); return; }
     var csrf = document.querySelector('meta[name="csrf-token"]');
     var body = new URLSearchParams();
     body.append('json', JSON.stringify(self.serialize(), null, 2));

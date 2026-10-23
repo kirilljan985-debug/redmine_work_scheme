@@ -257,3 +257,43 @@
   #ws-editor { flex-direction: column; }
   .ws-editor-side { flex: 1 1 auto; width: 100%; }
 }
+
+/* Маркеры перепривязки стрелок и русские подписи панелей */
+
+.ws-handle {
+  fill: #d66f2c;
+  stroke: #ffffff;
+  stroke-width: 2;
+  cursor: crosshair;
+}
+
+.ws-temp-line {
+  stroke: #d66f2c;
+  stroke-width: 2;
+  stroke-dasharray: 6 4;
+  pointer-events: none;
+}
+
+.ws-temp-dot {
+  fill: #d66f2c;
+  stroke: #ffffff;
+  stroke-width: 2;
+  pointer-events: none;
+}
+
+.ws-drop-target rect,
+.ws-drop-target polygon {
+  stroke: #2a9d4f;
+  stroke-width: 3;
+  fill: #e8f7ec;
+}
+
+.ws-panel-hint {
+  font-size: 11px;
+  color: #64707c;
+  margin-bottom: 8px;
+}
+
+#ws-obj-panel .ws-dashed-label {
+  font-size: 12px;
+}
