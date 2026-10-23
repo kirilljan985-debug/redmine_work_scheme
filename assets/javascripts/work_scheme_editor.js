@@ -31,7 +31,8 @@
       edge: root.getAttribute('data-label-edge') || 'Стрелка',
       scenarios: root.getAttribute('data-label-scenarios') || 'Сценарии',
       stepsHint: root.getAttribute('data-label-steps-hint') || 'id узлов через запятую',
-      bend: root.getAttribute('data-label-bend') || 'Изгиб'
+      bend: root.getAttribute('data-label-bend') || 'Изгиб',
+      background: root.getAttribute('data-label-background') || 'Цвет фона'
     };
     var dataEl = root.querySelector('script.ws-data');
     if (!dataEl) return; // страница показывает ошибки валидации
@@ -47,7 +48,19 @@
     this.wire();
     this.renderScenarios();
     this.wirePalette();
+    this.wireBackground();
   }
+
+  Editor.prototype.wireBackground = function () {
+    var self = this;
+    var input = this.root.querySelector('#ws-background');
+    if (!input) return;
+    input.value = /^#[0-9a-f]{6}$/i.test(self.view.scheme.background || '') ? self.view.scheme.background : '#f3f7fa';
+    input.addEventListener('input', function () {
+      self.view.scheme.background = input.value;
+      self.redraw();
+    });
+  };
 
   Editor.prototype.maxNodeSeq = function () {
     var max = 0;
@@ -648,6 +661,7 @@
     var self = this;
     return {
       title: self.view.scheme.title || 'Схема',
+      background: self.view.scheme.background || '#f3f7fa',
       nodes: self.view.nodes.map(function (n) {
         return {
           id: n.id, type: n.type, title: n.title, dept: n.dept,

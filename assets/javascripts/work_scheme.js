@@ -265,12 +265,13 @@
     defs.appendChild(marker);
     svg.appendChild(defs);
 
+    var backgroundColor = self.scheme.background || '#f3f7fa';
     var background = svgEl('rect', {
       x: bounds.minX - pad, y: bounds.minY - pad,
       width: width, height: height,
       rx: 18, ry: 18,
       'class': 'ws-process-background',
-      fill: 'url(#' + gradientId + ')'
+      fill: backgroundColor
     });
     svg.appendChild(background);
     svg.appendChild(svgEl('rect', {
@@ -572,7 +573,7 @@
       if (pathEl) {
         self.markNodeComplete(prev);
         self.highlightNode(node);
-        self.showPlaybackToken(prev);
+        self.showPlaybackToken(prev, true);
         var isRework = steps.slice(0, index).indexOf(node.id) !== -1;
         self.highlightEdge(pathEl, isRework);
         var afterEdge = function () {

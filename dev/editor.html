@@ -16,13 +16,17 @@
      data-label-add-edge-hint="Кликните исходный узел, затем целевой" data-label-swap="Развернуть"
      data-label-delete="Удалить" data-label-node="Узел" data-label-edge="Стрелка"
      data-label-scenarios="Сценарии проигрывания" data-label-steps-hint="id узлов через запятую"
-     data-label-bend="Изгиб">
+     data-label-bend="Изгиб" data-label-background="Цвет фона">
   <div class="ws-editor-main">
     <div class="ws-container" data-work-scheme>
       <script type="application/json" class="ws-data"></script>
     </div>
   </div>
   <div class="ws-editor-side">
+    <div class="ws-background-control">
+      <label for="ws-background">Цвет фона</label>
+      <input id="ws-background" type="color" value="#f3f7fa">
+    </div>
     <div id="ws-obj-panel"><em>Узел / Стрелка</em></div>
     <div class="ws-editor-actions">
       <button type="button" id="ws-add-node" class="button"></button>

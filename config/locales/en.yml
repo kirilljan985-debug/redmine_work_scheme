@@ -25,6 +25,7 @@ en:
   ws_label_scenarios: "Playback scenarios"
   ws_label_steps_hint: "node ids, comma separated"
   ws_label_bend: "Bend"
+  ws_label_background: "Background color"
   ws_label_palette: "Ready elements"
   ws_label_palette_hint: "Drag a block to the canvas. Drop an arrow on its source, then choose the target."
   ws_label_palette_nodes: "Blocks"

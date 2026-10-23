@@ -30,13 +30,18 @@
        data-label-edge="<%= l(:ws_label_edge) %>"
        data-label-scenarios="<%= l(:ws_label_scenarios) %>"
        data-label-steps-hint="<%= l(:ws_label_steps_hint) %>"
-       data-label-bend="<%= l(:ws_label_bend) %>">
+       data-label-bend="<%= l(:ws_label_bend) %>"
+       data-label-background="<%= l(:ws_label_background) %>">
     <div class="ws-editor-main">
       <div class="ws-container" data-work-scheme>
         <script type="application/json" class="ws-data"><%= RedmineWorkScheme::Scheme.safe_json(@scheme[:data]) %></script>
       </div>
     </div>
     <div class="ws-editor-side">
+      <div class="ws-background-control">
+        <label for="ws-background"><%= l(:ws_label_background) %></label>
+        <input id="ws-background" type="color" value="#f3f7fa">
+      </div>
       <div id="ws-obj-panel"><em><%= l(:ws_label_node) %> / <%= l(:ws_label_edge) %></em></div>
       <div class="ws-editor-actions">
         <button type="button" id="ws-add-node" class="button"></button>
