@@ -634,7 +634,7 @@
           index += 1;
           self.timer(step, self.playbackDelay(node.type === 'decision' ? 1050 : 420));
         };
-        self.animateMarker(pathEl, node, afterEdge);
+        self.animateMarker(pathEl, node, afterEdge, prev);
       } else {
         self.highlightNode(node);
         self.showPlaybackToken(node);
@@ -729,7 +729,7 @@
     if (duration === 0) tick(0); else window.requestAnimationFrame(tick);
   };
 
-  WorkSchemeView.prototype.animateMarker = function (pathEl, node, done) {
+  WorkSchemeView.prototype.animateMarker = function (pathEl, node, done, transitNode) {
     var self = this;
     var reduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     var marker = self.playbackToken;
@@ -742,15 +742,25 @@
     var bridgeDistance = Math.hypot(fromPoint.x - startPoint.x, fromPoint.y - startPoint.y);
     var bridgeDuration = reduced || bridgeDistance < 1 ? 0 : this.playbackDelay(420);
     var bridgeStart = null;
+    var center = transitNode ? self.nodeCenter(transitNode) : {
+      x: (fromPoint.x + startPoint.x) / 2,
+      y: (fromPoint.y + startPoint.y) / 2
+    };
+    // This control point makes the quadratic curve pass exactly through center at t=0.5.
+    var control = {
+      x: 2 * center.x - (fromPoint.x + startPoint.x) / 2,
+      y: 2 * center.y - (fromPoint.y + startPoint.y) / 2
+    };
 
     var ease = function (value) {
       return value * value * (3 - 2 * value);
     };
 
-    var between = function (a, b, progress) {
+    var curve = function (a, c, b, progress) {
+      var inverse = 1 - progress;
       return {
-        x: a.x + (b.x - a.x) * progress,
-        y: a.y + (b.y - a.y) * progress
+        x: inverse * inverse * a.x + 2 * inverse * progress * c.x + progress * progress * b.x,
+        y: inverse * inverse * a.y + 2 * inverse * progress * c.y + progress * progress * b.y
       };
     };
 
@@ -778,7 +788,7 @@
       if (bridgeStart === null) bridgeStart = timestamp;
       var linear = bridgeDuration === 0 ? 1 : Math.min(1, (timestamp - bridgeStart) / bridgeDuration);
       var progress = ease(linear);
-      move(between(fromPoint, startPoint, progress));
+      move(curve(fromPoint, control, startPoint, progress));
       if (progress < 1) {
         window.requestAnimationFrame(bridge);
       } else if (duration === 0) {
