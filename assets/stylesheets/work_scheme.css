@@ -352,6 +352,7 @@
 #ws-save-status { margin-top: 6px; min-height: 18px; font-size: 12px; }
 #ws-save-status .ok { color: #2a7a3b; }
 #ws-save-status .err { color: #b03030; }
+#ws-save-status .dirty { color: #b37a20; font-weight: 600; }
 
 .ws-node.ws-selected rect,
 .ws-node.ws-selected polygon {

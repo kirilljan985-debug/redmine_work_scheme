@@ -42,6 +42,7 @@
     this.view.editMode = true;        // перетаскивание узлов включено
     this.view.showCoordPanel = false; // панель координат не нужна — есть полноценный редактор
     this.sel = null;                  // {type:'node', id} | {type:'edge', key}
+    this.dirty = false;
     this.pendingFrom = null;          // режим добавления стрелки: {from: id}
     this.seq = this.maxNodeSeq() + 1;
     this.redraw();
@@ -73,6 +74,12 @@
       self.view.scheme.background = input.value;
       self.redraw();
     });
+  };
+
+  Editor.prototype.markDirty = function () {
+    if (this.dirty) return;
+    this.dirty = true;
+    this.setStatus('Есть несохранённые изменения', 'dirty');
   };
 
   Editor.prototype.maxNodeSeq = function () {
@@ -124,6 +131,7 @@
         var p = self.svgPoint(moveEv.clientX, moveEv.clientY);
         node.w = Math.max(node.type === 'decision' ? 90 : 80, Math.round(width + p.x - start.x));
         node.h = Math.max(node.type === 'decision' ? 64 : 42, Math.round(height + p.y - start.y));
+        self.markDirty();
         self.redraw();
       };
       var onUp = function () {
@@ -265,6 +273,7 @@
         self.redraw();
         return;
       }
+      self.markDirty();
       self.sel = { type: 'edge', key: edge.from + '>' + edge.to };
       self.redraw();
       self.renderEdgePanel();
@@ -276,6 +285,12 @@
   Editor.prototype.wire = function () {
     var self = this;
     var container = self.view.container;
+
+    var markFormDirty = function (ev) {
+      if (ev.target.closest && (ev.target.closest('.ws-field') || ev.target.closest('.ws-scenario-row') || ev.target.id === 'ws-title' || ev.target.id === 'ws-background')) self.markDirty();
+    };
+    self.root.addEventListener('input', markFormDirty);
+    self.root.addEventListener('change', markFormDirty);
 
     container.addEventListener('click', function (ev) {
       var nodeGroup = ev.target.closest ? ev.target.closest('.ws-node') : null;
@@ -348,7 +363,7 @@
       var target = ev.target.closest ? ev.target.closest('.ws-node') : null;
       if (item.kind === 'icon' && target) {
         var iconNode = self.view.byId[target.getAttribute('data-id')];
-        if (iconNode) { iconNode.icon = item.icon; self.redraw(); }
+        if (iconNode) { iconNode.icon = item.icon; self.markDirty(); self.redraw(); }
         return;
       }
       if (item.kind === 'node') {
@@ -376,6 +391,7 @@
       x: Math.max(0, Math.round(p.x - 70)), y: Math.max(0, Math.round(p.y - 28)), w: 140, h: 56 };
     if (node.type === 'decision') { node.w = 150; node.h = 88; }
     self.view.nodes.push(node);
+    self.markDirty();
     self.view.byId[id] = node;
     self.selectNode(id);
   };
@@ -384,6 +400,7 @@
     var self = this;
     var edge = { from: from, to: to, label: '', dashed: dashed === true, route: route || 'straight', fromSide: fromSide || '', toSide: toSide || '', bend: num(bend, 50) };
     self.view.edges.push(edge);
+    self.markDirty();
     self.pendingFrom = null;
     self.setStatus('', '');
     self.redraw();
@@ -754,6 +771,7 @@
       return resp.json().then(function (data) { return { status: resp.status, data: data }; });
     }).then(function (res) {
       if (res.status === 200 && res.data.ok) {
+        self.dirty = false;
         self.setStatus('✓ ' + self.labels.saved, 'ok');
       } else {
         var errs = (res.data && res.data.errors) || ['HTTP ' + res.status];
