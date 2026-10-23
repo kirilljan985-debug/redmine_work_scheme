@@ -97,6 +97,43 @@
     }
     self.addHitPaths();
     if (self.sel && self.sel.type === 'edge') self.addEdgeHandles();
+    if (self.sel && self.sel.type === 'node') self.addResizeHandle();
+  };
+
+  /* Маркер в правом нижнем углу выбранного блока — изменение w/h мышкой. */
+  Editor.prototype.addResizeHandle = function () {
+    var self = this;
+    var node = self.selectedNode();
+    if (!node) return;
+    var svg = self.view.container.querySelector('svg');
+    if (!svg) return;
+    var handle = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+    handle.setAttribute('x', node.x + node.w - 7);
+    handle.setAttribute('y', node.y + node.h - 7);
+    handle.setAttribute('width', 14);
+    handle.setAttribute('height', 14);
+    handle.setAttribute('rx', 3);
+    handle.setAttribute('class', 'ws-resize-handle');
+    handle.addEventListener('pointerdown', function (ev) {
+      ev.preventDefault();
+      ev.stopPropagation();
+      var start = self.svgPoint(ev.clientX, ev.clientY);
+      var width = node.w;
+      var height = node.h;
+      var onMove = function (moveEv) {
+        var p = self.svgPoint(moveEv.clientX, moveEv.clientY);
+        node.w = Math.max(node.type === 'decision' ? 90 : 80, Math.round(width + p.x - start.x));
+        node.h = Math.max(node.type === 'decision' ? 64 : 42, Math.round(height + p.y - start.y));
+        self.redraw();
+      };
+      var onUp = function () {
+        document.removeEventListener('pointermove', onMove);
+        document.removeEventListener('pointerup', onUp);
+      };
+      document.addEventListener('pointermove', onMove);
+      document.addEventListener('pointerup', onUp);
+    });
+    svg.appendChild(handle);
   };
 
   /* Прозрачные широкие дорожки поверх стрелок — чтобы легко кликать */

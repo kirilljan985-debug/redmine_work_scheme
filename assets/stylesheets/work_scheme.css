@@ -378,6 +378,13 @@
   cursor: crosshair;
 }
 
+.ws-resize-handle {
+  fill: #356fa8;
+  stroke: #ffffff;
+  stroke-width: 2;
+  cursor: nwse-resize;
+}
+
 .ws-temp-line {
   stroke: #d66f2c;
   stroke-width: 2;
