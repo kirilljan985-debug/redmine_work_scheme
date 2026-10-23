@@ -309,6 +309,10 @@
 .ws-help-swatch-active { background: #d66f2c; }
 .ws-help-swatch-done { background: #6aa57a; }
 .ws-help-swatch-rework { background: #7c4dff; }
+.ws-properties { margin-bottom: 10px; padding: 7px 9px; border: 1px solid var(--ws-border); border-radius: var(--ws-radius); background: var(--ws-surface); }
+.ws-properties summary { cursor: pointer; color: var(--ws-text); font-weight: 600; }
+.ws-node-overlap rect, .ws-node-overlap polygon { stroke: #b34a4a !important; stroke-width: 3 !important; stroke-dasharray: 5 3; }
+#ws-save-status .warn { color: #b34a4a; font-weight: 600; }
 .ws-palette-node-start { border-color: #7c9cc4; background: #eef4fb; }
 .ws-palette-node-process { border-color: #8a949e; }
 .ws-palette-node-decision { border-color: #c9a75a; background: #fdf6e3; }

@@ -44,7 +44,7 @@
     this.sel = null;                  // {type:'node', id} | {type:'edge', key}
     this.selectedIds = [];
     this.dirty = false;
-    this.history = [];
+    this.history = [JSON.stringify(this.serialize())];
     this.future = [];
     this.pendingFrom = null;          // режим добавления стрелки: {from: id}
     this.seq = this.maxNodeSeq() + 1;
@@ -80,8 +80,8 @@
   };
 
   Editor.prototype.markDirty = function () {
-    if (this.dirty) return;
-    this.history.push(JSON.stringify(this.serialize()));
+    var current = JSON.stringify(this.serialize());
+    if (this.history[this.history.length - 1] !== current) this.history.push(current);
     this.future = [];
     this.dirty = true;
     this.setStatus('Есть несохранённые изменения', 'dirty');
@@ -136,6 +136,45 @@
     this.redraw();
   };
 
+  Editor.prototype.distributeNodes = function (axis) {
+    var nodes = this.selectedNodes().slice().sort(function (a, b) {
+      return axis === 'x' ? a.x - b.x : a.y - b.y;
+    });
+    if (nodes.length < 3) {
+      this.setStatus('Выберите минимум три блока через Shift+клик', '');
+      return;
+    }
+    var first = nodes[0];
+    var last = nodes[nodes.length - 1];
+    var start = axis === 'x' ? first.x + first.w / 2 : first.y + first.h / 2;
+    var end = axis === 'x' ? last.x + last.w / 2 : last.y + last.h / 2;
+    var step = (end - start) / (nodes.length - 1);
+    nodes.slice(1, -1).forEach(function (node, index) {
+      if (axis === 'x') node.x = Math.round(start + step * (index + 1) - node.w / 2);
+      else node.y = Math.round(start + step * (index + 1) - node.h / 2);
+    });
+    this.markDirty();
+    this.redraw();
+  };
+
+  Editor.prototype.checkOverlaps = function () {
+    var self = this;
+    var overlaps = [];
+    self.view.nodes.forEach(function (a, i) {
+      self.view.nodes.slice(i + 1).forEach(function (b) {
+        if (a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y) overlaps.push([a.id, b.id]);
+      });
+    });
+    self.view.container.querySelectorAll('.ws-node-overlap').forEach(function (el) { el.classList.remove('ws-node-overlap'); });
+    overlaps.forEach(function (pair) {
+      pair.forEach(function (id) {
+        var el = self.view.container.querySelector('.ws-node[data-id="' + id + '"]');
+        if (el) el.classList.add('ws-node-overlap');
+      });
+    });
+    if (overlaps.length && !self.dirty) self.setStatus('Пересечение блоков: ' + overlaps.length, 'warn');
+  };
+
   Editor.prototype.duplicateSelected = function () {
     var node = this.selectedNode();
     if (!node) return;
@@ -176,6 +215,7 @@
     self.addHitPaths();
     if (self.sel && self.sel.type === 'edge') self.addEdgeHandles();
     if (self.sel && self.sel.type === 'node') self.addResizeHandle();
+    self.checkOverlaps();
   };
 
   /* Маркер в правом нижнем углу выбранного блока — изменение w/h мышкой. */
@@ -452,6 +492,10 @@
     var alignY = document.getElementById('ws-align-y');
     if (alignX) alignX.addEventListener('click', function () { self.alignNodes('x'); });
     if (alignY) alignY.addEventListener('click', function () { self.alignNodes('y'); });
+    var distX = document.getElementById('ws-distribute-x');
+    var distY = document.getElementById('ws-distribute-y');
+    if (distX) distX.addEventListener('click', function () { self.distributeNodes('x'); });
+    if (distY) distY.addEventListener('click', function () { self.distributeNodes('y'); });
     var duplicate = document.getElementById('ws-duplicate');
     if (duplicate) duplicate.addEventListener('click', function () { self.duplicateSelected(); });
   };

@@ -36,7 +36,10 @@
       <label for="ws-background">Цвет фона</label>
       <input id="ws-background" type="color" value="#f3f7fa">
     </div>
-    <div id="ws-obj-panel"><em>Узел / Стрелка</em></div>
+    <details class="ws-properties" open>
+      <summary>Узел / Стрелка</summary>
+      <div id="ws-obj-panel"><em>Узел / Стрелка</em></div>
+    </details>
     <div class="ws-palette">
       <h4>Готовые элементы</h4>
       <p class="ws-panel-hint">Перетащите блок на холст. Стрелку бросьте на блок-источник, затем выберите блок-цель.</p>
@@ -72,6 +75,8 @@
       <button type="button" id="ws-redo">Повторить</button>
       <button type="button" id="ws-align-x">Выровнять X</button>
       <button type="button" id="ws-align-y">Выровнять Y</button>
+      <button type="button" id="ws-distribute-x">Распределить X</button>
+      <button type="button" id="ws-distribute-y">Распределить Y</button>
       <button type="button" id="ws-duplicate">Дублировать</button>
       <button type="button" id="ws-save" class="button"></button>
       <button type="button" id="ws-download"></button>
