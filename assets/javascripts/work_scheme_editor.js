@@ -35,7 +35,7 @@
       background: root.getAttribute('data-label-background') || 'Цвет фона'
     };
     var dataEl = root.querySelector('script.ws-data');
-    if (!dataEl) return; // страница показывает ошибки валидации
+    if (!dataEl || !dataEl.textContent.trim()) return; // данные загрузятся асинхронно в dev-превью
     var scheme = JSON.parse(dataEl.textContent);
     var View = window.WorkScheme.View;
     this.view = new View(root.querySelector('.ws-container'), scheme);
@@ -299,17 +299,22 @@
       if (ev.target === container.querySelector('svg')) { self.deselect(); }
     });
 
-    document.getElementById('ws-add-node').textContent = self.labels.addNode;
-    document.getElementById('ws-add-node').addEventListener('click', function () { self.addNode(); });
+    var addNodeBtn = document.getElementById('ws-add-node');
+    if (addNodeBtn) {
+      addNodeBtn.textContent = self.labels.addNode;
+      addNodeBtn.addEventListener('click', function () { self.addNode(); });
+    }
 
     var addEdgeBtn = document.getElementById('ws-add-edge');
-    addEdgeBtn.textContent = self.labels.addEdge;
-    addEdgeBtn.title = self.labels.addEdgeHint;
-    addEdgeBtn.addEventListener('click', function () {
-      self.pendingFrom = { from: null };
-      addEdgeBtn.classList.add('ws-active');
-      self.setStatus(self.labels.addEdgeHint, '');
-    });
+    if (addEdgeBtn) {
+      addEdgeBtn.textContent = self.labels.addEdge;
+      addEdgeBtn.title = self.labels.addEdgeHint;
+      addEdgeBtn.addEventListener('click', function () {
+        self.pendingFrom = { from: null };
+        addEdgeBtn.classList.add('ws-active');
+        self.setStatus(self.labels.addEdgeHint, '');
+      });
+    }
 
     document.getElementById('ws-add-scenario').textContent = '+ ' + self.labels.scenarios;
     document.getElementById('ws-add-scenario').addEventListener('click', function () {
