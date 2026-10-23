@@ -53,11 +53,13 @@ class RedmineWorkSchemePagesTest < Redmine::IntegrationTest
     assert_select 'div.flash.error'
   end
 
-  test 'editor page is admin-only' do
+  test 'editor page redirects non-admin' do
     log_user 'jsmith', 'jsmith'
     get '/work_scheme/edit'
     assert_redirected_to '/work_scheme'
+  end
 
+  test 'editor page renders for admin' do
     log_user 'admin', 'admin'
     get '/work_scheme/edit'
     assert_response :success
