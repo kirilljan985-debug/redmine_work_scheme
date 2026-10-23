@@ -93,6 +93,18 @@
   cursor: pointer;
 }
 
+.ws-playback-status {
+  margin-left: 4px;
+  padding: 3px 8px;
+  border-left: 3px solid #d66f2c;
+  color: #45505a;
+  font-size: 12px;
+  line-height: 1.3;
+  background: #fff8f1;
+}
+
+.ws-playback-status[hidden] { display: none; }
+
 .ws-node-active rect,
 .ws-node-active polygon {
   stroke: #d66f2c;

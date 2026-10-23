@@ -391,8 +391,27 @@
       controls.appendChild(edit);
     }
 
+    var status = document.createElement('div');
+    status.className = 'ws-playback-status';
+    status.setAttribute('aria-live', 'polite');
+    status.setAttribute('aria-atomic', 'true');
+    status.hidden = true;
+    controls.appendChild(status);
+
     self.container.insertBefore(controls, self.container.firstChild);
     self.playButton = play;
+    self.playbackStatus = status;
+  };
+
+  WorkSchemeView.prototype.updatePlaybackStatus = function (scenario, index, node, total, done) {
+    var status = this.playbackStatus;
+    if (!status) return;
+    status.hidden = false;
+    var title = scenario && scenario.title ? scenario.title : '';
+    var stage = node ? (node.title || node.id) : '';
+    var prefix = done ? this.label('playback-done', 'Готово') : this.label('playback-step', 'Этап');
+    status.textContent = prefix + ': ' + stage + (title ? ' · ' + title : '') +
+      (total ? ' (' + Math.min(index + 1, total) + '/' + total + ')' : '');
   };
 
   /* ---- Режим правки: перетаскивание узлов и координаты ---- */
@@ -497,6 +516,7 @@
     var step = function () {
       if (!self.playing) return;
       if (index >= steps.length) {
+        self.updatePlaybackStatus(scenario, steps.length - 1, self.byId[steps[steps.length - 1]], steps.length, true);
         self.finishPlayback();
         return;
       }
@@ -504,6 +524,7 @@
       if (!node) { index += 1; step(); return; }
       self.highlightNode(node);
       self.showPlaybackToken(node);
+      self.updatePlaybackStatus(scenario, index, node, steps.length, false);
 
       var pathEl = null;
       if (index > 0) {
@@ -608,6 +629,10 @@
     self.timers = [];
     if (self.playButton) self.playButton.disabled = false;
     self.clearHighlights();
+    if (self.playbackStatus) {
+      self.playbackStatus.hidden = true;
+      self.playbackStatus.textContent = '';
+    }
   };
 
   WorkSchemeView.prototype.stageTarget = function (node) {

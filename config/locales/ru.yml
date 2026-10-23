@@ -8,6 +8,8 @@ ru:
   ws_label_edit_hint: "Перетаскивайте узлы мышкой, затем скопируйте координаты в настройки схемы"
   ws_label_coords: "Координаты узлов — перенесите x/y в настройки схемы:"
   ws_label_copy: "Копировать"
+  ws_label_playback_step: "Этап"
+  ws_label_playback_done: "Готово"
   ws_label_edit_page: "Редактор схемы"
   ws_label_save: "Сохранить схему"
   ws_label_saved: "Схема сохранена"

@@ -8,6 +8,8 @@ en:
   ws_label_edit_hint: "Drag nodes with the mouse, then copy the coordinates into the scheme settings"
   ws_label_coords: "Node coordinates — move x/y into the scheme settings:"
   ws_label_copy: "Copy"
+  ws_label_playback_step: "Step"
+  ws_label_playback_done: "Done"
   ws_label_edit_page: "Scheme editor"
   ws_label_save: "Save scheme"
   ws_label_saved: "Scheme saved"
