@@ -22,7 +22,7 @@
 <script src="../assets/javascripts/work_scheme.js?v=11"></script>
 <script>
   // dev-обвязка: схема из scheme.json + демо-стрелка elbow; инициализация
-  fetch('scheme.json')
+  fetch('scheme.json?v=26')
     .then(function (r) { return r.text(); })
     .then(function (text) {
       var scheme = JSON.parse(text);
