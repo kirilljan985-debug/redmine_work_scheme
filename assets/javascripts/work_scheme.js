@@ -536,7 +536,7 @@
         var isRework = steps.slice(0, index).indexOf(node.id) !== -1;
         self.highlightEdge(pathEl, isRework);
         var afterEdge = function () {
-          self.showPlaybackToken(node);
+          self.showPlaybackToken(node, true);
           index += 1;
           self.timer(step, node.type === 'decision' ? 1050 : 420);
         };
@@ -561,7 +561,7 @@
     if (rework) pathEl.classList.add('ws-edge-rework');
   };
 
-  WorkSchemeView.prototype.showPlaybackToken = function (node) {
+  WorkSchemeView.prototype.showPlaybackToken = function (node, preservePoint) {
     var self = this;
     if (!self.playbackToken || !self.playbackToken.parentNode) {
       var group = svgEl('g', { 'class': 'ws-playback-token' });
@@ -571,8 +571,19 @@
       self.playbackToken = group;
     }
     self.playbackToken.querySelector('.ws-marker-label').textContent = node.title || node.id;
+    if (preservePoint && self.playbackPoint) {
+      self.setPlaybackPoint(self.playbackPoint);
+      return;
+    }
     var center = self.nodeCenter(node);
     self.playbackToken.setAttribute('transform', 'translate(' + center.x + ' ' + center.y + ')');
+    self.playbackPoint = center;
+  };
+
+  WorkSchemeView.prototype.setPlaybackPoint = function (point) {
+    if (!this.playbackToken || !point) return;
+    this.playbackToken.setAttribute('transform', 'translate(' + point.x + ' ' + point.y + ')');
+    this.playbackPoint = { x: point.x, y: point.y };
   };
 
   WorkSchemeView.prototype.animateMarker = function (pathEl, node, done) {
@@ -584,7 +595,14 @@
     var duration = reduced ? 0 : 900;
     var start = null;
     var startPoint = pathEl.getPointAtLength(0);
-    marker.setAttribute('transform', 'translate(' + startPoint.x + ' ' + startPoint.y + ')');
+    var fromPoint = self.playbackPoint || startPoint;
+    var bridgeDistance = Math.hypot(fromPoint.x - startPoint.x, fromPoint.y - startPoint.y);
+    var bridgeDuration = reduced || bridgeDistance < 1 ? 0 : 180;
+    var bridgeStart = null;
+
+    var move = function (point) {
+      self.setPlaybackPoint({ x: point.x, y: point.y });
+    };
 
     var tick = function (timestamp) {
       if (!self.playing) return;
@@ -593,7 +611,7 @@
       // Smoothstep keeps the marker from snapping at the beginning/end of an edge.
       var progress = linear * linear * (3 - 2 * linear);
       var point = pathEl.getPointAtLength(total * progress);
-      marker.setAttribute('transform', 'translate(' + point.x + ' ' + point.y + ')');
+      move(point);
       if (progress < 1) {
         window.requestAnimationFrame(tick);
       } else {
@@ -601,10 +619,31 @@
         done();
       }
     };
-    if (duration === 0) {
+    var bridge = function (timestamp) {
+      if (!self.playing) return;
+      if (bridgeStart === null) bridgeStart = timestamp;
+      var linear = bridgeDuration === 0 ? 1 : Math.min(1, (timestamp - bridgeStart) / bridgeDuration);
+      var progress = linear * linear * (3 - 2 * linear);
+      move({
+        x: fromPoint.x + (startPoint.x - fromPoint.x) * progress,
+        y: fromPoint.y + (startPoint.y - fromPoint.y) * progress
+      });
+      if (progress < 1) {
+        window.requestAnimationFrame(bridge);
+      } else if (duration === 0) {
+        tick(0);
+      } else {
+        window.requestAnimationFrame(tick);
+      }
+    };
+    if (bridgeDuration === 0 && duration === 0) {
+      move(startPoint);
       tick(0);
-    } else {
+    } else if (bridgeDuration === 0) {
+      move(startPoint);
       window.requestAnimationFrame(tick);
+    } else {
+      window.requestAnimationFrame(bridge);
     }
   };
 
@@ -628,6 +667,7 @@
     var token = self.playbackToken;
     if (token) token.remove();
     self.playbackToken = null;
+    self.playbackPoint = null;
   };
 
   WorkSchemeView.prototype.resetPlayback = function () {
