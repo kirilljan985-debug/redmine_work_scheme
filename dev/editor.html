@@ -9,7 +9,7 @@
 </style>
 </head>
 <body>
-<h2>Редактор схемы (dev-превью)</h2>
+<h2 id="ws-editor-heading">Редактор схемы (dev-превью)</h2>
 <div id="ws-editor" data-save-url=""
      data-more-label="Подробнее" data-label-save="Сохранить схему" data-label-saved="Схема сохранена"
      data-label-download="Скачать JSON" data-label-add-node="Добавить узел" data-label-add-edge="Добавить стрелку"
@@ -23,6 +23,10 @@
     </div>
   </div>
   <div class="ws-editor-side">
+    <div class="ws-title-control">
+      <label for="ws-title">Название схемы</label>
+      <input id="ws-title" type="text" value="">
+    </div>
     <div class="ws-background-control">
       <label for="ws-background">Цвет фона</label>
       <input id="ws-background" type="color" value="#f3f7fa">

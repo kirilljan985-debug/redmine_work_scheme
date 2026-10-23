@@ -26,6 +26,7 @@ ru:
   ws_label_steps_hint: "id узлов через запятую"
   ws_label_bend: "Изгиб"
   ws_label_background: "Цвет фона"
+  ws_label_scheme_title: "Название схемы"
   ws_label_palette: "Готовые элементы"
   ws_label_palette_hint: "Перетащите блок на холст. Стрелку бросьте на источник, затем выберите цель."
   ws_label_palette_nodes: "Блоки"

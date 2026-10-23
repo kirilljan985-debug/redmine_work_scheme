@@ -1,7 +1,7 @@
 <div class="contextual">
   <%= link_to(l(:ws_label_back_to_scheme), work_scheme_path, class: 'icon icon-back') %>
 </div>
-<h2><%= l(:ws_label_edit_page) %></h2>
+<h2 id="ws-editor-heading"><%= l(:ws_label_edit_page) %></h2>
 <% if @scheme[:errors].any? %>
   <div class="flash error">
     <%= l(:ws_error_invalid_scheme) %>
@@ -38,6 +38,10 @@
       </div>
     </div>
     <div class="ws-editor-side">
+      <div class="ws-title-control">
+        <label for="ws-title"><%= l(:ws_label_scheme_title) %></label>
+        <input id="ws-title" type="text" value="">
+      </div>
       <div class="ws-background-control">
         <label for="ws-background"><%= l(:ws_label_background) %></label>
         <input id="ws-background" type="color" value="#f3f7fa">

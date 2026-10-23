@@ -48,8 +48,21 @@
     this.wire();
     this.renderScenarios();
     this.wirePalette();
+    this.wireTitle();
     this.wireBackground();
   }
+
+  Editor.prototype.wireTitle = function () {
+    var self = this;
+    var input = this.root.querySelector('#ws-title');
+    if (!input) return;
+    input.value = self.view.scheme.title || 'Схема';
+    input.addEventListener('input', function () {
+      self.view.scheme.title = input.value;
+      var heading = document.querySelector('#ws-editor-heading');
+      if (heading) heading.textContent = input.value || 'Схема';
+    });
+  };
 
   Editor.prototype.wireBackground = function () {
     var self = this;
