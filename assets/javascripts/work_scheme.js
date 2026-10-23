@@ -522,24 +522,28 @@
       }
       var node = self.byId[steps[index]];
       if (!node) { index += 1; step(); return; }
-      self.highlightNode(node);
-      self.showPlaybackToken(node);
       self.updatePlaybackStatus(scenario, index, node, steps.length, false);
 
       var pathEl = null;
+      var prev = null;
       if (index > 0) {
-        var prev = self.byId[steps[index - 1]];
+        prev = self.byId[steps[index - 1]];
         if (prev) pathEl = self.pathByEdge[prev.id + '>' + node.id];
       }
       if (pathEl) {
+        self.highlightNode(node);
+        self.showPlaybackToken(prev);
         var isRework = steps.slice(0, index).indexOf(node.id) !== -1;
         self.highlightEdge(pathEl, isRework);
         var afterEdge = function () {
+          self.showPlaybackToken(node);
           index += 1;
           self.timer(step, node.type === 'decision' ? 1050 : 420);
         };
         self.animateMarker(pathEl, node, afterEdge);
       } else {
+        self.highlightNode(node);
+        self.showPlaybackToken(node);
         index += 1;
         self.timer(step, node.type === 'decision' ? 1050 : 850);
       }
@@ -577,13 +581,17 @@
     var marker = self.playbackToken;
     if (!marker) { self.showPlaybackToken(node); marker = self.playbackToken; }
     var total = pathEl.getTotalLength();
-    var duration = reduced ? 0 : 700;
+    var duration = reduced ? 0 : 900;
     var start = null;
+    var startPoint = pathEl.getPointAtLength(0);
+    marker.setAttribute('transform', 'translate(' + startPoint.x + ' ' + startPoint.y + ')');
 
     var tick = function (timestamp) {
       if (!self.playing) return;
       if (start === null) start = timestamp;
-      var progress = duration === 0 ? 1 : Math.min(1, (timestamp - start) / duration);
+      var linear = duration === 0 ? 1 : Math.min(1, (timestamp - start) / duration);
+      // Smoothstep keeps the marker from snapping at the beginning/end of an edge.
+      var progress = linear * linear * (3 - 2 * linear);
       var point = pathEl.getPointAtLength(total * progress);
       marker.setAttribute('transform', 'translate(' + point.x + ' ' + point.y + ')');
       if (progress < 1) {
@@ -647,6 +655,19 @@
     var tooltip = document.createElement('div');
     tooltip.className = 'ws-tooltip';
     self.container.appendChild(tooltip);
+    var hideTimer = null;
+
+    function cancelHide() {
+      if (hideTimer) window.clearTimeout(hideTimer);
+      hideTimer = null;
+    }
+
+    function scheduleHide() {
+      cancelHide();
+      hideTimer = window.setTimeout(function () {
+        tooltip.style.display = 'none';
+      }, 180);
+    }
 
     function show(node, event) {
       var html = '<div class="ws-tooltip-title"></div>';
@@ -686,7 +707,8 @@
       tooltip.style.top = Math.max(4, Math.min(y, maxY)) + 'px';
     }
 
-    function hide() { tooltip.style.display = 'none'; }
+    tooltip.addEventListener('mouseenter', cancelHide);
+    tooltip.addEventListener('mouseleave', scheduleHide);
 
     self.container.addEventListener('mousemove', function (event) {
       var group = event.target.closest ? event.target.closest('.ws-node') : null;
@@ -696,8 +718,11 @@
       var id = group.getAttribute('data-id');
       var node = self.byId[id];
       if (!node) return;
-      group.addEventListener('mouseenter', function (event) { show(node, event); });
-      group.addEventListener('mouseleave', hide);
+      group.addEventListener('mouseenter', function (event) {
+        cancelHide();
+        show(node, event);
+      });
+      group.addEventListener('mouseleave', scheduleHide);
       group.addEventListener('click', function () {
         if (self.editMode) return; // в режиме правки клик не уводит со страницы
         var target = self.stageTarget(node);

@@ -63,7 +63,7 @@
   font-size: 12px;
   line-height: 1.45;
   z-index: 99;
-  pointer-events: none;
+  pointer-events: auto;
 }
 
 .ws-tooltip-title { font-weight: bold; margin-bottom: 2px; }
