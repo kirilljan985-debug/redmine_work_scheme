@@ -289,7 +289,8 @@
           dashed: item.getAttribute('data-edge-dashed') === 'true',
           fromSide: item.getAttribute('data-edge-from-side') || '',
           toSide: item.getAttribute('data-edge-to-side') || '',
-          bend: num(item.getAttribute('data-edge-bend'), 50)
+          bend: num(item.getAttribute('data-edge-bend'), 50),
+          icon: item.getAttribute('data-icon') || ''
         }));
         item.classList.add('ws-dragging');
       });
@@ -307,11 +308,16 @@
       var raw = ev.dataTransfer.getData('text/plain');
       var item;
       try { item = JSON.parse(raw); } catch (_) { return; }
+      var target = ev.target.closest ? ev.target.closest('.ws-node') : null;
+      if (item.kind === 'icon' && target) {
+        var iconNode = self.view.byId[target.getAttribute('data-id')];
+        if (iconNode) { iconNode.icon = item.icon; self.redraw(); }
+        return;
+      }
       if (item.kind === 'node') {
         self.addPaletteNode(item.type, ev.clientX, ev.clientY);
         return;
       }
-      var target = ev.target.closest ? ev.target.closest('.ws-node') : null;
       if (item.kind === 'edge' && target) {
         var targetId = target.getAttribute('data-id');
         if (self.selectedNode() && self.selectedNode().id !== targetId) {
@@ -329,7 +335,7 @@
     var p = self.svgPoint(clientX, clientY);
     var id = 'n' + (self.seq++);
     var titles = { start: 'Старт', process: 'Процесс', decision: 'Решение', end: 'Финиш' };
-    var node = { id: id, type: type || 'process', title: titles[type] || 'Процесс', dept: '', description: '', page: '', url: '', queryId: null,
+    var node = { id: id, type: type || 'process', title: titles[type] || 'Процесс', dept: '', description: '', page: '', url: '', icon: '', queryId: null,
       x: Math.max(0, Math.round(p.x - 70)), y: Math.max(0, Math.round(p.y - 28)), w: 140, h: 56 };
     if (node.type === 'decision') { node.w = 150; node.h = 88; }
     self.view.nodes.push(node);
@@ -497,7 +503,7 @@
     var self = this;
     var id = 'n' + (self.seq++);
     var node = {
-      id: id, type: 'process', title: id, dept: '', description: '', page: '', url: '',
+      id: id, type: 'process', title: id, dept: '', description: '', page: '', url: '', icon: '',
       queryId: null, x: 60 + (self.seq % 5) * 30, y: 60 + (self.seq % 4) * 24, w: 140, h: 56
     };
     self.view.nodes.push(node);
@@ -678,7 +684,7 @@
       nodes: self.view.nodes.map(function (n) {
         return {
           id: n.id, type: n.type, title: n.title, dept: n.dept,
-          description: n.description, page: n.page, url: n.url,
+          description: n.description, page: n.page, url: n.url, icon: n.icon || '',
           query_id: n.queryId || null,
           x: n.x, y: n.y, w: n.w, h: n.h
         };

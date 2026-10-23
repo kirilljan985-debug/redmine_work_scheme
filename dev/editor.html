@@ -51,6 +51,15 @@
         <button type="button" draggable="true" class="ws-palette-item" data-palette-kind="edge" data-edge-route="elbow">Колено</button>
         <button type="button" draggable="true" class="ws-palette-item" data-palette-kind="edge" data-edge-route="u" data-edge-bend="100">П‑образная</button>
       </div></div>
+      <div class="ws-palette-group"><strong>Иконки</strong><div class="ws-palette-items">
+        <button type="button" draggable="true" class="ws-palette-item ws-palette-icon" data-palette-kind="icon" data-icon="user">Пользователь</button>
+        <button type="button" draggable="true" class="ws-palette-item ws-palette-icon" data-palette-kind="icon" data-icon="document">Документ</button>
+        <button type="button" draggable="true" class="ws-palette-item ws-palette-icon" data-palette-kind="icon" data-icon="search">Поиск</button>
+        <button type="button" draggable="true" class="ws-palette-item ws-palette-icon" data-palette-kind="icon" data-icon="decision">Решение</button>
+        <button type="button" draggable="true" class="ws-palette-item ws-palette-icon" data-palette-kind="icon" data-icon="certificate">Сертификат</button>
+        <button type="button" draggable="true" class="ws-palette-item ws-palette-icon" data-palette-kind="icon" data-icon="gear">Шестерёнка</button>
+        <button type="button" draggable="true" class="ws-palette-item ws-palette-icon" data-palette-kind="icon" data-icon="rocket">Запуск</button>
+      </div></div>
     </div>
     <div class="ws-scenarios-block">
       <h4>Сценарии проигрывания</h4>
@@ -69,7 +78,7 @@
 <script>
   // dev-обвязка: после загрузки схемы повторно инициируем редактор
   // (editor.js вешает init на DOMContentLoaded, который к моменту fetch уже прошёл)
-  fetch('scheme.json?v=26')
+  fetch('scheme.json?v=29')
     .then(function (r) { return r.text(); })
     .then(function (text) {
       document.querySelector('script.ws-data').textContent = text;

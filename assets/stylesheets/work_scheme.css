@@ -38,6 +38,11 @@
   fill: #1a232b;
 }
 
+.ws-node-icon { color: #55738b; opacity: .9; }
+.ws-node-start .ws-node-icon { color: #3569a8; }
+.ws-node-decision .ws-node-icon { color: #a87918; }
+.ws-node-end .ws-node-icon { color: #2f8b4c; }
+
 .ws-node { cursor: pointer; }
 .ws-node:hover rect,
 .ws-node:hover polygon,
@@ -279,6 +284,7 @@
   font-size: 11px;
 }
 .ws-palette-item:active, .ws-palette-item.ws-dragging { cursor: grabbing; opacity: .55; }
+.ws-palette-icon { border-color: #8a7ab8; background: #f5f1ff; }
 .ws-palette-node-start { border-color: #7c9cc4; background: #eef4fb; }
 .ws-palette-node-process { border-color: #8a949e; }
 .ws-palette-node-decision { border-color: #c9a75a; background: #fdf6e3; }

@@ -31,6 +31,7 @@ ru:
   ws_label_palette_hint: "Перетащите блок на холст. Стрелку бросьте на источник, затем выберите цель."
   ws_label_palette_nodes: "Блоки"
   ws_label_palette_edges: "Стрелки"
+  ws_label_palette_icons: "Иконки"
   ws_palette_start: "Старт"
   ws_palette_process: "Процесс"
   ws_palette_decision: "Решение"

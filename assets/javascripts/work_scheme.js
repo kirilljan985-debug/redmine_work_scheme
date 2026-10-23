@@ -7,6 +7,7 @@
   'use strict';
 
   var SVG_NS = 'http://www.w3.org/2000/svg';
+  var ICONS = ['user', 'document', 'search', 'decision', 'certificate', 'gear', 'rocket'];
 
   function svgEl(name, attrs, text) {
     var el = document.createElementNS(SVG_NS, name);
@@ -53,6 +54,7 @@
         description: String(raw.description || ''),
         page: String(raw.page || ''),
         url: String(raw.url || ''),
+        icon: ICONS.indexOf(raw.icon) !== -1 ? raw.icon : '',
         queryId: raw.query_id || null,
         x: num(raw.x, 0),
         y: num(raw.y, 0),
@@ -353,18 +355,58 @@
       }));
     }
 
-    var maxChars = node.type === 'decision' ? 14 : Math.max(10, Math.floor(node.w / 7.2));
+    if (node.icon) {
+      selfAppendIcon(group, node.icon,
+        node.type === 'decision' ? cx : node.x + 18,
+        node.type === 'decision' ? node.y + 16 : node.y + 18);
+    }
+
+    var textX = cx + (node.icon && node.type !== 'decision' ? 9 : 0);
+    var maxChars = node.type === 'decision' ? 12 : Math.max(9, Math.floor((node.w - (node.icon ? 28 : 0)) / 7.2));
     var lines = wrapText(node.title, maxChars);
     var lineHeight = 14;
     var startY = cy - ((lines.length - 1) * lineHeight) / 2 + 4;
     lines.forEach(function (line, index) {
       group.appendChild(svgEl('text', {
-        x: cx, y: startY + index * lineHeight,
+        x: textX, y: startY + index * lineHeight,
         'text-anchor': 'middle'
       }, line));
     });
     return group;
   };
+
+  function selfAppendIcon(group, name, x, y) {
+    var icon = svgEl('g', { 'class': 'ws-node-icon ws-icon-' + name, transform: 'translate(' + x + ' ' + y + ')' });
+    var attrs = { fill: 'none', stroke: 'currentColor', 'stroke-width': 1.8, 'stroke-linecap': 'round', 'stroke-linejoin': 'round' };
+    if (name === 'user') {
+      icon.appendChild(svgEl('circle', { cx: 0, cy: -4, r: 3, fill: 'currentColor', stroke: 'none' }));
+      icon.appendChild(svgEl('path', Object.assign({}, attrs, { d: 'M -6 7 C -5 1, 5 1, 6 7' })));
+    } else if (name === 'document') {
+      icon.appendChild(svgEl('rect', Object.assign({}, attrs, { x: -5, y: -7, width: 10, height: 14, rx: 1 })));
+      icon.appendChild(svgEl('path', Object.assign({}, attrs, { d: 'M -2 -2 H 3 M -2 2 H 3' })));
+    } else if (name === 'search') {
+      icon.appendChild(svgEl('circle', Object.assign({}, attrs, { cx: -1, cy: -2, r: 4 })));
+      icon.appendChild(svgEl('path', Object.assign({}, attrs, { d: 'M 2 1 L 6 5' })));
+    } else if (name === 'decision') {
+      icon.appendChild(svgEl('path', Object.assign({}, attrs, { d: 'M 0 -7 L 5 0 L 0 7 L -5 0 Z' })));
+      icon.appendChild(svgEl('circle', { cx: 0, cy: 0, r: 1.2, fill: 'currentColor', stroke: 'none' }));
+    } else if (name === 'certificate') {
+      icon.appendChild(svgEl('circle', Object.assign({}, attrs, { cx: 0, cy: -1, r: 5 })));
+      icon.appendChild(svgEl('path', Object.assign({}, attrs, { d: 'M -2 3 L -3 8 L 0 6 L 3 8 L 2 3' })));
+    } else if (name === 'gear') {
+      icon.appendChild(svgEl('circle', Object.assign({}, attrs, { cx: 0, cy: 0, r: 5 })));
+      icon.appendChild(svgEl('circle', { cx: 0, cy: 0, r: 1.5, fill: 'currentColor', stroke: 'none' }));
+      for (var i = 0; i < 4; i += 1) {
+        var a = i * Math.PI / 2;
+        icon.appendChild(svgEl('line', Object.assign({}, attrs, { x1: Math.cos(a) * 5, y1: Math.sin(a) * 5, x2: Math.cos(a) * 7, y2: Math.sin(a) * 7 })));
+      }
+    } else if (name === 'rocket') {
+      icon.appendChild(svgEl('path', Object.assign({}, attrs, { d: 'M 0 -7 C 5 -4, 5 2, 0 5 C -5 2, -5 -4, 0 -7 Z' })));
+      icon.appendChild(svgEl('circle', { cx: 0, cy: -2, r: 1.2, fill: 'currentColor', stroke: 'none' }));
+      icon.appendChild(svgEl('path', Object.assign({}, attrs, { d: 'M -2 5 L -3 8 M 2 5 L 3 8' })));
+    }
+    group.appendChild(icon);
+  }
 
   /* ---- Проигрывание сценариев ---- */
 

@@ -31,6 +31,7 @@ en:
   ws_label_palette_hint: "Drag a block to the canvas. Drop an arrow on its source, then choose the target."
   ws_label_palette_nodes: "Blocks"
   ws_label_palette_edges: "Arrows"
+  ws_label_palette_icons: "Icons"
   ws_palette_start: "Start"
   ws_palette_process: "Process"
   ws_palette_decision: "Decision"

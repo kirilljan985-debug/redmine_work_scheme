@@ -72,6 +72,14 @@
             <button type="button" draggable="true" class="ws-palette-item" data-palette-kind="edge" data-edge-route="u" data-edge-bend="100"><%= l(:ws_palette_u) %></button>
           </div>
         </div>
+        <div class="ws-palette-group">
+          <strong><%= l(:ws_label_palette_icons) %></strong>
+          <div class="ws-palette-items">
+            <% [['user','Пользователь'], ['document','Документ'], ['search','Поиск'], ['decision','Решение'], ['certificate','Сертификат'], ['gear','Шестерёнка'], ['rocket','Запуск']].each do |icon| %>
+              <button type="button" draggable="true" class="ws-palette-item ws-palette-icon" data-palette-kind="icon" data-icon="<%= icon[0] %>"><%= icon[1] %></button>
+            <% end %>
+          </div>
+        </div>
       </div>
       <div class="ws-scenarios-block">
         <h4><%= l(:ws_label_scenarios) %></h4>

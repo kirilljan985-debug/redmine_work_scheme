@@ -7,6 +7,7 @@ module RedmineWorkScheme
     NODE_TYPES = %w(start process decision end).freeze
     EDGE_SIDES = %w(left right top bottom).freeze
     EDGE_ROUTES = %w(straight arc elbow u).freeze
+    ICONS = %w(user document search decision certificate gear rocket).freeze
     DEFAULT_NODE_WIDTH = 140
     DEFAULT_NODE_HEIGHT = 56
 
@@ -132,6 +133,7 @@ module RedmineWorkScheme
         'description' => raw['description'].to_s.strip,
         'page' => raw['page'].to_s,
         'url' => raw['url'].to_s.strip,
+        'icon' => ICONS.include?(raw['icon'].to_s.strip) ? raw['icon'].to_s.strip : '',
         'query_id' => positive_int_or_nil(raw['query_id']),
         'x' => int_value(raw['x'], 0),
         'y' => int_value(raw['y'], 0),
