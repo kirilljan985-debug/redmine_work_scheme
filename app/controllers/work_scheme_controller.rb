@@ -1,4 +1,4 @@
-# Контроллер схемы: полная страница схемы и страницы этапов.
+# Контроллер схемы: страница схемы, страницы этапов, визуальный редактор.
 class WorkSchemeController < ApplicationController
   layout 'base'
 
@@ -17,6 +17,35 @@ class WorkSchemeController < ApplicationController
     end
   rescue StandardError
     render_404
+  end
+
+  # Визуальный редактор схемы (только администратор)
+  def edit
+    unless User.current.admin?
+      redirect_to work_scheme_path
+      flash[:error] = l(:ws_error_admin_only)
+      return
+    end
+    @scheme = parsed_scheme
+  end
+
+  # Сохранение схемы из редактора (только администратор)
+  def save
+    unless User.current.admin?
+      render json: { errors: [l(:ws_error_admin_only)] }, status: :forbidden
+      return
+    end
+    json_str = params[:json].to_s
+    parsed = RedmineWorkScheme::Scheme.parse(json_str)
+    if parsed[:errors].any?
+      render json: { errors: parsed[:errors] }, status: :unprocessable_entity
+      return
+    end
+    Setting.plugin_redmine_work_scheme = { 'json' => json_str }
+    render json: { ok: true }
+  rescue StandardError => e
+    Rails.logger.error("Work Scheme save failed: #{e.message}")
+    render json: { errors: [e.message] }, status: :internal_server_error
   end
 
   private

@@ -68,7 +68,8 @@
         dashed: raw.dashed === true,
         route: raw.route === 'arc' ? 'arc' : (raw.route === 'elbow' ? 'elbow' : 'straight'),
         fromSide: raw.from_side || '',
-        toSide: raw.to_side || ''
+        toSide: raw.to_side || '',
+        bend: num(raw.bend, 50)
       };
     });
     this.byId = {};
@@ -143,7 +144,8 @@
     if (edge.route === 'arc') {
       var topA = this.anchor(a, 'top');
       var topB = this.anchor(b, 'top');
-      var lift = Math.max(46, Math.abs(topA.x - topB.x) / 4);
+      var baseLift = Math.max(46, Math.abs(topA.x - topB.x) / 4);
+      var lift = baseLift * (edge.bend / 50);
       var y = Math.min(topA.y, topB.y) - lift;
       labelPoint = { x: (topA.x + topB.x) / 2, y: y };
       return {
@@ -157,12 +159,13 @@
       var gap = 26;
       var p1 = this.offsetPoint(s, sides[0], gap);
       var p2 = this.offsetPoint(t, sides[1], gap);
+      var bendRatio = Math.min(100, Math.max(0, edge.bend)) / 100;
       var verticalFrom = sides[0] === 'top' || sides[0] === 'bottom';
       var verticalTo = sides[1] === 'top' || sides[1] === 'bottom';
       var mid;
 
       if (verticalFrom && verticalTo) {
-        mid = { x: (p1.x + p2.x) / 2, y: (p1.y + p2.y) / 2 };
+        mid = { x: (p1.x + p2.x) / 2, y: p1.y + (p2.y - p1.y) * bendRatio };
         labelPoint = { x: mid.x, y: mid.y };
         return {
           d: 'M ' + s.x + ' ' + s.y + ' L ' + p1.x + ' ' + p1.y +
@@ -172,7 +175,7 @@
         };
       }
       if (!verticalFrom && !verticalTo) {
-        mid = { x: (p1.x + p2.x) / 2, y: (p1.y + p2.y) / 2 };
+        mid = { x: p1.x + (p2.x - p1.x) * bendRatio, y: (p1.y + p2.y) / 2 };
         labelPoint = { x: mid.x, y: mid.y };
         return {
           d: 'M ' + s.x + ' ' + s.y + ' L ' + p1.x + ' ' + p1.y +
@@ -281,7 +284,7 @@
     if (self.editMode) {
       self.container.classList.add('ws-edit-mode');
       self.attachDrag();
-      self.buildEditPanel();
+      if (self.showCoordPanel !== false) self.buildEditPanel();
     } else {
       self.container.classList.remove('ws-edit-mode');
       var oldPanel = self.container.querySelector('.ws-edit-panel');
@@ -672,5 +675,5 @@
     init();
   }
 
-  window.WorkScheme = { init: init };
+  window.WorkScheme = { init: init, View: WorkSchemeView };
 })();

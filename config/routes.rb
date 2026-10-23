@@ -1,3 +1,5 @@
 # Роуты плагина Redmine Work Scheme
 get '/work_scheme', to: 'work_scheme#show', as: :work_scheme
 get '/work_scheme/stages/:id', to: 'work_scheme#stage', as: :work_scheme_stage
+get '/work_scheme/edit', to: 'work_scheme#edit', as: :work_scheme_edit
+post '/work_scheme/save', to: 'work_scheme#save', as: :work_scheme_save

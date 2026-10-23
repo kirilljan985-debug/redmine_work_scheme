@@ -52,4 +52,41 @@ class RedmineWorkSchemePagesTest < Redmine::IntegrationTest
     assert_response :success
     assert_select 'div.flash.error'
   end
+
+  test 'editor page is admin-only' do
+    log_user 'jsmith', 'jsmith'
+    get '/work_scheme/edit'
+    assert_redirected_to '/work_scheme'
+
+    log_user 'admin', 'admin'
+    get '/work_scheme/edit'
+    assert_response :success
+    assert_select '#ws-editor'
+    assert_select 'script.ws-data'
+  end
+
+  test 'save endpoint validates and stores scheme' do
+    log_user 'admin', 'admin'
+    new_scheme = {
+      'nodes' => [{ 'id' => 's1', 'type' => 'start', 'title' => 'Старт редактора', 'x' => 10, 'y' => 10 }],
+      'edges' => [],
+      'scenarios' => []
+    }.to_json
+    post '/work_scheme/save', params: { json: new_scheme }
+    assert_response :success
+    assert_equal true, JSON.parse(@response.body)['ok']
+    assert_match 'Старт редактора', Setting.plugin_redmine_work_scheme['json']
+
+    # невалидная схема — 422 и ошибки, настройки не меняются
+    post '/work_scheme/save', params: { json: '{"nodes": []}' }
+    assert_response :unprocessable_entity
+    assert JSON.parse(@response.body)['errors'].any?
+    assert_match 'Старт редактора', Setting.plugin_redmine_work_scheme['json']
+  end
+
+  test 'save endpoint rejects non-admin' do
+    log_user 'jsmith', 'jsmith'
+    post '/work_scheme/save', params: { json: '{"nodes": []}' }
+    assert_response :forbidden
+  end
 end

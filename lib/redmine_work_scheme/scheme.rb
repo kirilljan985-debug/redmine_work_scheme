@@ -160,6 +160,9 @@ module RedmineWorkScheme
         end
         route = raw['route'].to_s.strip
         route = 'straight' unless EDGE_ROUTES.include?(route)
+        bend = int_value(raw['bend'], 50)
+        bend = 0 if bend.negative?
+        bend = 200 if bend > 200
         {
           'from' => from,
           'to' => to,
@@ -167,7 +170,8 @@ module RedmineWorkScheme
           'dashed' => raw['dashed'] == true,
           'route' => route,
           'from_side' => from_side,
-          'to_side' => to_side
+          'to_side' => to_side,
+          'bend' => bend
         }
       end.compact
     end
