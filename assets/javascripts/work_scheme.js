@@ -247,6 +247,16 @@
     var markerId = 'ws-arrow-' + Math.random().toString(36).slice(2, 8);
 
     var defs = svgEl('defs');
+    var gradientId = 'ws-bg-' + Math.random().toString(36).slice(2, 8);
+    var gridId = 'ws-grid-' + Math.random().toString(36).slice(2, 8);
+    var gradient = svgEl('linearGradient', { id: gradientId, x1: '0%', y1: '0%', x2: '100%', y2: '0%' });
+    gradient.appendChild(svgEl('stop', { offset: '0%', 'stop-color': '#f8fbfd' }));
+    gradient.appendChild(svgEl('stop', { offset: '55%', 'stop-color': '#f3f7fa' }));
+    gradient.appendChild(svgEl('stop', { offset: '100%', 'stop-color': '#edf4f8' }));
+    defs.appendChild(gradient);
+    var grid = svgEl('pattern', { id: gridId, width: 32, height: 32, patternUnits: 'userSpaceOnUse' });
+    grid.appendChild(svgEl('path', { d: 'M 32 0 L 0 0 0 32', fill: 'none', stroke: '#8aa0ad', 'stroke-width': 0.6, opacity: 0.14 }));
+    defs.appendChild(grid);
     var marker = svgEl('marker', {
       id: markerId, viewBox: '0 0 10 10', refX: 9, refY: 5,
       markerWidth: 7, markerHeight: 7, orient: 'auto-start-reverse'
@@ -254,6 +264,22 @@
     marker.appendChild(svgEl('path', { d: 'M 0 0 L 10 5 L 0 10 z', fill: '#7a8691' }));
     defs.appendChild(marker);
     svg.appendChild(defs);
+
+    var background = svgEl('rect', {
+      x: bounds.minX - pad, y: bounds.minY - pad,
+      width: width, height: height,
+      rx: 18, ry: 18,
+      'class': 'ws-process-background',
+      fill: 'url(#' + gradientId + ')'
+    });
+    svg.appendChild(background);
+    svg.appendChild(svgEl('rect', {
+      x: bounds.minX - pad, y: bounds.minY - pad,
+      width: width, height: height,
+      rx: 18, ry: 18,
+      'class': 'ws-process-grid',
+      fill: 'url(#' + gridId + ')'
+    }));
 
     var edgeGroup = svgEl('g', { 'class': 'ws-edges' });
     var labelGroup = svgEl('g', { 'class': 'ws-edge-labels' });

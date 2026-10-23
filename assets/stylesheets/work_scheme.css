@@ -13,6 +13,16 @@
   min-height: 200px;
 }
 
+.ws-process-background,
+.ws-process-grid {
+  pointer-events: none;
+}
+
+.ws-process-background {
+  stroke: #d7e2e8;
+  stroke-width: 1;
+}
+
 .ws-node rect,
 .ws-node polygon {
   stroke-width: 1.5;
