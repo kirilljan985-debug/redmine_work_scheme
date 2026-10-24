@@ -282,6 +282,7 @@
   font-weight: 600;
   cursor: pointer;
 }
+.ws-action-title { padding: 6px 8px; color: var(--ws-text); font-weight: 600; }
 .ws-action-group { display: flex; gap: 6px; flex-wrap: wrap; padding: 0 8px 8px; }
 
 .ws-editor-actions button,
