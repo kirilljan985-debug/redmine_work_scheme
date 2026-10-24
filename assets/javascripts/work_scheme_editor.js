@@ -481,7 +481,7 @@
       self.root.classList.add('ws-scenario-capture');
       self.markDirty();
       self.renderScenarios();
-      self.setStatus('Щёлкайте по блокам, чтобы собрать сценарий', 'dirty');
+      self.setStatus('Кликом добавляйте блоки в сценарий', 'dirty');
     });
 
     var saveBtn = document.getElementById('ws-save');
@@ -636,11 +636,11 @@
           capture.steps.push(id);
           self.markDirty();
         }
-        self.selectedIds = [id];
-        self.sel = { type: 'node', id: id };
-        self.root.classList.add('ws-object-focus', 'ws-scenario-capture');
+        self.selectedIds = [];
+        self.sel = null;
+        self.root.classList.remove('ws-object-focus');
+        self.root.classList.add('ws-scenario-capture');
         self.renderScenarios();
-        self.renderNodePanel();
         self.redraw();
         return;
       }
@@ -953,8 +953,8 @@
       var capture = document.createElement('button');
       capture.type = 'button';
       capture.className = 'ws-scenario-capture-button' + (self.activeScenarioId === scenario.id ? ' ws-active' : '');
-      capture.textContent = self.activeScenarioId === scenario.id ? 'Готово' : 'Щелчки';
-      capture.title = 'Собрать шаги кликами по блокам';
+      capture.textContent = self.activeScenarioId === scenario.id ? 'Готово' : 'Кликом';
+      capture.title = 'Собрать шаги кликом по блокам';
       capture.addEventListener('click', function () {
         if (self.activeScenarioId === scenario.id) {
           self.activeScenarioId = null;
@@ -963,7 +963,7 @@
         } else {
           self.activeScenarioId = scenario.id;
           self.root.classList.add('ws-scenario-capture');
-          self.setStatus('Щёлкайте по блокам, чтобы собрать сценарий', 'dirty');
+          self.setStatus('Кликом добавляйте блоки в сценарий', 'dirty');
         }
         self.renderScenarios();
       });
