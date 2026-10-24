@@ -846,7 +846,6 @@
   WorkSchemeView.prototype.highlightEdge = function (pathEl, rework) {
     pathEl.classList.add('ws-edge-active', 'ws-edge-drawing');
     if (rework) pathEl.classList.add('ws-edge-rework');
-    this.animateEnergyPulse(pathEl, rework);
     var reduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     var length = pathEl.getTotalLength ? pathEl.getTotalLength() : 0;
     if (length > 0) {
@@ -856,28 +855,6 @@
         pathEl.style.strokeDashoffset = '0';
       });
     }
-  };
-
-  WorkSchemeView.prototype.animateEnergyPulse = function (pathEl, rework) {
-    var self = this;
-    var total = pathEl.getTotalLength ? pathEl.getTotalLength() : 0;
-    if (!total || !self.overlay) return;
-    var pulse = svgEl('circle', { r: 9, 'class': 'ws-energy-pulse' + (rework ? ' ws-energy-pulse-rework' : '') });
-    self.overlay.appendChild(pulse);
-    var start = null;
-    var duration = self.playbackDelay(620);
-    var tick = function (timestamp) {
-      if (!self.playing) { if (pulse.parentNode) pulse.remove(); return; }
-      if (start === null) start = timestamp;
-      var progress = Math.min(1, (timestamp - start) / duration);
-      var point = pathEl.getPointAtLength(total * progress);
-      pulse.setAttribute('cx', point.x);
-      pulse.setAttribute('cy', point.y);
-      pulse.setAttribute('r', String(9 + progress * 5));
-      if (progress < 1) window.requestAnimationFrame(tick);
-      else if (pulse.parentNode) pulse.remove();
-    };
-    window.requestAnimationFrame(tick);
   };
 
   WorkSchemeView.prototype.markEdgeComplete = function (pathEl) {
