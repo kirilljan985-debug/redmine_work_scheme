@@ -177,6 +177,7 @@ module RedmineWorkScheme
           'from' => from,
           'to' => to,
           'label' => raw['label'].to_s.strip,
+          'color' => normalize_color(raw['color'], errors, index),
           'dashed' => raw['dashed'] == true,
           'route' => route,
           'from_side' => from_side,
@@ -226,6 +227,15 @@ module RedmineWorkScheme
       EDGE_SIDES.include?(side) ? side : :invalid
     end
 
+    def normalize_color(value, errors, index)
+      color = value.to_s.strip
+      return '' if color.empty?
+      return color if color =~ /\A#[0-9a-fA-F]{6}\z/
+
+      errors << format(I18n_error(:ws_error_edge_bad_color), index: index + 1)
+      ''
+    end
+
     def positive_int_or_nil(value)
       int = int_value(value, 0)
       int.positive? ? int : nil
@@ -262,6 +272,7 @@ module RedmineWorkScheme
       'ws_error_edge_not_object' => 'Связь №%{index} — не объект.',
       'ws_error_edge_bad_nodes' => 'Связь №%{index} ссылается на неизвестные узлы (from: "%{from}", to: "%{to}").',
       'ws_error_edge_bad_side' => 'Связь №%{index}: недопустимая сторона "%{side}" (допустимо: left, right, top, bottom или пусто).',
+      'ws_error_edge_bad_color' => 'Связь №%{index}: цвет должен быть в формате #RRGGBB или пустым.',
       'ws_error_scenarios_not_array' => '"scenarios" должен быть массивом.',
       'ws_error_scenario_not_object' => 'Сценарий №%{index} — не объект.',
       'ws_error_scenario_invalid' => 'Сценарий №%{index} заполнен неверно (нужны id, title и steps существующих узлов; неизвестные узлы: %{unknown}).',

@@ -71,6 +71,22 @@ class RedmineWorkSchemeSchemeTest < ActiveSupport::TestCase
     assert_equal 'straight', edge['route']
     assert_equal '', edge['from_side']
     assert_equal '', edge['to_side']
+    assert_equal '', edge['color']
+  end
+
+  test 'edge color accepts hex and rejects invalid values' do
+    parsed = RedmineWorkScheme::Scheme.parse(valid_scheme_json_with_nodes(
+      [{ 'id' => 'a', 'title' => 'A' }],
+      [{ 'from' => 'a', 'to' => 'a', 'color' => '#12AbEF' }]
+    ))
+    assert_empty parsed[:errors]
+    assert_equal '#12AbEF', parsed[:data]['edges'].first['color']
+
+    parsed = RedmineWorkScheme::Scheme.parse(valid_scheme_json_with_nodes(
+      [{ 'id' => 'a', 'title' => 'A' }],
+      [{ 'from' => 'a', 'to' => 'a', 'color' => 'red' }]
+    ))
+    assert parsed[:errors].any? { |e| e.include?('цвет') }
   end
 
   test 'arc route is preserved' do

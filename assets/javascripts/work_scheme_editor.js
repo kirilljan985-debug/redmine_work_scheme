@@ -32,7 +32,8 @@
       scenarios: root.getAttribute('data-label-scenarios') || 'Сценарии',
       stepsHint: root.getAttribute('data-label-steps-hint') || 'id узлов через запятую',
       bend: root.getAttribute('data-label-bend') || 'Изгиб',
-      background: root.getAttribute('data-label-background') || 'Цвет фона'
+      background: root.getAttribute('data-label-background') || 'Цвет фона',
+      edgeColor: root.getAttribute('data-label-edge-color') || 'Цвет стрелки'
     };
     var dataEl = root.querySelector('script.ws-data');
     if (!dataEl || !dataEl.textContent.trim()) return; // данные загрузятся асинхронно в dev-превью
@@ -572,7 +573,7 @@
 
   Editor.prototype.addPaletteEdge = function (route, dashed, from, to, fromSide, toSide, bend) {
     var self = this;
-    var edge = { from: from, to: to, label: '', dashed: dashed === true, route: route || 'straight', fromSide: fromSide || '', toSide: toSide || '', bend: num(bend, 50) };
+    var edge = { from: from, to: to, label: '', color: '', dashed: dashed === true, route: route || 'straight', fromSide: fromSide || '', toSide: toSide || '', bend: num(bend, 50) };
     self.view.edges.push(edge);
     self.markDirty();
     self.pendingFrom = null;
@@ -835,6 +836,18 @@
 
     field('Подпись на стрелке', e.label, function (v) { e.label = v; self.redraw(); });
 
+    var colorWrap = document.createElement('div');
+    colorWrap.className = 'ws-field';
+    var colorLabel = document.createElement('label');
+    colorLabel.textContent = self.labels.edgeColor;
+    colorWrap.appendChild(colorLabel);
+    var color = document.createElement('input');
+    color.type = 'color';
+    color.value = /^#[0-9a-f]{6}$/i.test(e.color || '') ? e.color : '#7a8691';
+    color.addEventListener('input', function () { e.color = color.value; self.redraw(); });
+    colorWrap.appendChild(color);
+    panel.appendChild(colorWrap);
+
     selectField('Форма', ROUTES, e.route, function (v) {
       e.route = v; self.redraw(); self.renderEdgePanel();
     });
@@ -944,7 +957,7 @@
       }),
       edges: self.view.edges.map(function (e) {
         return {
-          from: e.from, to: e.to, label: e.label, dashed: e.dashed === true,
+          from: e.from, to: e.to, label: e.label, color: /^#[0-9a-f]{6}$/i.test(e.color || '') ? e.color : '', dashed: e.dashed === true,
           route: e.route, from_side: e.fromSide || '', to_side: e.toSide || '',
           bend: num(e.bend, 50)
         };

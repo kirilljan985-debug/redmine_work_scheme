@@ -67,6 +67,7 @@
         from: String(raw.from || ''),
         to: String(raw.to || ''),
         label: String(raw.label || ''),
+        color: /^#[0-9a-f]{6}$/i.test(String(raw.color || '').trim()) ? String(raw.color).trim() : '',
         dashed: raw.dashed === true,
         route: raw.route === 'arc' ? 'arc' : (raw.route === 'elbow' ? 'elbow' : (raw.route === 'u' ? 'u' : 'straight')),
         fromSide: raw.from_side || '',
@@ -292,10 +293,12 @@
       var pathAttrs = {
         d: drawn.d,
         'class': 'ws-edge' + (edge.dashed ? ' ws-edge-dashed' : ''),
+        stroke: edge.color || undefined,
         'data-edge': edge.from + '>' + edge.to,
         'marker-end': 'url(#' + markerId + ')'
       };
       var pathEl = svgEl('path', pathAttrs);
+      if (edge.color) pathEl.style.stroke = edge.color;
       edgeGroup.appendChild(pathEl);
       self.pathByEdge[edge.from + '>' + edge.to] = pathEl;
       if (edge.label) {
