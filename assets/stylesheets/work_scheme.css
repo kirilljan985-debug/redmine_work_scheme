@@ -27,7 +27,26 @@
   box-shadow: var(--ws-shadow);
 }
 
+.ws-additionals-block {
+  width: var(--ws-block-width, 100%);
+  max-width: 100%;
+  min-height: var(--ws-block-height, 420px);
+  box-sizing: border-box;
+}
+.ws-additionals-block svg { max-height: calc(var(--ws-block-height, 420px) - 72px); }
+
 #ws-editor .ws-container { padding: 0; border: 0; border-radius: 0; background: transparent; box-shadow: none; }
+
+#ws-editor .ws-editor-main { position: relative; background: var(--ws-surface-muted); }
+#ws-editor .ws-editor-main::before {
+  content: 'Рабочая область схемы';
+  display: block;
+  padding: 3px 6px 7px;
+  color: var(--ws-muted);
+  font-size: 10px;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
 
 .ws-container svg {
   max-width: 100%;
@@ -443,6 +462,40 @@
   .ws-palette-items { overflow-x: auto; flex-wrap: nowrap; padding-bottom: 3px; }
   .ws-palette-item { flex: 0 0 auto; }
 }
+
+/* Тёмная тема Redmine/системы: поддерживаем распространённые классы тем и media preference. */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --ws-surface: #1f2933;
+    --ws-surface-muted: #151d24;
+    --ws-border: #43515d;
+    --ws-border-strong: #61717e;
+    --ws-text: #edf3f7;
+    --ws-muted: #aebbc5;
+    --ws-primary: #6ea8dc;
+    --ws-primary-dark: #8fc1ee;
+    --ws-primary-soft: #263d52;
+  }
+  .ws-node-process rect { fill: #26313a; stroke: #94a3ad; }
+  .ws-node-start rect { fill: #24384a; stroke: #8fb4d6; }
+  .ws-node-decision polygon { fill: #493d27; stroke: #dfbd69; }
+  .ws-node-end rect { fill: #203a2a; stroke: #83c595; }
+  .ws-node text { fill: #edf3f7; }
+  .ws-edge-label { fill: #e7eef3; stroke: #1f2933; }
+}
+body.theme-dark, body.dark, body[data-theme="dark"] {
+  --ws-surface: #1f2933;
+  --ws-surface-muted: #151d24;
+  --ws-border: #43515d;
+  --ws-border-strong: #61717e;
+  --ws-text: #edf3f7;
+  --ws-muted: #aebbc5;
+  --ws-primary: #6ea8dc;
+  --ws-primary-dark: #8fc1ee;
+  --ws-primary-soft: #263d52;
+}
+body.theme-dark .ws-node-process rect, body.dark .ws-node-process rect, body[data-theme="dark"] .ws-node-process rect { fill: #26313a; stroke: #94a3ad; }
+body.theme-dark .ws-node text, body.dark .ws-node text, body[data-theme="dark"] .ws-node text { fill: #edf3f7; }
 
 /* Маркеры перепривязки стрелок и русские подписи панелей */
 

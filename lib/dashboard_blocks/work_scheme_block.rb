@@ -8,7 +8,8 @@ module DashboardBlocks
     label :ws_label_scheme
     dashboards :welcome
     partial 'work_scheme/block'
-    no_settings!
+    setting :width, type: :integer, label: :ws_block_width, min: 30, max: 100, default: 100
+    setting :height, type: :integer, label: :ws_block_height, min: 200, max: 1200, default: 420
 
     def scheme
       json = Setting.plugin_redmine_work_scheme
