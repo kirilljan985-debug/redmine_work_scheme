@@ -205,6 +205,11 @@
   touch-action: none;
 }
 
+.ws-scenario-capture .ws-edit-mode .ws-node {
+  cursor: default;
+  touch-action: auto;
+}
+
 .ws-edit-panel {
   margin-top: 8px;
   padding: 8px;

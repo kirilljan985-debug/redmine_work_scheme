@@ -561,6 +561,7 @@
       if (!node) return;
       group.addEventListener('pointerdown', function (event) {
         if (!self.editMode) return;
+        if (self.container.closest && self.container.closest('.ws-scenario-capture')) return;
         event.preventDefault();
         var startX = event.clientX;
         var startY = event.clientY;
