@@ -666,3 +666,11 @@ customer` кликами добавлен ещё один цикл `cirpt, analy
 `customer, cirpt, analyze, check, customer, cirpt, analyze, check, approve,
 proj, dev, control, cert, pilot`. Unit-проверка обновлена с 2 до 3 сценариев.
 В `/dev/preview.html?v=54` сценарий выбран и проигран до статуса «Готово» (14/14).
+
+Результат: при первом повторном узле проигрыватель очищает зелёные классы
+пройденных узлов и связей. Ромб проверки получает красный класс
+`ws-node-rework` вместе с активным состоянием на возвратной ветке; при новом
+успешном проходе `markNodeComplete` снимает красный класс и возвращает зелёный.
+Проверено в `/dev/preview.html?v=55` на сценарии `rework_cycle`: ромб имел
+`ws-node-active ws-node-rework` во время возврата. `node --check` и
+`git diff --check` прошли.

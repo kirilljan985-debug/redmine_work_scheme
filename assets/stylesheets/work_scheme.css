@@ -161,6 +161,13 @@
   fill: #f0f9f1;
 }
 
+.ws-node-rework rect,
+.ws-node-rework polygon {
+  stroke: #b34a4a;
+  fill: #fff0f0;
+  stroke-width: 2.8;
+}
+
 .ws-edge-active {
   stroke: #d66f2c !important;
   stroke-width: 2.6 !important;

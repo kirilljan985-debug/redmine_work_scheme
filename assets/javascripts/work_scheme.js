@@ -672,10 +672,10 @@
         if (prev) pathEl = self.pathByEdge[prev.id + '>' + node.id];
       }
       if (pathEl) {
-        self.markNodeComplete(prev);
+        var isRework = steps.slice(0, index).indexOf(node.id) !== -1;
+        if (isRework) self.beginRework(prev); else self.markNodeComplete(prev);
         self.highlightNode(node);
         self.showPlaybackToken(prev, true);
-        var isRework = steps.slice(0, index).indexOf(node.id) !== -1;
         self.highlightEdge(pathEl, isRework);
         var afterEdge = function () {
           self.markEdgeComplete(pathEl);
@@ -702,7 +702,26 @@
   WorkSchemeView.prototype.markNodeComplete = function (node) {
     if (!node) return;
     var group = this.container.querySelector('.ws-node[data-id="' + node.id + '"]');
-    if (group) group.classList.add('ws-node-complete');
+    if (group) {
+      group.classList.remove('ws-node-rework');
+      group.classList.add('ws-node-complete');
+    }
+  };
+
+  WorkSchemeView.prototype.beginRework = function (node) {
+    var self = this;
+    Array.prototype.forEach.call(self.container.querySelectorAll('.ws-node-complete'), function (el) {
+      el.classList.remove('ws-node-complete');
+    });
+    Array.prototype.forEach.call(self.container.querySelectorAll('.ws-edge-complete'), function (el) {
+      el.classList.remove('ws-edge-complete');
+      el.style.strokeDasharray = '';
+      el.style.strokeDashoffset = '';
+    });
+    if (node) {
+      var group = self.container.querySelector('.ws-node[data-id="' + node.id + '"]');
+      if (group) group.classList.add('ws-node-rework');
+    }
   };
 
   WorkSchemeView.prototype.highlightEdge = function (pathEl, rework) {
@@ -872,6 +891,9 @@
     });
     Array.prototype.forEach.call(self.container.querySelectorAll('.ws-node-complete'), function (el) {
       el.classList.remove('ws-node-complete');
+    });
+    Array.prototype.forEach.call(self.container.querySelectorAll('.ws-node-rework'), function (el) {
+      el.classList.remove('ws-node-rework');
     });
     Array.prototype.forEach.call(self.container.querySelectorAll('.ws-edge-active'), function (el) {
       el.classList.remove('ws-edge-active');
