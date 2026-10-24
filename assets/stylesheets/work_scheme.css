@@ -339,6 +339,7 @@
 .ws-help-swatch-rework { background: #7c4dff; }
 .ws-properties { margin-bottom: 10px; padding: 7px 9px; border: 1px solid var(--ws-border); border-radius: var(--ws-radius); background: var(--ws-surface); }
 .ws-properties summary { cursor: pointer; color: var(--ws-text); font-weight: 600; }
+#ws-editor:not(.ws-object-focus) .ws-properties { display: none; }
 #ws-editor.ws-object-focus .ws-help,
 #ws-editor.ws-object-focus .ws-title-control,
 #ws-editor.ws-object-focus .ws-background-control,
