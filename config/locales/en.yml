@@ -31,6 +31,7 @@ en:
   ws_label_background: "Background color"
   ws_label_edge_color: "Arrow color"
   ws_label_scheme_title: "Scheme title"
+  ws_label_theme: "Interface theme"
   ws_block_width: "Scheme width, %"
   ws_block_height: "Scheme height, px"
   ws_label_palette: "Ready elements"

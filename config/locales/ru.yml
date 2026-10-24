@@ -31,6 +31,7 @@ ru:
   ws_label_background: "Цвет фона"
   ws_label_edge_color: "Цвет стрелки"
   ws_label_scheme_title: "Название схемы"
+  ws_label_theme: "Тема интерфейса"
   ws_block_width: "Ширина схемы, %"
   ws_block_height: "Высота схемы, px"
   ws_label_palette: "Готовые элементы"

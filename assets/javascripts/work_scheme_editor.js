@@ -40,6 +40,7 @@
     var scheme = JSON.parse(dataEl.textContent);
     var View = window.WorkScheme.View;
     this.view = new View(root.querySelector('.ws-container'), scheme);
+    root.setAttribute('data-ws-theme', scheme.theme || 'classic');
     this.view.editMode = true;        // перетаскивание узлов включено
     this.view.showCoordPanel = false; // панель координат не нужна — есть полноценный редактор
     this.sel = null;                  // {type:'node', id} | {type:'edge', key}
@@ -56,6 +57,7 @@
     this.wirePalette();
     this.wireTitle();
     this.wireBackground();
+    this.wireTheme();
   }
 
   Editor.prototype.wireTitle = function () {
@@ -77,6 +79,20 @@
     input.value = /^#[0-9a-f]{6}$/i.test(self.view.scheme.background || '') ? self.view.scheme.background : '#f3f7fa';
     input.addEventListener('input', function () {
       self.view.scheme.background = input.value;
+      self.redraw();
+    });
+  };
+
+  Editor.prototype.wireTheme = function () {
+    var self = this;
+    var input = this.root.querySelector('#ws-theme');
+    if (!input) return;
+    input.value = self.view.scheme.theme || 'classic';
+    input.addEventListener('change', function () {
+      self.view.scheme.theme = input.value;
+      self.root.setAttribute('data-ws-theme', input.value);
+      self.view.container.setAttribute('data-ws-theme', input.value);
+      self.markDirty();
       self.redraw();
     });
   };
@@ -105,6 +121,9 @@
     if (titleInput) titleInput.value = data.title || 'Схема';
     var backgroundInput = this.root.querySelector('#ws-background');
     if (backgroundInput) backgroundInput.value = data.background || '#f3f7fa';
+    var themeInput = this.root.querySelector('#ws-theme');
+    if (themeInput) themeInput.value = data.theme || 'classic';
+    this.root.setAttribute('data-ws-theme', data.theme || 'classic');
     this.renderScenarios();
     this.dirty = true;
     this.setStatus('Есть несохранённые изменения', 'dirty');
@@ -1048,6 +1067,7 @@
     var self = this;
     return {
       title: self.view.scheme.title || 'Схема',
+      theme: self.view.scheme.theme || 'classic',
       background: self.view.scheme.background || '#f3f7fa',
       nodes: self.view.nodes.map(function (n) {
         return {

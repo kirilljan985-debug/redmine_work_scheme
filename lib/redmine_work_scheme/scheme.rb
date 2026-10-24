@@ -10,6 +10,7 @@ module RedmineWorkScheme
     ICONS = %w(user document search decision certificate gear rocket).freeze
     TEXT_FAMILIES = %w(sans-serif serif monospace).freeze
     TEXT_WEIGHTS = %w(normal bold).freeze
+    THEMES = %w(classic ocean graphite warm paper).freeze
     DEFAULT_NODE_WIDTH = 140
     DEFAULT_NODE_HEIGHT = 56
 
@@ -46,6 +47,7 @@ module RedmineWorkScheme
         result(
           {
             'title' => raw['title'].to_s.strip,
+            'theme' => THEMES.include?(raw['theme'].to_s) ? raw['theme'].to_s : 'classic',
             'background' => background,
             'nodes' => nodes,
             'edges' => edges,

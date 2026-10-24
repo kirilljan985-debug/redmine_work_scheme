@@ -44,6 +44,7 @@
   function WorkSchemeView(container, scheme) {
     this.container = container;
     this.scheme = scheme || {};
+    this.container.setAttribute('data-ws-theme', this.scheme.theme || 'classic');
     this.stageBase = container.getAttribute('data-stage-base-url') || '';
     this.nodes = (scheme.nodes || []).map(function (raw) {
       return {

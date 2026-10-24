@@ -336,3 +336,7 @@ to_side, bend 0–200), `scenarios[]` (id, title, steps[]). Подробно —
   compact canvas/controls, единые карточки боковой панели, иконки секций,
   плотный playback-status и empty-state для отсутствующих сценариев/ошибок.
   Проверено в `/dev/editor.html?v=64`.
+- 2026-10-24 — добавлена секция «Тема интерфейса» с пятью визуальными темами:
+  Redmine Classic, Ocean Blue, Graphite Dark, Warm Office, Paper Canvas. Выбор
+  сохраняется в JSON и применяется сразу к canvas/панели через CSS-переменные.
+  Проверено в `/dev/editor.html?v=65` на Graphite Dark.
