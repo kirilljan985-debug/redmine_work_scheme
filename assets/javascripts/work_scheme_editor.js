@@ -32,7 +32,6 @@
       scenarios: root.getAttribute('data-label-scenarios') || 'Сценарии',
       stepsHint: root.getAttribute('data-label-steps-hint') || 'id узлов через запятую',
       bend: root.getAttribute('data-label-bend') || 'Изгиб',
-      background: root.getAttribute('data-label-background') || 'Цвет фона',
       edgeColor: root.getAttribute('data-label-edge-color') || 'Цвет стрелки'
     };
     var dataEl = root.querySelector('script.ws-data');
@@ -56,7 +55,6 @@
     this.renderScenarios();
     this.wirePalette();
     this.wireTitle();
-    this.wireBackground();
     this.wireTheme();
   }
 
@@ -69,17 +67,6 @@
       self.view.scheme.title = input.value;
       var heading = document.querySelector('#ws-editor-heading');
       if (heading) heading.textContent = input.value || 'Схема';
-    });
-  };
-
-  Editor.prototype.wireBackground = function () {
-    var self = this;
-    var input = this.root.querySelector('#ws-background');
-    if (!input) return;
-    input.value = /^#[0-9a-f]{6}$/i.test(self.view.scheme.background || '') ? self.view.scheme.background : '#f3f7fa';
-    input.addEventListener('input', function () {
-      self.view.scheme.background = input.value;
-      self.redraw();
     });
   };
 
@@ -119,8 +106,6 @@
     this.root.classList.remove('ws-object-focus');
     var titleInput = this.root.querySelector('#ws-title');
     if (titleInput) titleInput.value = data.title || 'Схема';
-    var backgroundInput = this.root.querySelector('#ws-background');
-    if (backgroundInput) backgroundInput.value = data.background || '#f3f7fa';
     var themeInput = this.root.querySelector('#ws-theme');
     if (themeInput) themeInput.value = data.theme || 'classic';
     this.root.setAttribute('data-ws-theme', data.theme || 'classic');
@@ -443,7 +428,7 @@
     var container = self.view.container;
 
     var markFormDirty = function (ev) {
-      if (ev.target.closest && (ev.target.closest('.ws-field') || ev.target.closest('.ws-scenario-row') || ev.target.id === 'ws-title' || ev.target.id === 'ws-background')) self.markDirty();
+      if (ev.target.closest && (ev.target.closest('.ws-field') || ev.target.closest('.ws-scenario-row') || ev.target.id === 'ws-title')) self.markDirty();
     };
     self.root.addEventListener('input', markFormDirty);
     self.root.addEventListener('change', markFormDirty);
@@ -1068,7 +1053,6 @@
     return {
       title: self.view.scheme.title || 'Схема',
       theme: self.view.scheme.theme || 'classic',
-      background: self.view.scheme.background || '#f3f7fa',
       nodes: self.view.nodes.map(function (n) {
         return {
           id: n.id, type: n.type, title: n.title, dept: n.dept,

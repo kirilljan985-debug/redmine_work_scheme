@@ -1,6 +1,6 @@
 {
   "title": "Схема",
-  "background": "#f3f7fa",
+  "theme": "classic",
   "nodes": [
     {
       "id": "customer",

@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <title>Work Scheme editor preview (dev)</title>
-<link rel="stylesheet" href="../assets/stylesheets/work_scheme.css?v=13">
+<link rel="stylesheet" href="../assets/stylesheets/work_scheme.css?v=66">
 <style>
   body { font-family: system-ui, sans-serif; margin: 16px; }
 </style>
@@ -16,7 +16,7 @@
      data-label-add-edge-hint="Кликните исходный узел, затем целевой" data-label-swap="Развернуть"
      data-label-delete="Удалить" data-label-node="Узел" data-label-edge="Стрелка"
      data-label-scenarios="Сценарии проигрывания" data-label-steps-hint="id узлов через запятую"
-     data-label-bend="Изгиб" data-label-background="Цвет фона" data-label-edge-color="Цвет стрелки">
+     data-label-bend="Изгиб" data-label-edge-color="Цвет стрелки">
   <div class="ws-editor-main">
     <div class="ws-container" data-work-scheme>
       <script type="application/json" class="ws-data"></script>
@@ -32,10 +32,6 @@
       <label for="ws-title">Название схемы</label>
       <input id="ws-title" type="text" value="">
     </div>
-    <div class="ws-background-control">
-      <label for="ws-background">Цвет фона</label>
-      <input id="ws-background" type="color" value="#f3f7fa">
-    </div>
     <div class="ws-theme-control">
       <label for="ws-theme">Тема интерфейса</label>
       <select id="ws-theme"><option value="classic">Redmine Classic</option><option value="ocean">Ocean Blue</option><option value="graphite">Graphite Dark</option><option value="warm">Warm Office</option><option value="paper">Paper Canvas</option></select>
@@ -44,8 +40,8 @@
       <summary>Узел / Стрелка</summary>
       <div id="ws-obj-panel"><em>Узел / Стрелка</em></div>
     </details>
-    <div class="ws-palette">
-      <h4>Готовые элементы</h4>
+    <details class="ws-palette" open>
+      <summary>Готовые элементы</summary>
       <p class="ws-panel-hint">Перетащите блок на холст. Стрелку бросьте на блок-источник, затем выберите блок-цель.</p>
       <div class="ws-palette-group"><strong>Блоки</strong><div class="ws-palette-items">
         <button type="button" draggable="true" class="ws-palette-item ws-palette-node-start" data-palette-kind="node" data-node-type="start">Старт</button>
@@ -68,13 +64,13 @@
         <button type="button" draggable="true" class="ws-palette-item ws-palette-icon" data-palette-kind="icon" data-icon="gear">Шестерёнка</button>
         <button type="button" draggable="true" class="ws-palette-item ws-palette-icon" data-palette-kind="icon" data-icon="rocket">Запуск</button>
       </div></div>
-    </div>
-    <div class="ws-scenarios-block">
-      <h4>Сценарии проигрывания</h4>
+    </details>
+    <details class="ws-scenarios-block" open>
+      <summary>Сценарии проигрывания</summary>
       <p class="ws-scenario-hint">В режиме «Кликом» можно повторно пройти блоки после возврата на переработку.</p>
       <div id="ws-scenarios-list"></div>
       <button type="button" id="ws-add-scenario">+ Сценарии</button>
-    </div>
+    </details>
     <div class="ws-editor-actions">
       <details class="ws-action-section ws-action-section-history" open><summary>История</summary><div class="ws-action-group">
         <button type="button" id="ws-undo">Отменить</button><button type="button" id="ws-redo">Повторить</button>
@@ -93,12 +89,12 @@
     <div id="ws-save-status"></div>
   </div>
 </div>
-<script src="../assets/javascripts/work_scheme.js?v=12"></script>
-<script src="../assets/javascripts/work_scheme_editor.js?v=12"></script>
+<script src="../assets/javascripts/work_scheme.js?v=66"></script>
+<script src="../assets/javascripts/work_scheme_editor.js?v=66"></script>
 <script>
   // dev-обвязка: после загрузки схемы повторно инициируем редактор
   // (editor.js вешает init на DOMContentLoaded, который к моменту fetch уже прошёл)
-  fetch('scheme.json?v=29')
+  fetch('scheme.json?v=66')
     .then(function (r) { return r.text(); })
     .then(function (text) {
       document.querySelector('script.ws-data').textContent = text;

@@ -28,7 +28,6 @@ en:
   ws_label_scenarios: "Playback scenarios"
   ws_label_steps_hint: "node ids, comma separated"
   ws_label_bend: "Bend"
-  ws_label_background: "Background color"
   ws_label_edge_color: "Arrow color"
   ws_label_scheme_title: "Scheme title"
   ws_label_theme: "Interface theme"

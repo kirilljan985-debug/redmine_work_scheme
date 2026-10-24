@@ -40,7 +40,7 @@ git clone https://github.com/kirilljan985-debug/redmine_work_scheme.git redmine_
 ```json
 {
   "title": "Схема",
-  "background": "#f3f7fa",
+  "theme": "classic",
   "nodes":  [ ...узлы... ],
   "edges":  [ ...связи между узлами... ],
   "scenarios": [ ...сценарии проигрывания... ]
@@ -49,8 +49,8 @@ git clone https://github.com/kirilljan985-debug/redmine_work_scheme.git redmine_
 
 ### Узел (nodes)
 
-`background` — необязательный цвет полотна в формате `#RRGGBB`; его можно
-изменить в визуальном редакторе.
+`theme` — визуальная тема схемы: `classic`, `ocean`, `graphite`, `warm` или
+`paper`. Тема задаёт фон полотна и оформление редактора.
 
 | Поле | Тип | Обяз. | Описание |
 |------|-----|-------|----------|

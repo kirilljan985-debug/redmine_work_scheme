@@ -31,7 +31,6 @@
        data-label-scenarios="<%= l(:ws_label_scenarios) %>"
        data-label-steps-hint="<%= l(:ws_label_steps_hint) %>"
        data-label-bend="<%= l(:ws_label_bend) %>"
-       data-label-background="<%= l(:ws_label_background) %>"
        data-label-edge-color="<%= l(:ws_label_edge_color) %>">
     <div class="ws-editor-main">
       <div class="ws-container" data-work-scheme>
@@ -48,10 +47,6 @@
         <label for="ws-title"><%= l(:ws_label_scheme_title) %></label>
         <input id="ws-title" type="text" value="">
       </div>
-      <div class="ws-background-control">
-        <label for="ws-background"><%= l(:ws_label_background) %></label>
-        <input id="ws-background" type="color" value="#f3f7fa">
-      </div>
       <div class="ws-theme-control">
         <label for="ws-theme"><%= l(:ws_label_theme) %></label>
         <select id="ws-theme">
@@ -66,8 +61,8 @@
         <summary><%= l(:ws_label_node) %> / <%= l(:ws_label_edge) %></summary>
         <div id="ws-obj-panel"><em><%= l(:ws_label_node) %> / <%= l(:ws_label_edge) %></em></div>
       </details>
-      <div class="ws-palette">
-        <h4><%= l(:ws_label_palette) %></h4>
+      <details class="ws-palette" open>
+        <summary><%= l(:ws_label_palette) %></summary>
         <p class="ws-panel-hint"><%= l(:ws_label_palette_hint) %></p>
         <div class="ws-palette-group">
           <strong><%= l(:ws_label_palette_nodes) %></strong>
@@ -95,13 +90,13 @@
             <% end %>
           </div>
         </div>
-      </div>
-      <div class="ws-scenarios-block">
-        <h4><%= l(:ws_label_scenarios) %></h4>
+      </details>
+      <details class="ws-scenarios-block" open>
+        <summary><%= l(:ws_label_scenarios) %></summary>
         <p class="ws-scenario-hint">В режиме «Кликом» можно повторно пройти блоки: после возврата на переработку снова нажмите нужные этапы.</p>
         <div id="ws-scenarios-list"></div>
         <button type="button" id="ws-add-scenario">+ <%= l(:ws_label_scenarios) %></button>
-      </div>
+      </details>
       <div class="ws-editor-actions">
         <details class="ws-action-section ws-action-section-history" open>
           <summary>История</summary>

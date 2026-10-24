@@ -184,24 +184,25 @@ class RedmineWorkSchemeSchemeTest < ActiveSupport::TestCase
     assert_equal 7, by_id['c']['query_id']
   end
 
-  test 'background accepts a hex color and defaults when omitted' do
+  test 'theme accepts known values and defaults when omitted' do
     parsed = RedmineWorkScheme::Scheme.parse(valid_scheme_json_with_nodes(
       [{ 'id' => 'a', 'title' => 'A', 'x' => 0, 'y' => 0 }]
     ))
-    assert_equal '#f3f7fa', parsed[:data]['background']
+    assert_equal 'classic', parsed[:data]['theme']
 
     parsed = RedmineWorkScheme::Scheme.parse(
-      { 'background' => '#123ABC', 'nodes' => [{ 'id' => 'a', 'title' => 'A' }], 'edges' => [], 'scenarios' => [] }.to_json
+      { 'theme' => 'graphite', 'nodes' => [{ 'id' => 'a', 'title' => 'A' }], 'edges' => [], 'scenarios' => [] }.to_json
     )
     assert_empty parsed[:errors]
-    assert_equal '#123ABC', parsed[:data]['background']
+    assert_equal 'graphite', parsed[:data]['theme']
   end
 
-  test 'invalid background returns an error' do
+  test 'unknown theme safely falls back to classic' do
     parsed = RedmineWorkScheme::Scheme.parse(
-      { 'background' => 'red', 'nodes' => [{ 'id' => 'a', 'title' => 'A' }], 'edges' => [], 'scenarios' => [] }.to_json
+      { 'theme' => 'neon', 'nodes' => [{ 'id' => 'a', 'title' => 'A' }], 'edges' => [], 'scenarios' => [] }.to_json
     )
-    assert parsed[:errors].any? { |e| e.include?('background') }
+    assert_empty parsed[:errors]
+    assert_equal 'classic', parsed[:data]['theme']
   end
 
   private

@@ -28,7 +28,6 @@ ru:
   ws_label_scenarios: "Сценарии проигрывания"
   ws_label_steps_hint: "id узлов через запятую"
   ws_label_bend: "Изгиб"
-  ws_label_background: "Цвет фона"
   ws_label_edge_color: "Цвет стрелки"
   ws_label_scheme_title: "Название схемы"
   ws_label_theme: "Тема интерфейса"

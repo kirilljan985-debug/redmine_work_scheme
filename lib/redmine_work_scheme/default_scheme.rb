@@ -9,7 +9,6 @@ module RedmineWorkScheme
     def data
       {
         'title' => 'Схема',
-        'background' => '#f3f7fa',
         'nodes' => [
           {
             'id' => 'customer', 'type' => 'start',

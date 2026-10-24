@@ -33,14 +33,6 @@ module RedmineWorkScheme
       nodes = normalize_nodes(raw['nodes'], errors)
       edges = normalize_edges(raw['edges'], nodes, errors)
       scenarios = normalize_scenarios(raw['scenarios'], nodes, errors)
-      background = raw['background'].to_s.strip
-      if background.empty?
-        background = '#f3f7fa'
-      elsif background !~ /\A#[0-9a-fA-F]{6}\z/
-        errors << I18n_error(:ws_error_bad_background)
-        background = '#f3f7fa'
-      end
-
       if errors.any?
         result(nil, errors)
       else
@@ -48,7 +40,6 @@ module RedmineWorkScheme
           {
             'title' => raw['title'].to_s.strip,
             'theme' => THEMES.include?(raw['theme'].to_s) ? raw['theme'].to_s : 'classic',
-            'background' => background,
             'nodes' => nodes,
             'edges' => edges,
             'scenarios' => scenarios
@@ -287,7 +278,6 @@ module RedmineWorkScheme
       'ws_error_not_object' => 'JSON должен быть объектом.',
       'ws_error_unexpected' => 'Неожиданная ошибка: %{message}',
       'ws_error_no_nodes' => 'В схеме нет узлов (массив "nodes").',
-      'ws_error_bad_background' => 'Поле "background" должно быть цветом в формате #RRGGBB.',
       'ws_error_node_not_object' => 'Узел №%{index} — не объект.',
       'ws_error_node_no_id' => 'Узел №%{index} без поля "id".',
       'ws_error_node_bad_id' => 'Узел "%{id}": id может содержать только латиницу, цифры, "-" и "_".',
