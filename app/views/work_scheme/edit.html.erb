@@ -57,11 +57,11 @@
           <option value="paper">Paper Canvas</option>
         </select>
       </div>
-      <details class="ws-properties" open>
+      <details class="ws-properties">
         <summary><%= l(:ws_label_node) %> / <%= l(:ws_label_edge) %></summary>
         <div id="ws-obj-panel"><em><%= l(:ws_label_node) %> / <%= l(:ws_label_edge) %></em></div>
       </details>
-      <details class="ws-palette" open>
+      <details class="ws-palette">
         <summary><%= l(:ws_label_palette) %></summary>
         <p class="ws-panel-hint"><%= l(:ws_label_palette_hint) %></p>
         <div class="ws-palette-group">
@@ -91,14 +91,14 @@
           </div>
         </div>
       </details>
-      <details class="ws-scenarios-block" open>
+      <details class="ws-scenarios-block">
         <summary><%= l(:ws_label_scenarios) %></summary>
         <p class="ws-scenario-hint">В режиме «Кликом» можно повторно пройти блоки: после возврата на переработку снова нажмите нужные этапы.</p>
         <div id="ws-scenarios-list"></div>
         <button type="button" id="ws-add-scenario">+ <%= l(:ws_label_scenarios) %></button>
       </details>
       <div class="ws-editor-actions">
-        <details class="ws-action-section ws-action-section-history" open>
+        <details class="ws-action-section ws-action-section-history">
           <summary>История</summary>
           <div class="ws-action-group">
             <button type="button" id="ws-undo">Отменить</button>

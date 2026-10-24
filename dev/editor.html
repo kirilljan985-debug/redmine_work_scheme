@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <title>Work Scheme editor preview (dev)</title>
-<link rel="stylesheet" href="../assets/stylesheets/work_scheme.css?v=66">
+<link rel="stylesheet" href="../assets/stylesheets/work_scheme.css?v=69">
 <style>
   body { font-family: system-ui, sans-serif; margin: 16px; }
 </style>
@@ -36,11 +36,11 @@
       <label for="ws-theme">Тема интерфейса</label>
       <select id="ws-theme"><option value="classic">Redmine Classic</option><option value="ocean">Ocean Blue</option><option value="graphite">Graphite Dark</option><option value="warm">Warm Office</option><option value="paper">Paper Canvas</option></select>
     </div>
-    <details class="ws-properties" open>
+    <details class="ws-properties">
       <summary>Узел / Стрелка</summary>
       <div id="ws-obj-panel"><em>Узел / Стрелка</em></div>
     </details>
-    <details class="ws-palette" open>
+    <details class="ws-palette">
       <summary>Готовые элементы</summary>
       <p class="ws-panel-hint">Перетащите блок на холст. Стрелку бросьте на блок-источник, затем выберите блок-цель.</p>
       <div class="ws-palette-group"><strong>Блоки</strong><div class="ws-palette-items">
@@ -65,14 +65,14 @@
         <button type="button" draggable="true" class="ws-palette-item ws-palette-icon" data-palette-kind="icon" data-icon="rocket">Запуск</button>
       </div></div>
     </details>
-    <details class="ws-scenarios-block" open>
+    <details class="ws-scenarios-block">
       <summary>Сценарии проигрывания</summary>
       <p class="ws-scenario-hint">В режиме «Кликом» можно повторно пройти блоки после возврата на переработку.</p>
       <div id="ws-scenarios-list"></div>
       <button type="button" id="ws-add-scenario">+ Сценарии</button>
     </details>
     <div class="ws-editor-actions">
-      <details class="ws-action-section ws-action-section-history" open><summary>История</summary><div class="ws-action-group">
+      <details class="ws-action-section ws-action-section-history"><summary>История</summary><div class="ws-action-group">
         <button type="button" id="ws-undo">Отменить</button><button type="button" id="ws-redo">Повторить</button>
       </div></details>
       <details class="ws-action-section ws-action-section-align"><summary>Выравнивание</summary><div class="ws-action-group">
@@ -89,8 +89,8 @@
     <div id="ws-save-status"></div>
   </div>
 </div>
-<script src="../assets/javascripts/work_scheme.js?v=66"></script>
-<script src="../assets/javascripts/work_scheme_editor.js?v=66"></script>
+<script src="../assets/javascripts/work_scheme.js?v=69"></script>
+<script src="../assets/javascripts/work_scheme_editor.js?v=69"></script>
 <script>
   // dev-обвязка: после загрузки схемы повторно инициируем редактор
   // (editor.js вешает init на DOMContentLoaded, который к моменту fetch уже прошёл)
