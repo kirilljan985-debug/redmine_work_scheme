@@ -144,6 +144,7 @@
   line-height: 1.3;
   background: #fff8f1;
 }
+.ws-playback-status-below { margin: 0 0 8px; }
 
 .ws-playback-status[hidden] { display: none; }
 

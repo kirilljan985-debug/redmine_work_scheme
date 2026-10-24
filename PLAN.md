@@ -734,3 +734,13 @@ standalone-валидатор и `git diff --check` прошли.
 больше нет. Проверено в `/dev/preview.html?v=61`: порядок детей controls начинается
 с `ws-playback-status`, затем `ws-zoom-controls`, select и play. `node --check`
 и `git diff --check` прошли.
+
+## Уточнение — строка состояния под controls
+
+Задача: разместить статус проигрывания отдельной строкой после всех кнопок
+управления и непосредственно перед SVG-схемой.
+
+Результат: controls идут первой строкой, отдельный статус — второй строкой,
+SVG — третьим элементом окна. Проверено в `/dev/preview.html?v=62`: порядок
+DOM `ws-controls`, `ws-playback-status-below`, `svg`; статус показывает текущий
+этап во время проигрывания. `node --check` и `git diff --check` прошли.
