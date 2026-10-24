@@ -733,3 +733,163 @@ body.theme-dark .ws-node text, body.dark .ws-node text, body[data-theme="dark"] 
 .ws-node polygon {
   filter: drop-shadow(0 2px 2px rgba(36, 59, 78, .08));
 }
+
+/* Glass dashboard language from the supplied reference image. */
+.ws-container,
+#ws-editor {
+  --ws-glass: rgba(255, 255, 255, .64);
+  --ws-glass-strong: rgba(255, 255, 255, .78);
+  --ws-glass-border: rgba(255, 255, 255, .82);
+  --ws-glass-shadow: 0 18px 44px rgba(73, 104, 173, .16);
+}
+
+.ws-container {
+  border: 1px solid var(--ws-glass-border);
+  border-radius: 22px;
+  background: var(--ws-glass);
+  box-shadow: var(--ws-glass-shadow), inset 0 1px 0 rgba(255,255,255,.75);
+  backdrop-filter: blur(18px);
+}
+
+.ws-container > .ws-controls {
+  margin: -8px -8px 10px;
+  padding: 10px 12px;
+  border-bottom: 1px solid rgba(255,255,255,.7);
+  background: rgba(255,255,255,.42);
+}
+
+.ws-controls button,
+.ws-controls select,
+.ws-edit-link,
+.ws-editor-actions button,
+#ws-add-scenario,
+.ws-copy {
+  min-height: 34px;
+  border-color: rgba(112, 143, 213, .25);
+  border-radius: 12px;
+  background: var(--ws-glass-strong);
+  box-shadow: 0 5px 14px rgba(74, 105, 179, .09), inset 0 1px 0 rgba(255,255,255,.85);
+}
+
+.ws-controls .ws-play,
+.ws-edit-link,
+#ws-save {
+  border-color: #536ee8;
+  border-radius: 13px;
+  background: #536ee8;
+  box-shadow: 0 8px 18px rgba(83, 110, 232, .28);
+}
+
+.ws-controls .ws-play:hover,
+.ws-edit-link:hover,
+#ws-save:hover {
+  background: #405bd5;
+  box-shadow: 0 10px 22px rgba(83, 110, 232, .35);
+}
+
+.ws-controls .ws-reset:hover,
+.ws-controls select:hover,
+.ws-editor-actions button:hover,
+#ws-add-scenario:hover,
+.ws-copy:hover {
+  border-color: rgba(83, 110, 232, .55);
+  background: rgba(228, 235, 255, .92);
+  transform: translateY(-1px);
+}
+
+.ws-editor-main,
+.ws-editor-side {
+  border: 1px solid var(--ws-glass-border);
+  border-radius: 22px;
+  background: var(--ws-glass);
+  box-shadow: var(--ws-glass-shadow), inset 0 1px 0 rgba(255,255,255,.78);
+  backdrop-filter: blur(18px);
+}
+
+.ws-editor-main { padding: 12px; }
+.ws-editor-side { padding: 14px; }
+#ws-editor .ws-editor-main::before { padding: 3px 8px 10px; color: #6075a6; font-weight: 700; }
+
+.ws-palette,
+.ws-scenarios-block,
+.ws-properties,
+.ws-help,
+.ws-action-section {
+  border-color: rgba(112, 143, 213, .22);
+  border-radius: 16px;
+  background: rgba(255,255,255,.42);
+  box-shadow: 0 8px 20px rgba(74,105,179,.08), inset 0 1px 0 rgba(255,255,255,.72);
+}
+
+.ws-palette > summary,
+.ws-scenarios-block > summary,
+.ws-properties summary,
+.ws-action-section summary,
+.ws-action-title {
+  padding: 9px 10px;
+  color: #14245c;
+  font-weight: 700;
+}
+
+.ws-palette-items { gap: 7px; }
+.ws-palette-item {
+  min-height: 34px;
+  border-radius: 12px;
+  border-color: rgba(112,143,213,.28);
+  background: rgba(255,255,255,.72);
+  box-shadow: 0 5px 12px rgba(74,105,179,.08);
+  color: #344a7c;
+}
+.ws-palette-item:hover { border-color: #617df0; box-shadow: 0 8px 18px rgba(83,110,232,.18); }
+
+.ws-title-control input,
+.ws-field input[type="text"],
+.ws-field input[type="number"],
+.ws-field select,
+.ws-field textarea,
+.ws-scenario-row input {
+  min-height: 32px;
+  border-color: rgba(112,143,213,.3);
+  border-radius: 11px;
+  background: rgba(255,255,255,.64);
+  box-shadow: inset 0 1px 2px rgba(68,91,146,.06);
+}
+
+.ws-node rect,
+.ws-node polygon {
+  filter: drop-shadow(0 7px 9px rgba(74,105,179,.18));
+  stroke-width: 1.8;
+}
+.ws-node-process rect,
+.ws-node-start rect,
+.ws-node-end rect { fill-opacity: .92; }
+.ws-node text { font-weight: 600; }
+.ws-edge { stroke-width: 1.8; }
+.ws-edge-label { font-weight: 600; }
+
+[data-ws-theme="graphite"] .ws-container,
+[data-ws-theme="graphite"] #ws-editor { --ws-glass: rgba(31,41,51,.78); --ws-glass-strong: rgba(44,57,70,.9); --ws-glass-border: rgba(148,163,173,.28); --ws-glass-shadow: 0 18px 44px rgba(0,0,0,.32); }
+[data-ws-theme="graphite"] .ws-palette,
+[data-ws-theme="graphite"] .ws-scenarios-block,
+[data-ws-theme="graphite"] .ws-properties,
+[data-ws-theme="graphite"] .ws-help,
+[data-ws-theme="graphite"] .ws-action-section { background: rgba(31,41,51,.66); }
+[data-ws-theme="graphite"] .ws-palette > summary,
+[data-ws-theme="graphite"] .ws-scenarios-block > summary,
+[data-ws-theme="graphite"] .ws-properties summary,
+[data-ws-theme="graphite"] .ws-action-section summary,
+[data-ws-theme="graphite"] .ws-action-title { color: #edf3f7; }
+[data-ws-theme="graphite"] .ws-title-control input,
+[data-ws-theme="graphite"] .ws-field input[type="text"],
+[data-ws-theme="graphite"] .ws-field input[type="number"],
+[data-ws-theme="graphite"] .ws-field select,
+[data-ws-theme="graphite"] .ws-field textarea,
+[data-ws-theme="graphite"] .ws-scenario-row input {
+  background: rgba(21,29,36,.92);
+  border-color: #61717e;
+  color: #edf3f7;
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  .ws-container, #ws-editor, .ws-editor-main, .ws-editor-side { backdrop-filter: none; }
+}
