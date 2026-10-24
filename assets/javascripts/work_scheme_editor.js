@@ -48,6 +48,7 @@
     this.history = [JSON.stringify(this.serialize())];
     this.future = [];
     this.pendingFrom = null;          // режим добавления стрелки: {from: id}
+    this.activeScenarioId = null;     // сценарий, который собирается кликами по узлам
     this.seq = this.maxNodeSeq() + 1;
     this.redraw();
     this.wire();
@@ -474,8 +475,13 @@
     document.getElementById('ws-add-scenario').textContent = '+ ' + self.labels.scenarios;
     document.getElementById('ws-add-scenario').addEventListener('click', function () {
       self.view.scheme.scenarios = self.view.scheme.scenarios || [];
-      self.view.scheme.scenarios.push({ id: 'scenario' + (self.view.scheme.scenarios.length + 1), title: 'Сценарий', steps: [] });
+      var scenario = { id: 'scenario' + (self.view.scheme.scenarios.length + 1), title: 'Сценарий', steps: [] };
+      self.view.scheme.scenarios.push(scenario);
+      self.activeScenarioId = scenario.id;
+      self.root.classList.add('ws-scenario-capture');
+      self.markDirty();
       self.renderScenarios();
+      self.setStatus('Щёлкайте по блокам, чтобы собрать сценарий', 'dirty');
     });
 
     var saveBtn = document.getElementById('ws-save');
@@ -621,6 +627,23 @@
       self.redraw();
       self.selectEdge(edge.from + '>' + edge.to);
       return;
+    }
+    if (self.activeScenarioId) {
+      var capture = (self.view.scheme.scenarios || []).filter(function (s) { return s.id === self.activeScenarioId; })[0];
+      if (capture) {
+        capture.steps = capture.steps || [];
+        if (capture.steps[capture.steps.length - 1] !== id) {
+          capture.steps.push(id);
+          self.markDirty();
+        }
+        self.selectedIds = [id];
+        self.sel = { type: 'node', id: id };
+        self.root.classList.add('ws-object-focus', 'ws-scenario-capture');
+        self.renderScenarios();
+        self.renderNodePanel();
+        self.redraw();
+        return;
+      }
     }
     if (additive) {
       var index = self.selectedIds.indexOf(id);
@@ -927,11 +950,35 @@
       });
       row.appendChild(steps);
 
+      var capture = document.createElement('button');
+      capture.type = 'button';
+      capture.className = 'ws-scenario-capture-button' + (self.activeScenarioId === scenario.id ? ' ws-active' : '');
+      capture.textContent = self.activeScenarioId === scenario.id ? 'Готово' : 'Щелчки';
+      capture.title = 'Собрать шаги кликами по блокам';
+      capture.addEventListener('click', function () {
+        if (self.activeScenarioId === scenario.id) {
+          self.activeScenarioId = null;
+          self.root.classList.remove('ws-scenario-capture');
+          self.setStatus('', '');
+        } else {
+          self.activeScenarioId = scenario.id;
+          self.root.classList.add('ws-scenario-capture');
+          self.setStatus('Щёлкайте по блокам, чтобы собрать сценарий', 'dirty');
+        }
+        self.renderScenarios();
+      });
+      row.appendChild(capture);
+
       var del = document.createElement('button');
       del.type = 'button'; del.textContent = '×';
       del.title = self.labels.del;
       del.addEventListener('click', function () {
         self.view.scheme.scenarios.splice(index, 1);
+        if (self.activeScenarioId === scenario.id) {
+          self.activeScenarioId = null;
+          self.root.classList.remove('ws-scenario-capture');
+        }
+        self.markDirty();
         self.renderScenarios();
       });
       row.appendChild(del);

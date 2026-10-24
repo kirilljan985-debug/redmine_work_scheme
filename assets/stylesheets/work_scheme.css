@@ -345,6 +345,7 @@
 #ws-editor.ws-object-focus .ws-background-control,
 #ws-editor.ws-object-focus .ws-palette,
 #ws-editor.ws-object-focus .ws-scenarios-block { display: none; }
+#ws-editor.ws-object-focus.ws-scenario-capture .ws-scenarios-block { display: block; }
 .ws-node-overlap rect, .ws-node-overlap polygon { stroke: #b34a4a !important; stroke-width: 3 !important; stroke-dasharray: 5 3; }
 #ws-save-status .warn { color: #b34a4a; font-weight: 600; }
 .ws-palette-node-start { border-color: #7c9cc4; background: #eef4fb; }
@@ -394,6 +395,8 @@
 .ws-scenario-row input:first-child { width: 40%; }
 .ws-scenario-row input:nth-child(2) { flex: 1; }
 .ws-scenario-row button { border: none; background: transparent; cursor: pointer; color: #b03030; }
+.ws-scenario-row .ws-scenario-capture-button { color: var(--ws-primary); border: 1px solid var(--ws-border-strong); border-radius: 4px; padding: 2px 6px; background: var(--ws-surface); }
+.ws-scenario-row .ws-scenario-capture-button.ws-active { color: #fff; background: var(--ws-primary); border-color: var(--ws-primary); }
 
 #ws-save-status { margin-top: 6px; min-height: 18px; font-size: 12px; }
 #ws-save-status .ok { color: #2a7a3b; }
