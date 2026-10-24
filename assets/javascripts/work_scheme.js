@@ -80,6 +80,7 @@
     this.pathByEdge = {};
     this.playing = false;
     this.playbackSpeed = 0.5;
+    this.zoom = 1;
     this.timers = [];
     this.editMode = false;
     this.render();
@@ -247,6 +248,8 @@
       role: 'img',
       'aria-label': 'scheme'
     });
+    svg.style.maxWidth = 'none';
+    svg.style.width = (this.zoom * 100) + '%';
     var markerId = 'ws-arrow-' + Math.random().toString(36).slice(2, 8);
 
     var defs = svgEl('defs');
@@ -421,10 +424,43 @@
   WorkSchemeView.prototype.buildControls = function () {
     var self = this;
     var scenarios = self.scheme.scenarios || [];
-    if (!scenarios.length) return;
 
     var controls = document.createElement('div');
     controls.className = 'ws-controls';
+
+    var zoom = document.createElement('div');
+    zoom.className = 'ws-zoom-controls';
+    var zoomOut = document.createElement('button');
+    zoomOut.type = 'button';
+    zoomOut.className = 'ws-zoom-out';
+    zoomOut.textContent = '−';
+    zoomOut.title = self.label('zoom-out', 'Уменьшить');
+    zoomOut.setAttribute('aria-label', zoomOut.title);
+    zoomOut.addEventListener('click', function () { self.setZoom(self.zoom - 0.1); });
+    zoom.appendChild(zoomOut);
+    var zoomFit = document.createElement('button');
+    zoomFit.type = 'button';
+    zoomFit.className = 'ws-zoom-fit';
+    zoomFit.textContent = '100%';
+    zoomFit.title = self.label('zoom-fit', 'Вписать в блок');
+    zoomFit.setAttribute('aria-label', zoomFit.title);
+    zoomFit.addEventListener('click', function () { self.setZoom(1); });
+    zoom.appendChild(zoomFit);
+    var zoomIn = document.createElement('button');
+    zoomIn.type = 'button';
+    zoomIn.className = 'ws-zoom-in';
+    zoomIn.textContent = '+';
+    zoomIn.title = self.label('zoom-in', 'Увеличить');
+    zoomIn.setAttribute('aria-label', zoomIn.title);
+    zoomIn.addEventListener('click', function () { self.setZoom(self.zoom + 0.1); });
+    zoom.appendChild(zoomIn);
+    controls.appendChild(zoom);
+
+    if (!scenarios.length) {
+      self.container.insertBefore(controls, self.container.firstChild);
+      self.zoomControls = zoom;
+      return;
+    }
 
     var select = document.createElement('select');
     select.className = 'ws-scenario-select';
@@ -490,6 +526,15 @@
     self.playButton = play;
     self.playbackStatus = status;
     self.speedSelect = speed;
+    self.zoomControls = zoom;
+  };
+
+  WorkSchemeView.prototype.setZoom = function (value) {
+    this.zoom = Math.max(0.6, Math.min(1.8, Number(value) || 1));
+    var svg = this.container.querySelector('svg');
+    if (svg) svg.style.width = (this.zoom * 100) + '%';
+    var fit = this.container.querySelector('.ws-zoom-fit');
+    if (fit) fit.textContent = Math.round(this.zoom * 100) + '%';
   };
 
   WorkSchemeView.prototype.playbackDelay = function (ms) {

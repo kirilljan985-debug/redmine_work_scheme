@@ -1,4 +1,5 @@
-<%# Блок со схемой: используется на странице /work_scheme и (в W4) в дашборде additionals %>
+<%# Блок со схемой: используется на странице /work_scheme и в дашборде Additionals %>
+<% scheme ||= dashboard_block.scheme if defined?(dashboard_block) && dashboard_block %>
 <% if scheme[:errors].any? %>
   <div class="flash error">
     <%= l(:ws_error_invalid_scheme) %>
@@ -22,6 +23,9 @@
        data-label-playback-step="<%= l(:ws_label_playback_step) %>"
        data-label-playback-done="<%= l(:ws_label_playback_done) %>"
        data-label-speed="<%= l(:ws_label_speed) %>"
+       data-label-zoom-out="<%= l(:ws_label_zoom_out) %>"
+       data-label-zoom-in="<%= l(:ws_label_zoom_in) %>"
+       data-label-zoom-fit="<%= l(:ws_label_zoom_fit) %>"
        data-label-edit-page="<%= l(:ws_label_edit_page) %>"
        data-edit-url="<%= User.current.admin? ? work_scheme_edit_path : '' %>"
        data-editable="<%= User.current.admin? %>"
