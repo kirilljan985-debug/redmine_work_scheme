@@ -9,7 +9,7 @@
   var SVG_NS = 'http://www.w3.org/2000/svg';
   var ICONS = ['user', 'document', 'search', 'decision', 'certificate', 'gear', 'rocket'];
   var THEME_CANVAS = {
-    classic: '#08111f',
+    classic: '#f3f7fa',
     ocean: '#e7f5fb',
     graphite: '#111820',
     warm: '#fbf3e9',
