@@ -228,9 +228,10 @@
 }
 
 .ws-marker { fill: #d66f2c; stroke: #fff; stroke-width: 2; filter: drop-shadow(0 0 5px rgba(214,111,44,.75)); }
-.ws-marker-trail { fill: #f0a15c; opacity: .22; pointer-events: none; }
-.ws-marker-trail-1 { opacity: .14; }
-.ws-marker-trail-2 { opacity: .08; }
+.ws-marker-trail-line { fill: none; stroke: #f0a15c; stroke-width: 4; stroke-linecap: round; stroke-linejoin: round; opacity: .55; pointer-events: none; }
+.ws-marker-trail { fill: #f0a15c; opacity: .42; pointer-events: none; }
+.ws-marker-trail-1 { opacity: .28; }
+.ws-marker-trail-2 { opacity: .16; }
 .ws-marker-label { font-size: 11px; font-weight: 700; fill: #8a3d0c; paint-order: stroke; stroke: #fff; stroke-width: 3px; stroke-linejoin: round; }
 
 .ws-node-active .ws-node-icon { animation: ws-icon-pulse 1s ease-in-out infinite alternate; transform-box: fill-box; transform-origin: center; }
@@ -238,6 +239,7 @@
 .ws-node-history { transition: opacity .25s ease; }
 .ws-playback-success { animation: ws-success-pop .45s cubic-bezier(.2,.9,.25,1.2) both; pointer-events: none; }
 .ws-success-bubble { fill: #effaf1; stroke: #55a96d; stroke-width: 1.5; filter: drop-shadow(0 4px 7px rgba(55,128,76,.24)); }
+.ws-success-icon { fill: #5caf73; }
 .ws-success-check { fill: none; stroke: #268b4c; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
 .ws-success-label { fill: #24703f; font-size: 12px; font-weight: 700; }
 
@@ -258,6 +260,7 @@
   .ws-node-active.ws-node-decision polygon { animation: none; }
   .ws-edge-rework { animation: none; }
   .ws-playback-success { animation: none; }
+  .ws-marker-trail-line { opacity: .35; }
 }
 
 /* Режим правки узлов */

@@ -743,7 +743,7 @@
     if (!node) return;
     var group = this.container.querySelector('.ws-node[data-id="' + node.id + '"]');
     if (group) {
-      group.classList.remove('ws-node-rework');
+      group.classList.remove('ws-node-active', 'ws-node-rework');
       group.classList.add('ws-node-complete', 'ws-node-history');
     }
   };
@@ -760,7 +760,10 @@
     });
     if (node) {
       var group = self.container.querySelector('.ws-node[data-id="' + node.id + '"]');
-      if (group) group.classList.add('ws-node-rework');
+      if (group) {
+        group.classList.remove('ws-node-active');
+        group.classList.add('ws-node-rework');
+      }
     }
   };
 
@@ -802,6 +805,8 @@
     if (!self.playbackToken || !self.playbackToken.parentNode) {
       var group = svgEl('g', { 'class': 'ws-playback-token' });
       self.playbackTrail = [];
+      self.playbackTrailPath = svgEl('path', { 'class': 'ws-marker-trail-line' });
+      group.appendChild(self.playbackTrailPath);
       [8, 6, 4].forEach(function (radius, index) {
         var trail = svgEl('circle', { r: radius, 'class': 'ws-marker-trail ws-marker-trail-' + index });
         group.appendChild(trail);
@@ -829,6 +834,11 @@
       var sample = this.playbackHistory[Math.min((index + 1) * 2, this.playbackHistory.length - 1)] || point;
       trail.setAttribute('transform', 'translate(' + (sample.x - point.x) + ' ' + (sample.y - point.y) + ')');
     }, this);
+    if (this.playbackTrailPath) {
+      this.playbackTrailPath.setAttribute('d', this.playbackHistory.map(function (sample, index) {
+        return (index ? 'L ' : 'M ') + (sample.x - point.x) + ' ' + (sample.y - point.y);
+      }).join(' '));
+    }
     this.playbackPoint = { x: point.x, y: point.y };
   };
 
@@ -855,8 +865,9 @@
       d: 'M ' + (center.x - 72) + ' ' + (node.y - 42) + ' Q ' + (center.x - 72) + ' ' + (node.y - 54) + ' ' + (center.x - 60) + ' ' + (node.y - 54) + ' L ' + (center.x + 60) + ' ' + (node.y - 54) + ' Q ' + (center.x + 72) + ' ' + (node.y - 54) + ' ' + (center.x + 72) + ' ' + (node.y - 42) + ' L ' + (center.x + 72) + ' ' + (node.y - 24) + ' Q ' + (center.x + 72) + ' ' + (node.y - 14) + ' ' + (center.x + 60) + ' ' + (node.y - 14) + ' L ' + (center.x - 60) + ' ' + (node.y - 14) + ' Q ' + (center.x - 72) + ' ' + (node.y - 14) + ' ' + (center.x - 72) + ' ' + (node.y - 24) + ' Z',
       'class': 'ws-success-bubble'
     }));
-    group.appendChild(svgEl('path', { d: 'M ' + (center.x - 9) + ' ' + (node.y - 36) + ' l 5 5 l 10 -11', 'class': 'ws-success-check' }));
-    group.appendChild(svgEl('text', { x: center.x + 12, y: node.y - 29, 'text-anchor': 'middle', 'class': 'ws-success-label' }, 'Готово'));
+    group.appendChild(svgEl('circle', { cx: center.x - 46, cy: node.y - 34, r: 8, 'class': 'ws-success-icon' }));
+    group.appendChild(svgEl('path', { d: 'M ' + (center.x - 50) + ' ' + (node.y - 34) + ' l 3 3 l 6 -7', 'class': 'ws-success-check' }));
+    group.appendChild(svgEl('text', { x: center.x + 14, y: node.y - 29, 'text-anchor': 'middle', 'class': 'ws-success-label' }, 'Готово'));
     self.overlay.appendChild(group);
     self.playbackSuccess = group;
   };
@@ -985,6 +996,7 @@
     if (self.playbackSuccess) self.playbackSuccess.remove();
     self.playbackSuccess = null;
     self.playbackTrail = null;
+    self.playbackTrailPath = null;
     self.playbackHistory = [];
     self.playbackPoint = null;
   };

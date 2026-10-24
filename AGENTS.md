@@ -407,3 +407,8 @@ to_side, bend 0–200), `scenarios[]` (id, title, steps[]). Подробно —
   и текстом «Готово», видимое 5 секунд; reduced-motion отключает эффекты.
 - Проверено в `/dev/preview.html?v=78`; `node --check`, `ruby -c` и
   `git diff --check` прошли.
+
+- Исправлено наложение состояний: `markNodeComplete` и `beginRework` снимают
+  active перед complete/rework. Trail получил видимую SVG-линию, а финальная
+  галочка вынесена в отдельный зелёный круг слева от «Готово». Проверено на
+  `/dev/preview.html?v=79`.
