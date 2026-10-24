@@ -20,8 +20,14 @@
 .ws-container {
   position: relative;
   overflow-x: auto;
-  padding: 4px 2px;
+  padding: 8px;
+  border: 1px solid var(--ws-border);
+  border-radius: var(--ws-radius);
+  background: var(--ws-surface-muted);
+  box-shadow: var(--ws-shadow);
 }
+
+#ws-editor .ws-container { padding: 0; border: 0; border-radius: 0; background: transparent; box-shadow: none; }
 
 .ws-container svg {
   max-width: 100%;
@@ -260,11 +266,23 @@
 .ws-editor-side h4 { margin: 8px 0 4px; }
 
 .ws-editor-actions {
-  display: flex;
+  display: grid;
   gap: 6px;
   margin: 10px 0;
-  flex-wrap: wrap;
 }
+
+.ws-action-section {
+  border: 1px solid var(--ws-border);
+  border-radius: var(--ws-radius);
+  background: var(--ws-surface-muted);
+}
+.ws-action-section summary {
+  padding: 6px 8px;
+  color: var(--ws-text);
+  font-weight: 600;
+  cursor: pointer;
+}
+.ws-action-group { display: flex; gap: 6px; flex-wrap: wrap; padding: 0 8px 8px; }
 
 .ws-editor-actions button,
 #ws-add-scenario {
@@ -280,6 +298,15 @@
   background: #fdeee2;
   border-color: #d66f2c;
 }
+
+.ws-container > .ws-controls {
+  margin: -8px -8px 8px;
+  border: 0;
+  border-bottom: 1px solid var(--ws-border);
+  border-radius: var(--ws-radius) var(--ws-radius) 0 0;
+  box-shadow: none;
+}
+#ws-editor .ws-container > .ws-controls { margin: 0; }
 
 .ws-palette {
   margin: 10px 0;
