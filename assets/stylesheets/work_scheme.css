@@ -391,6 +391,7 @@
 .ws-geom-cell input { width: 100% !important; }
 
 .ws-scenarios-block { margin-top: 10px; }
+.ws-scenario-hint { margin: 4px 0 7px; color: var(--ws-muted); font-size: 11px; line-height: 1.35; }
 .ws-scenario-row {
   display: flex;
   gap: 4px;
