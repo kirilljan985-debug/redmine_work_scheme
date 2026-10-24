@@ -807,3 +807,10 @@ Redmine Classic, Ocean Blue, Graphite Dark, Warm Office и Paper Canvas.
 значения, переключение меняет CSS-переменные canvas и панели без перезагрузки.
 Проверено в `/dev/editor.html?v=65`: Graphite Dark применил поверхность `#1f2933`
 и акцент `#6ea8dc`; `ruby -c`, `node --check` и `git diff --check` прошли.
+
+## Сводный статус на 2026-10-24
+
+Текущая ветка содержит и отправила в `origin/main` этапы Additionals-блока,
+размеров dashboard, визуальной полировки canvas/панелей и пяти тем интерфейса.
+Проверены dev-просмотры `editor?v=65` и `preview?v=62`; рабочее дерево чистое.
+CI после последнего push отдельно не проверялся.
