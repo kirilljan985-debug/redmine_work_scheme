@@ -167,7 +167,8 @@
       "to": "customer",
       "label": "нет — на доработку",
       "dashed": true,
-      "route": "arc"
+      "route": "u",
+      "bend": 80
     },
     {
       "from": "check",
