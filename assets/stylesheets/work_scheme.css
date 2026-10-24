@@ -217,8 +217,6 @@
 .ws-edge-drawing { stroke-linecap: round; }
 .ws-edge-branch-option { stroke-width: 2.6 !important; opacity: .72; animation: ws-branch-option .75s ease-in-out infinite alternate; }
 .ws-edge-branch-selected { stroke: #356fa8 !important; opacity: 1; }
-.ws-edge-particle { fill: #4f8ff0; filter: drop-shadow(0 0 5px rgba(79,143,240,.8)); pointer-events: none; }
-.ws-edge-particle-rework { fill: #8a5cf6; filter: drop-shadow(0 0 5px rgba(138,92,246,.85)); }
 .ws-energy-pulse { fill: none; stroke: #5f9df4; stroke-width: 2.5; opacity: .85; filter: drop-shadow(0 0 6px rgba(95,157,244,.8)); pointer-events: none; }
 .ws-energy-pulse-rework { stroke: #8a5cf6; filter: drop-shadow(0 0 6px rgba(138,92,246,.85)); }
 

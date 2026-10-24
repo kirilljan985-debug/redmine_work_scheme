@@ -101,7 +101,6 @@
     this.playbackHistory = [];
     this.playbackSuccess = null;
     this.playbackTimeline = null;
-    this.playbackParticles = [];
     this.zoom = 1;
     this.timers = [];
     this.editMode = false;
@@ -847,7 +846,6 @@
   WorkSchemeView.prototype.highlightEdge = function (pathEl, rework) {
     pathEl.classList.add('ws-edge-active', 'ws-edge-drawing');
     if (rework) pathEl.classList.add('ws-edge-rework');
-    this.animateEdgeParticles(pathEl, rework);
     this.animateEnergyPulse(pathEl, rework);
     var reduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     var length = pathEl.getTotalLength ? pathEl.getTotalLength() : 0;
@@ -858,33 +856,6 @@
         pathEl.style.strokeDashoffset = '0';
       });
     }
-  };
-
-  WorkSchemeView.prototype.animateEdgeParticles = function (pathEl, rework) {
-    var self = this;
-    var total = pathEl.getTotalLength ? pathEl.getTotalLength() : 0;
-    if (!total || !self.overlay) return;
-    var particles = [0, 180, 360].map(function (offset, index) {
-      var circle = svgEl('circle', { r: index === 0 ? 4 : 3, 'class': 'ws-edge-particle' + (rework ? ' ws-edge-particle-rework' : '') });
-      self.overlay.appendChild(circle);
-      self.playbackParticles.push(circle);
-      return { circle: circle, offset: offset };
-    });
-    var start = null;
-    var duration = self.playbackDelay(1050);
-    var tick = function (timestamp) {
-      if (!self.playing) return;
-      if (start === null) start = timestamp;
-      particles.forEach(function (particle) {
-        var progress = Math.max(0, Math.min(1, ((timestamp - start + particle.offset) / duration)));
-        var point = pathEl.getPointAtLength(total * progress);
-        particle.circle.setAttribute('cx', point.x);
-        particle.circle.setAttribute('cy', point.y);
-      });
-      if (timestamp - start < duration + 420) window.requestAnimationFrame(tick);
-      else particles.forEach(function (particle) { if (particle.circle.parentNode) particle.circle.remove(); });
-    };
-    window.requestAnimationFrame(tick);
   };
 
   WorkSchemeView.prototype.animateEnergyPulse = function (pathEl, rework) {
@@ -1122,8 +1093,6 @@
     var self = this;
     self.resetRouteStates();
     self.container.classList.remove('ws-playback-focus');
-    self.playbackParticles.forEach(function (particle) { if (particle.parentNode) particle.remove(); });
-    self.playbackParticles = [];
     var token = self.playbackToken;
     if (token) token.remove();
     self.playbackToken = null;
