@@ -7,7 +7,7 @@ class RedmineWorkSchemeSchemeTest < ActiveSupport::TestCase
     assert_not_nil parsed[:data]
     assert_equal 10, parsed[:data]['nodes'].length
     assert_equal 10, parsed[:data]['edges'].length
-    assert_equal 2, parsed[:data]['scenarios'].length
+    assert_equal 3, parsed[:data]['scenarios'].length
   end
 
   test 'empty scheme returns error' do
@@ -147,6 +147,7 @@ class RedmineWorkSchemeSchemeTest < ActiveSupport::TestCase
     assert_nil RedmineWorkScheme::Scheme.node(data, 'nope')
     assert_equal 1, RedmineWorkScheme::Scheme.outgoing_edges(data, 'customer').length
     assert_equal 'Успешное прохождение', RedmineWorkScheme::Scheme.scenario(data, 'success')['title']
+    assert_equal 14, RedmineWorkScheme::Scheme.scenario(data, 'rework_cycle')['steps'].length
   end
 
   test 'query_id accepts only positive integers' do

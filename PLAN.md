@@ -660,3 +660,9 @@ touch-action возвращён в `auto`, а обработчик pointerdown �
 customer` кликами добавлен ещё один цикл `cirpt, analyze, check, customer`; значения
 `steps` сохраняются с повторяющимися узлами. `node --check` и `git diff --check`
 прошли.
+
+Результат: в DefaultScheme и dev/scheme.json добавлен сценарий
+`rework_cycle` «Доработка и полный цикл» с 14 шагами:
+`customer, cirpt, analyze, check, customer, cirpt, analyze, check, approve,
+proj, dev, control, cert, pilot`. Unit-проверка обновлена с 2 до 3 сценариев.
+В `/dev/preview.html?v=54` сценарий выбран и проигран до статуса «Готово» (14/14).

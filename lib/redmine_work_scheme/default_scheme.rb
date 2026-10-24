@@ -114,6 +114,11 @@ module RedmineWorkScheme
             'id' => 'rework',
             'title' => 'Возврат на доработку',
             'steps' => %w(customer cirpt analyze check customer)
+          },
+          {
+            'id' => 'rework_cycle',
+            'title' => 'Доработка и полный цикл',
+            'steps' => %w(customer cirpt analyze check customer cirpt analyze check approve proj dev control cert pilot)
           }
         ]
       }
