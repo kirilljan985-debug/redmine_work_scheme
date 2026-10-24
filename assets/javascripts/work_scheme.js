@@ -100,6 +100,8 @@
     this.playbackTrail = null;
     this.playbackHistory = [];
     this.playbackSuccess = null;
+    this.playbackTimeline = null;
+    this.playbackParticles = [];
     this.zoom = 1;
     this.timers = [];
     this.editMode = false;
@@ -502,6 +504,10 @@
       option.textContent = scenario.title;
       select.appendChild(option);
     });
+    select.addEventListener('change', function () {
+      var selected = scenarios.filter(function (scenario) { return scenario.id === select.value; })[0];
+      self.renderPlaybackTimeline(selected);
+    });
     controls.appendChild(select);
 
     var play = document.createElement('button');
@@ -555,12 +561,20 @@
     self.container.insertBefore(controls, self.container.firstChild);
     status.className = 'ws-playback-status ws-playback-status-below';
     var svg = self.container.querySelector('svg');
-    if (svg) self.container.insertBefore(status, svg);
+    var timeline = document.createElement('div');
+    timeline.className = 'ws-playback-timeline';
+    timeline.setAttribute('aria-label', 'Прогресс сценария');
+    if (svg) {
+      self.container.insertBefore(status, svg);
+      self.container.insertBefore(timeline, svg);
+    }
     else self.container.appendChild(status);
     self.playButton = play;
     self.playbackStatus = status;
+    self.playbackTimeline = timeline;
     self.speedSelect = speed;
     self.zoomControls = zoom;
+    self.renderPlaybackTimeline(scenarios[0]);
   };
 
   WorkSchemeView.prototype.setZoom = function (value) {
@@ -584,6 +598,31 @@
     var prefix = done ? this.label('playback-done', 'Готово') : this.label('playback-step', 'Этап');
     status.textContent = prefix + ': ' + stage + (title ? ' · ' + title : '') +
       (total ? ' (' + Math.min(index + 1, total) + '/' + total + ')' : '');
+    this.updatePlaybackTimeline(index, done);
+  };
+
+  WorkSchemeView.prototype.renderPlaybackTimeline = function (scenario) {
+    if (!this.playbackTimeline) return;
+    this.playbackTimeline.innerHTML = '';
+    if (!scenario || !scenario.steps || !scenario.steps.length) return;
+    var self = this;
+    scenario.steps.forEach(function (id, index) {
+      var node = self.byId[id];
+      var item = document.createElement('span');
+      item.className = 'ws-timeline-step';
+      item.setAttribute('data-step', String(index));
+      item.title = node ? (node.title || node.id) : id;
+      item.textContent = String(index + 1);
+      self.playbackTimeline.appendChild(item);
+    });
+  };
+
+  WorkSchemeView.prototype.updatePlaybackTimeline = function (index, done) {
+    if (!this.playbackTimeline) return;
+    Array.prototype.forEach.call(this.playbackTimeline.querySelectorAll('.ws-timeline-step'), function (item, itemIndex) {
+      item.classList.toggle('ws-timeline-done', itemIndex < index || (done && itemIndex === index));
+      item.classList.toggle('ws-timeline-current', itemIndex === index && !done);
+    });
   };
 
   /* ---- Режим правки: перетаскивание узлов и координаты ---- */
@@ -681,6 +720,7 @@
     if (!scenario || !scenario.steps.length) return;
 
     self.playing = true;
+    self.container.classList.add('ws-playback-focus');
     self.reworkTriggered = false;
     if (self.playButton) self.playButton.disabled = true;
 
@@ -695,7 +735,10 @@
         self.updatePlaybackStatus(scenario, steps.length - 1, finalNode, steps.length, completedScheme);
         self.markNodeComplete(finalNode);
         self.settlePlaybackToken(finalNode, function () {
-          if (completedScheme) self.showSuccessBubble(finalNode);
+          if (completedScheme) {
+            self.showSuccessBubble(finalNode);
+            self.animateCompletionChain();
+          }
           self.finishPlayback();
         });
         return;
@@ -714,6 +757,7 @@
         var isRework = !self.reworkTriggered && steps.slice(0, index).indexOf(node.id) !== -1;
         if (isRework) self.reworkTriggered = true;
         if (isRework) self.beginRework(prev); else self.markNodeComplete(prev);
+        if (prev && prev.type === 'decision') self.showDecisionBranches(prev, node);
         self.highlightNode(node);
         self.showPlaybackToken(prev, true);
         self.highlightEdge(pathEl, isRework);
@@ -738,6 +782,23 @@
     var group = this.container.querySelector('.ws-node[data-id="' + node.id + '"]');
     if (group) group.classList.add('ws-node-active');
     this.focusPlaybackNode(node);
+  };
+
+  WorkSchemeView.prototype.showDecisionBranches = function (decision, chosen) {
+    var self = this;
+    var outgoing = self.edges.filter(function (edge) { return edge.from === decision.id; });
+    outgoing.forEach(function (edge) {
+      var path = self.pathByEdge[edge.from + '>' + edge.to];
+      if (!path) return;
+      path.classList.add('ws-edge-branch-option');
+      if (edge.to === chosen.id) path.classList.add('ws-edge-branch-selected');
+    });
+    self.timer(function () {
+      outgoing.forEach(function (edge) {
+        var path = self.pathByEdge[edge.from + '>' + edge.to];
+        if (path) path.classList.remove('ws-edge-branch-option', 'ws-edge-branch-selected');
+      });
+    }, self.playbackDelay(720));
   };
 
   WorkSchemeView.prototype.markNodeComplete = function (node) {
@@ -778,11 +839,16 @@
       el.style.strokeDasharray = '';
       el.style.strokeDashoffset = '';
     });
+    Array.prototype.forEach.call(self.container.querySelectorAll('.ws-edge-branch-option, .ws-edge-branch-selected'), function (el) {
+      el.classList.remove('ws-edge-branch-option', 'ws-edge-branch-selected');
+    });
   };
 
   WorkSchemeView.prototype.highlightEdge = function (pathEl, rework) {
     pathEl.classList.add('ws-edge-active', 'ws-edge-drawing');
     if (rework) pathEl.classList.add('ws-edge-rework');
+    this.animateEdgeParticles(pathEl, rework);
+    this.animateEnergyPulse(pathEl, rework);
     var reduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     var length = pathEl.getTotalLength ? pathEl.getTotalLength() : 0;
     if (length > 0) {
@@ -792,6 +858,55 @@
         pathEl.style.strokeDashoffset = '0';
       });
     }
+  };
+
+  WorkSchemeView.prototype.animateEdgeParticles = function (pathEl, rework) {
+    var self = this;
+    var total = pathEl.getTotalLength ? pathEl.getTotalLength() : 0;
+    if (!total || !self.overlay) return;
+    var particles = [0, 180, 360].map(function (offset, index) {
+      var circle = svgEl('circle', { r: index === 0 ? 4 : 3, 'class': 'ws-edge-particle' + (rework ? ' ws-edge-particle-rework' : '') });
+      self.overlay.appendChild(circle);
+      self.playbackParticles.push(circle);
+      return { circle: circle, offset: offset };
+    });
+    var start = null;
+    var duration = self.playbackDelay(1050);
+    var tick = function (timestamp) {
+      if (!self.playing) return;
+      if (start === null) start = timestamp;
+      particles.forEach(function (particle) {
+        var progress = Math.max(0, Math.min(1, ((timestamp - start + particle.offset) / duration)));
+        var point = pathEl.getPointAtLength(total * progress);
+        particle.circle.setAttribute('cx', point.x);
+        particle.circle.setAttribute('cy', point.y);
+      });
+      if (timestamp - start < duration + 420) window.requestAnimationFrame(tick);
+      else particles.forEach(function (particle) { if (particle.circle.parentNode) particle.circle.remove(); });
+    };
+    window.requestAnimationFrame(tick);
+  };
+
+  WorkSchemeView.prototype.animateEnergyPulse = function (pathEl, rework) {
+    var self = this;
+    var total = pathEl.getTotalLength ? pathEl.getTotalLength() : 0;
+    if (!total || !self.overlay) return;
+    var pulse = svgEl('circle', { r: 9, 'class': 'ws-energy-pulse' + (rework ? ' ws-energy-pulse-rework' : '') });
+    self.overlay.appendChild(pulse);
+    var start = null;
+    var duration = self.playbackDelay(620);
+    var tick = function (timestamp) {
+      if (!self.playing) { if (pulse.parentNode) pulse.remove(); return; }
+      if (start === null) start = timestamp;
+      var progress = Math.min(1, (timestamp - start) / duration);
+      var point = pathEl.getPointAtLength(total * progress);
+      pulse.setAttribute('cx', point.x);
+      pulse.setAttribute('cy', point.y);
+      pulse.setAttribute('r', String(9 + progress * 5));
+      if (progress < 1) window.requestAnimationFrame(tick);
+      else if (pulse.parentNode) pulse.remove();
+    };
+    window.requestAnimationFrame(tick);
   };
 
   WorkSchemeView.prototype.markEdgeComplete = function (pathEl) {
@@ -813,6 +928,7 @@
         group.appendChild(trail);
         self.playbackTrail.push(trail);
       });
+      group.appendChild(svgEl('path', { d: 'M 0 -7 L 11 0 L 0 7 Z', 'class': 'ws-marker-direction' }));
       group.appendChild(svgEl('circle', { r: 10, 'class': 'ws-marker' }));
       self.overlay.appendChild(group);
       self.playbackToken = group;
@@ -871,6 +987,15 @@
     group.appendChild(svgEl('text', { x: center.x + 14, y: node.y - 29, 'text-anchor': 'middle', 'class': 'ws-success-label' }, 'Готово'));
     self.overlay.appendChild(group);
     self.playbackSuccess = group;
+  };
+
+  WorkSchemeView.prototype.animateCompletionChain = function () {
+    var self = this;
+    var items = Array.prototype.slice.call(self.container.querySelectorAll('.ws-node-complete, .ws-edge-complete'));
+    items.forEach(function (item, index) {
+      self.timer(function () { item.classList.add('ws-completion-flash'); }, index * 55);
+      self.timer(function () { item.classList.remove('ws-completion-flash'); }, index * 55 + 520);
+    });
   };
 
   WorkSchemeView.prototype.settlePlaybackToken = function (node, done) {
@@ -939,6 +1064,10 @@
     var move = function (point) {
       self.setPlaybackPoint({ x: point.x, y: point.y });
     };
+    var rotate = function (point, nextPoint) {
+      var direction = self.playbackToken && self.playbackToken.querySelector('.ws-marker-direction');
+      if (direction && nextPoint) direction.setAttribute('transform', 'rotate(' + (Math.atan2(nextPoint.y - point.y, nextPoint.x - point.x) * 180 / Math.PI) + ')');
+    };
 
     var tick = function (timestamp) {
       if (!self.playing) return;
@@ -948,6 +1077,7 @@
       var progress = linear * linear * (3 - 2 * linear);
       var point = pathEl.getPointAtLength(total * progress);
       move(point);
+      rotate(point, pathEl.getPointAtLength(Math.min(total, total * progress + 2)));
       if (progress < 1) {
         window.requestAnimationFrame(tick);
       } else {
@@ -991,6 +1121,9 @@
   WorkSchemeView.prototype.clearHighlights = function () {
     var self = this;
     self.resetRouteStates();
+    self.container.classList.remove('ws-playback-focus');
+    self.playbackParticles.forEach(function (particle) { if (particle.parentNode) particle.remove(); });
+    self.playbackParticles = [];
     var token = self.playbackToken;
     if (token) token.remove();
     self.playbackToken = null;
@@ -1013,6 +1146,7 @@
       self.playbackStatus.hidden = true;
       self.playbackStatus.textContent = '';
     }
+    self.updatePlaybackTimeline(-1, false);
   };
 
   WorkSchemeView.prototype.stageTarget = function (node) {

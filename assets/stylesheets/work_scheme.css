@@ -215,6 +215,12 @@
 }
 
 .ws-edge-drawing { stroke-linecap: round; }
+.ws-edge-branch-option { stroke-width: 2.6 !important; opacity: .72; animation: ws-branch-option .75s ease-in-out infinite alternate; }
+.ws-edge-branch-selected { stroke: #356fa8 !important; opacity: 1; }
+.ws-edge-particle { fill: #4f8ff0; filter: drop-shadow(0 0 5px rgba(79,143,240,.8)); pointer-events: none; }
+.ws-edge-particle-rework { fill: #8a5cf6; filter: drop-shadow(0 0 5px rgba(138,92,246,.85)); }
+.ws-energy-pulse { fill: none; stroke: #5f9df4; stroke-width: 2.5; opacity: .85; filter: drop-shadow(0 0 6px rgba(95,157,244,.8)); pointer-events: none; }
+.ws-energy-pulse-rework { stroke: #8a5cf6; filter: drop-shadow(0 0 6px rgba(138,92,246,.85)); }
 
 .ws-edge-complete {
   stroke: #6aa57a !important;
@@ -232,6 +238,7 @@
 .ws-marker-trail { fill: #f0a15c; opacity: .42; pointer-events: none; }
 .ws-marker-trail-1 { opacity: .28; }
 .ws-marker-trail-2 { opacity: .16; }
+.ws-marker-direction { fill: #ffffff; opacity: .92; filter: drop-shadow(0 0 4px rgba(214,111,44,.7)); pointer-events: none; }
 .ws-marker-label { font-size: 11px; font-weight: 700; fill: #8a3d0c; paint-order: stroke; stroke: #fff; stroke-width: 3px; stroke-linejoin: round; }
 
 .ws-node-active .ws-node-icon { animation: ws-icon-pulse 1s ease-in-out infinite alternate; transform-box: fill-box; transform-origin: center; }
@@ -242,6 +249,14 @@
 .ws-success-icon { fill: #5caf73; }
 .ws-success-check { fill: none; stroke: #268b4c; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
 .ws-success-label { fill: #24703f; font-size: 12px; font-weight: 700; }
+.ws-completion-flash { animation: ws-completion-flash .52s ease-out; }
+.ws-playback-timeline { display: flex; align-items: center; gap: 4px; min-height: 18px; margin: 0 0 8px; padding: 3px 8px; overflow: hidden; }
+.ws-timeline-step { position: relative; display: inline-flex; align-items: center; justify-content: center; flex: 1 1 0; min-width: 16px; max-width: 32px; height: 14px; border-radius: 999px; background: var(--ws-border); color: var(--ws-muted); font-size: 9px; transition: background-color .2s ease, color .2s ease, transform .2s ease; }
+.ws-timeline-step:not(:last-child)::after { content: ''; position: absolute; left: calc(100% + 2px); top: 6px; width: 4px; height: 2px; background: var(--ws-border); }
+.ws-timeline-done { background: var(--ws-success); color: #fff; }
+.ws-timeline-current { background: var(--ws-primary); color: #fff; transform: scale(1.18); box-shadow: 0 0 8px rgba(53,111,168,.35); }
+.ws-timeline-current:not(:last-child)::after, .ws-timeline-done:not(:last-child)::after { background: var(--ws-success); }
+.ws-playback-focus .ws-node:not(.ws-node-active):not(.ws-node-complete):not(.ws-node-rework), .ws-playback-focus .ws-edge:not(.ws-edge-active):not(.ws-edge-complete):not(.ws-edge-rework) { opacity: .62; transition: opacity .25s ease; }
 
 @keyframes ws-pulse {
   from { fill: #fdeee2; }
@@ -252,6 +267,8 @@
 @keyframes ws-icon-pulse { from { opacity: .72; transform: scale(.92); } to { opacity: 1; transform: scale(1.12); } }
 @keyframes ws-decision-wait { from { filter: drop-shadow(0 0 2px rgba(214,111,44,.2)); } to { filter: drop-shadow(0 0 10px rgba(214,111,44,.75)); } }
 @keyframes ws-success-pop { from { opacity: 0; transform: translateY(8px) scale(.86); transform-origin: center; } to { opacity: 1; transform: translateY(0) scale(1); transform-origin: center; } }
+@keyframes ws-branch-option { from { opacity: .45; } to { opacity: .9; } }
+@keyframes ws-completion-flash { 0% { filter: brightness(1); } 45% { filter: brightness(1.45) drop-shadow(0 0 8px rgba(83,164,106,.7)); } 100% { filter: brightness(1); } }
 
 @media (prefers-reduced-motion: reduce) {
   .ws-node-active rect,
@@ -261,6 +278,8 @@
   .ws-edge-rework { animation: none; }
   .ws-playback-success { animation: none; }
   .ws-marker-trail-line { opacity: .35; }
+  .ws-edge-branch-option { animation: none; }
+  .ws-completion-flash { animation: none; }
 }
 
 /* Режим правки узлов */
