@@ -780,11 +780,9 @@
     if (!self.playbackToken || !self.playbackToken.parentNode) {
       var group = svgEl('g', { 'class': 'ws-playback-token' });
       group.appendChild(svgEl('circle', { r: 10, 'class': 'ws-marker' }));
-      group.appendChild(svgEl('text', { x: 16, y: 4, 'class': 'ws-marker-label' }, 'ТЗ'));
       self.overlay.appendChild(group);
       self.playbackToken = group;
     }
-    self.playbackToken.querySelector('.ws-marker-label').textContent = node.title || node.id;
     if (preservePoint && self.playbackPoint) {
       self.setPlaybackPoint(self.playbackPoint);
       return;
