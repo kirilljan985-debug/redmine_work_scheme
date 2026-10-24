@@ -893,3 +893,107 @@ body.theme-dark .ws-node text, body.dark .ws-node text, body[data-theme="dark"] 
 @media (prefers-reduced-transparency: reduce) {
   .ws-container, #ws-editor, .ws-editor-main, .ws-editor-side { backdrop-filter: none; }
 }
+
+/* Stellar Night reference: deep navy glass with violet neon focus. */
+[data-ws-theme="classic"],
+[data-ws-theme="classic"] #ws-editor {
+  --ws-surface: #101c2d;
+  --ws-surface-muted: #0b1626;
+  --ws-canvas: #08111f;
+  --ws-border: #2f4869;
+  --ws-border-strong: #5d7ca7;
+  --ws-text: #eaf2ff;
+  --ws-muted: #91a6c4;
+  --ws-primary: #8b4dff;
+  --ws-primary-dark: #b678ff;
+  --ws-primary-soft: #29174d;
+  --ws-node-start: #142d4b;
+  --ws-node-process: #122238;
+  --ws-node-decision: #342346;
+  --ws-node-end: #143b39;
+  --ws-node-text: #f1f5ff;
+  --ws-button-text: #eaf2ff;
+  --ws-radius: 14px;
+  --ws-shadow: 0 18px 46px rgba(0,0,0,.38);
+}
+
+[data-ws-theme="classic"] .ws-container,
+[data-ws-theme="classic"] #ws-editor {
+  --ws-glass: rgba(14, 27, 45, .82);
+  --ws-glass-strong: rgba(24, 40, 63, .92);
+  --ws-glass-border: rgba(112, 154, 203, .62);
+  --ws-glass-shadow: 0 18px 48px rgba(0,0,0,.42), 0 0 34px rgba(112,54,255,.12);
+}
+
+[data-ws-theme="classic"] .ws-editor-main,
+[data-ws-theme="classic"] .ws-editor-side,
+[data-ws-theme="classic"] .ws-palette,
+[data-ws-theme="classic"] .ws-scenarios-block,
+[data-ws-theme="classic"] .ws-properties,
+[data-ws-theme="classic"] .ws-help,
+[data-ws-theme="classic"] .ws-action-section {
+  background: rgba(15, 28, 46, .82);
+  border-color: rgba(112,154,203,.44);
+  box-shadow: 0 14px 32px rgba(0,0,0,.3), 0 0 22px rgba(112,54,255,.08), inset 0 1px 0 rgba(177,213,255,.14);
+}
+
+[data-ws-theme="classic"] .ws-palette > summary,
+[data-ws-theme="classic"] .ws-scenarios-block > summary,
+[data-ws-theme="classic"] .ws-properties summary,
+[data-ws-theme="classic"] .ws-action-section summary,
+[data-ws-theme="classic"] .ws-action-title { color: #f1f5ff; }
+
+[data-ws-theme="classic"] .ws-palette-item,
+[data-ws-theme="classic"] .ws-controls button,
+[data-ws-theme="classic"] .ws-controls select,
+[data-ws-theme="classic"] .ws-editor-actions button,
+[data-ws-theme="classic"] #ws-add-scenario,
+[data-ws-theme="classic"] .ws-title-control input,
+[data-ws-theme="classic"] .ws-field input,
+[data-ws-theme="classic"] .ws-field select,
+[data-ws-theme="classic"] .ws-field textarea,
+[data-ws-theme="classic"] .ws-scenario-row input {
+  background: rgba(28, 47, 75, .9);
+  border-color: rgba(112,154,203,.5);
+  color: #edf4ff;
+  box-shadow: 0 6px 18px rgba(0,0,0,.2), inset 0 1px 0 rgba(177,213,255,.1);
+}
+
+[data-ws-theme="classic"] .ws-controls .ws-play,
+[data-ws-theme="classic"] .ws-edit-link,
+[data-ws-theme="classic"] #ws-save {
+  border-color: #9b5cff;
+  background: #7b3ff2;
+  box-shadow: 0 0 24px rgba(139,77,255,.42), 0 10px 22px rgba(0,0,0,.3);
+}
+
+[data-ws-theme="classic"] .ws-controls {
+  background: rgba(15, 28, 46, .9);
+  border-color: rgba(112,154,203,.46);
+  box-shadow: 0 12px 28px rgba(0,0,0,.28), inset 0 1px 0 rgba(177,213,255,.12);
+}
+[data-ws-theme="classic"] .ws-playback-status {
+  background: rgba(41,23,77,.82);
+  color: #c8a8ff;
+}
+
+[data-ws-theme="classic"] .ws-node rect,
+[data-ws-theme="classic"] .ws-node polygon {
+  filter: drop-shadow(0 8px 12px rgba(0,0,0,.34)) drop-shadow(0 0 8px rgba(88,66,255,.12));
+}
+[data-ws-theme="classic"] .ws-edge { stroke: #8fa7c7; }
+[data-ws-theme="classic"] .ws-edge-label { fill: #eaf2ff; stroke: #0b1626; }
+
+#ws-editor { position: relative; }
+#ws-editor .ws-editor-side { order: -1; flex: 0 0 280px; }
+
+@media (max-width: 760px) {
+  #ws-editor { flex-direction: column; gap: 10px; padding: 10px; }
+  #ws-editor .ws-editor-side { order: 0; width: 100%; flex-basis: auto; }
+  #ws-editor .ws-editor-main { order: 1; width: 100%; box-sizing: border-box; }
+  .ws-container { border-radius: 16px; padding: 6px; }
+  .ws-container > .ws-controls { margin: -6px -6px 8px; }
+  .ws-controls { gap: 5px; }
+  .ws-controls button, .ws-controls select, .ws-edit-link { min-height: 32px; padding-inline: 8px; }
+  .ws-editor-side { border-radius: 16px; }
+}
