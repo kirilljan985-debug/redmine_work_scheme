@@ -691,10 +691,11 @@
       if (!self.playing) return;
       if (index >= steps.length) {
         var finalNode = self.byId[steps[steps.length - 1]];
-        self.updatePlaybackStatus(scenario, steps.length - 1, finalNode, steps.length, true);
+        var completedScheme = finalNode && finalNode.type === 'end';
+        self.updatePlaybackStatus(scenario, steps.length - 1, finalNode, steps.length, completedScheme);
         self.markNodeComplete(finalNode);
         self.settlePlaybackToken(finalNode, function () {
-          self.showSuccessBubble(finalNode);
+          if (completedScheme) self.showSuccessBubble(finalNode);
           self.finishPlayback();
         });
         return;

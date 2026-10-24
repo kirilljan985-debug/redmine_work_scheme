@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <title>Work Scheme editor preview (dev)</title>
-<link rel="stylesheet" href="../assets/stylesheets/work_scheme.css?v=79">
+<link rel="stylesheet" href="../assets/stylesheets/work_scheme.css?v=80">
 <style>
   body { font-family: system-ui, sans-serif; margin: 16px; background: #dbe7fb; color: #14245c; }
 </style>
@@ -89,12 +89,12 @@
     <div id="ws-save-status"></div>
   </div>
 </div>
-<script src="../assets/javascripts/work_scheme.js?v=79"></script>
-<script src="../assets/javascripts/work_scheme_editor.js?v=79"></script>
+<script src="../assets/javascripts/work_scheme.js?v=80"></script>
+<script src="../assets/javascripts/work_scheme_editor.js?v=80"></script>
 <script>
   // dev-обвязка: после загрузки схемы повторно инициируем редактор
   // (editor.js вешает init на DOMContentLoaded, который к моменту fetch уже прошёл)
-  fetch('scheme.json?v=79')
+  fetch('scheme.json?v=80')
     .then(function (r) { return r.text(); })
     .then(function (text) {
       document.querySelector('script.ws-data').textContent = text;
