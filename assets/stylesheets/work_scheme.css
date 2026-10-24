@@ -164,6 +164,9 @@
   background: #fff8f1;
 }
 .ws-playback-status-below { margin: 0 0 8px; }
+.ws-playback-status-below { padding: 3px 8px; font-size: 11px; line-height: 1.25; max-width: 100%; box-sizing: border-box; }
+.ws-empty-note, .ws-empty-state { color: var(--ws-muted); font-size: 12px; }
+.ws-empty-note { padding: 7px 9px; border: 1px dashed var(--ws-border-strong); border-radius: 5px; background: var(--ws-surface); }
 
 .ws-playback-status[hidden] { display: none; }
 
@@ -314,6 +317,11 @@
   font-weight: 600;
   cursor: pointer;
 }
+.ws-action-section summary::before { display: inline-block; width: 1.2em; margin-right: 4px; color: var(--ws-primary); }
+.ws-action-section-history summary::before { content: '↶'; }
+.ws-action-section-align summary::before { content: '⇆'; }
+.ws-action-section-object summary::before { content: '◉'; }
+.ws-action-section-file .ws-action-title::before { content: '▣'; display: inline-block; width: 1.2em; margin-right: 4px; color: var(--ws-primary); }
 .ws-action-title { padding: 6px 8px; color: var(--ws-text); font-weight: 600; }
 .ws-action-group { display: flex; gap: 6px; flex-wrap: wrap; padding: 0 8px 8px; }
 
@@ -363,6 +371,8 @@
 .ws-palette-item:active, .ws-palette-item.ws-dragging { cursor: grabbing; opacity: .55; }
 .ws-palette-icon { border-color: #8a7ab8; background: #f5f1ff; }
 .ws-help { margin-bottom: 10px; padding: 7px 9px; border: 1px solid var(--ws-border); border-radius: var(--ws-radius); background: var(--ws-surface-muted); color: var(--ws-muted); font-size: 11px; }
+.ws-help, .ws-properties, .ws-palette, .ws-scenarios-block, .ws-editor-actions { box-sizing: border-box; }
+.ws-help::before { content: 'ⓘ'; display: inline-block; width: 1.2em; margin-right: 4px; color: var(--ws-primary); }
 .ws-help summary { cursor: pointer; color: var(--ws-text); font-weight: 600; }
 .ws-help p { margin: 6px 0 0; }
 .ws-help-swatch { display: inline-block; width: 10px; height: 10px; margin: 0 2px; border-radius: 50%; vertical-align: -1px; }
@@ -371,6 +381,7 @@
 .ws-help-swatch-rework { background: #7c4dff; }
 .ws-properties { margin-bottom: 10px; padding: 7px 9px; border: 1px solid var(--ws-border); border-radius: var(--ws-radius); background: var(--ws-surface); }
 .ws-properties summary { cursor: pointer; color: var(--ws-text); font-weight: 600; }
+.ws-properties summary::before { content: '◈'; display: inline-block; width: 1.2em; margin-right: 4px; color: var(--ws-primary); }
 #ws-editor:not(.ws-object-focus) .ws-properties { display: none; }
 #ws-editor.ws-object-focus .ws-help,
 #ws-editor.ws-object-focus .ws-title-control,
@@ -422,6 +433,8 @@
 .ws-geom-cell input { width: 100% !important; }
 
 .ws-scenarios-block { margin-top: 10px; }
+.ws-scenarios-block, .ws-palette { padding: 9px; border: 1px solid var(--ws-border); border-radius: var(--ws-radius); background: var(--ws-surface); box-shadow: 0 2px 8px rgba(36,59,78,.05); }
+.ws-scenarios-block h4, .ws-palette h4 { margin-top: 0; }
 .ws-scenario-hint { margin: 4px 0 7px; color: var(--ws-muted); font-size: 11px; line-height: 1.35; }
 .ws-scenario-row {
   display: flex;

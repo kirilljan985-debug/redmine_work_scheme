@@ -93,14 +93,14 @@
         <button type="button" id="ws-add-scenario">+ <%= l(:ws_label_scenarios) %></button>
       </div>
       <div class="ws-editor-actions">
-        <details class="ws-action-section" open>
+        <details class="ws-action-section ws-action-section-history" open>
           <summary>История</summary>
           <div class="ws-action-group">
             <button type="button" id="ws-undo">Отменить</button>
             <button type="button" id="ws-redo">Повторить</button>
           </div>
         </details>
-        <details class="ws-action-section">
+        <details class="ws-action-section ws-action-section-align">
           <summary>Выравнивание</summary>
           <div class="ws-action-group">
             <button type="button" id="ws-align-x">Выровнять X</button>
@@ -109,7 +109,7 @@
             <button type="button" id="ws-distribute-y">Распределить Y</button>
           </div>
         </details>
-        <details class="ws-action-section">
+        <details class="ws-action-section ws-action-section-object">
           <summary>Объект</summary>
           <div class="ws-action-group">
             <button type="button" id="ws-duplicate">Дублировать</button>

@@ -1,13 +1,14 @@
 <%# Блок со схемой: используется на странице /work_scheme и в дашборде Additionals %>
 <% scheme ||= dashboard_block.scheme if defined?(dashboard_block) && dashboard_block %>
 <% if scheme[:errors].any? %>
-  <div class="flash error">
+  <div class="flash error ws-empty-state">
     <%= l(:ws_error_invalid_scheme) %>
     <ul>
       <% scheme[:errors].each do |error| %>
         <li><%= error %></li>
       <% end %>
     </ul>
+    <p>Проверьте JSON схемы в настройках плагина.</p>
   </div>
 <% else %>
   <% additionals_block = defined?(dashboard_block) && dashboard_block %>

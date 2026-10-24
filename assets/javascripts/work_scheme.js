@@ -475,6 +475,10 @@
 
     if (!scenarios.length) {
       self.container.insertBefore(controls, self.container.firstChild);
+      var empty = document.createElement('div');
+      empty.className = 'ws-empty-note';
+      empty.textContent = 'Сценарии проигрывания пока не добавлены.';
+      self.container.insertBefore(empty, self.container.querySelector('svg'));
       self.zoomControls = zoom;
       return;
     }
