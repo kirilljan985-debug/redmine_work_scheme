@@ -65,6 +65,7 @@ git clone https://github.com/kirilljan985-debug/redmine_work_scheme.git redmine_
 | `query_id` | число | нет | ID сохранённого запроса Redmine для **живого счётчика** (см. ниже) |
 | `x`, `y` | числа | да | Координаты левого верхнего угла |
 | `w`, `h` | числа | нет | Размер (по умолчанию 140×56) |
+| `font_size`, `font_weight`, `font_family`, `text_color` | число/строка | нет | Стиль заголовка блока на схеме; размер 8–32, семейство `sans-serif`/`serif`/`monospace` |
 
 ### Связь (edges)
 
@@ -72,6 +73,7 @@ git clone https://github.com/kirilljan985-debug/redmine_work_scheme.git redmine_
 |------|-----|----------|
 | `from`, `to` | id узлов | Стрелка из узла в узел |
 | `label` | строка | Подпись на стрелке («да», «нет — на доработку») |
+| `label_font_size`, `label_font_weight`, `label_font_family`, `label_text_color` | число/строка | Стиль подписи стрелки |
 | `color` | строка | Необязательный цвет стрелки в формате `#RRGGBB` |
 | `dashed` | true/false | Пунктирная стрелка |
 | `route` | `straight`/`arc`/`elbow`/`u` | Прямая, дуга поверх схемы, Г-образное колено или П-образный обход |

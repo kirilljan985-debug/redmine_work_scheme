@@ -8,6 +8,8 @@ module RedmineWorkScheme
     EDGE_SIDES = %w(left right top bottom).freeze
     EDGE_ROUTES = %w(straight arc elbow u).freeze
     ICONS = %w(user document search decision certificate gear rocket).freeze
+    TEXT_FAMILIES = %w(sans-serif serif monospace).freeze
+    TEXT_WEIGHTS = %w(normal bold).freeze
     DEFAULT_NODE_WIDTH = 140
     DEFAULT_NODE_HEIGHT = 56
 
@@ -135,6 +137,10 @@ module RedmineWorkScheme
         'url' => raw['url'].to_s.strip,
         'icon' => ICONS.include?(raw['icon'].to_s.strip) ? raw['icon'].to_s.strip : '',
         'query_id' => positive_int_or_nil(raw['query_id']),
+        'font_size' => text_size(raw['font_size'], 12),
+        'font_weight' => TEXT_WEIGHTS.include?(raw['font_weight'].to_s) ? raw['font_weight'].to_s : 'normal',
+        'font_family' => TEXT_FAMILIES.include?(raw['font_family'].to_s) ? raw['font_family'].to_s : 'sans-serif',
+        'text_color' => normalize_text_color(raw['text_color'], errors, index, :node),
         'x' => int_value(raw['x'], 0),
         'y' => int_value(raw['y'], 0),
         'w' => int_value(raw['w'], DEFAULT_NODE_WIDTH),
@@ -178,6 +184,10 @@ module RedmineWorkScheme
           'to' => to,
           'label' => raw['label'].to_s.strip,
           'color' => normalize_color(raw['color'], errors, index),
+          'label_font_size' => text_size(raw['label_font_size'], 11),
+          'label_font_weight' => TEXT_WEIGHTS.include?(raw['label_font_weight'].to_s) ? raw['label_font_weight'].to_s : 'normal',
+          'label_font_family' => TEXT_FAMILIES.include?(raw['label_font_family'].to_s) ? raw['label_font_family'].to_s : 'sans-serif',
+          'label_text_color' => normalize_text_color(raw['label_text_color'], errors, index, :edge),
           'dashed' => raw['dashed'] == true,
           'route' => route,
           'from_side' => from_side,
@@ -236,6 +246,20 @@ module RedmineWorkScheme
       ''
     end
 
+    def normalize_text_color(value, errors, index, kind)
+      color = value.to_s.strip
+      return '' if color.empty?
+      return color if color =~ /\A#[0-9a-fA-F]{6}\z/
+
+      errors << format(I18n_error(:ws_error_bad_text_color), index: index + 1, kind: kind == :node ? 'узла' : 'связи')
+      ''
+    end
+
+    def text_size(value, default)
+      size = int_value(value, default)
+      [[size, 8].max, 32].min
+    end
+
     def positive_int_or_nil(value)
       int = int_value(value, 0)
       int.positive? ? int : nil
@@ -273,6 +297,7 @@ module RedmineWorkScheme
       'ws_error_edge_bad_nodes' => 'Связь №%{index} ссылается на неизвестные узлы (from: "%{from}", to: "%{to}").',
       'ws_error_edge_bad_side' => 'Связь №%{index}: недопустимая сторона "%{side}" (допустимо: left, right, top, bottom или пусто).',
       'ws_error_edge_bad_color' => 'Связь №%{index}: цвет должен быть в формате #RRGGBB или пустым.',
+      'ws_error_bad_text_color' => 'Элемент №%{index} (%{kind}): цвет текста должен быть в формате #RRGGBB или пустым.',
       'ws_error_scenarios_not_array' => '"scenarios" должен быть массивом.',
       'ws_error_scenario_not_object' => 'Сценарий №%{index} — не объект.',
       'ws_error_scenario_invalid' => 'Сценарий №%{index} заполнен неверно (нужны id, title и steps существующих узлов; неизвестные узлы: %{unknown}).',

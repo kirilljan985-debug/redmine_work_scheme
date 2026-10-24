@@ -65,6 +65,9 @@ class RedmineWorkSchemeSchemeTest < ActiveSupport::TestCase
     assert_equal 'process', node['type']
     assert_equal RedmineWorkScheme::Scheme::DEFAULT_NODE_WIDTH, node['w']
     assert_equal RedmineWorkScheme::Scheme::DEFAULT_NODE_HEIGHT, node['h']
+    assert_equal 12, node['font_size']
+    assert_equal 'normal', node['font_weight']
+    assert_equal 'sans-serif', node['font_family']
     assert_nil node['query_id']
     edge = parsed[:data]['edges'].first
     assert_equal false, edge['dashed']
@@ -72,6 +75,23 @@ class RedmineWorkSchemeSchemeTest < ActiveSupport::TestCase
     assert_equal '', edge['from_side']
     assert_equal '', edge['to_side']
     assert_equal '', edge['color']
+  end
+
+  test 'node and edge text styles are normalized' do
+    parsed = RedmineWorkScheme::Scheme.parse({
+      'nodes' => [{ 'id' => 'a', 'title' => 'A', 'font_size' => 40, 'font_weight' => 'bold', 'font_family' => 'serif', 'text_color' => '#123456' }],
+      'edges' => [{ 'from' => 'a', 'to' => 'a', 'label' => 'L', 'label_font_size' => 8, 'label_font_weight' => 'bold', 'label_font_family' => 'monospace', 'label_text_color' => '#abcdef' }],
+      'scenarios' => []
+    }.to_json)
+    assert_empty parsed[:errors]
+    node = parsed[:data]['nodes'].first
+    edge = parsed[:data]['edges'].first
+    assert_equal 32, node['font_size']
+    assert_equal 'serif', node['font_family']
+    assert_equal '#123456', node['text_color']
+    assert_equal 8, edge['label_font_size']
+    assert_equal 'monospace', edge['label_font_family']
+    assert_equal '#abcdef', edge['label_text_color']
   end
 
   test 'edge color accepts hex and rejects invalid values' do

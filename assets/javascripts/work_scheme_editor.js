@@ -569,6 +569,7 @@
     var id = 'n' + (self.seq++);
     var titles = { start: 'Старт', process: 'Процесс', decision: 'Решение', end: 'Финиш' };
     var node = { id: id, type: type || 'process', title: titles[type] || 'Процесс', dept: '', description: '', page: '', url: '', icon: '', queryId: null,
+      fontSize: 12, fontWeight: 'normal', fontFamily: 'sans-serif', textColor: '',
       x: Math.max(0, Math.round(p.x - 70)), y: Math.max(0, Math.round(p.y - 28)), w: 140, h: 56 };
     if (node.type === 'decision') { node.w = 150; node.h = 88; }
     self.view.nodes.push(node);
@@ -716,6 +717,33 @@
     field('ID (не меняется)', n.id, function () {}, false, true);
     field('Заголовок', n.title, function (v) { n.title = v; self.redraw(); });
 
+    var textStyle = document.createElement('div');
+    textStyle.className = 'ws-text-style';
+    var styleLabel = document.createElement('strong');
+    styleLabel.textContent = 'Текст на схеме';
+    textStyle.appendChild(styleLabel);
+    var size = document.createElement('input');
+    size.type = 'number'; size.min = '8'; size.max = '32'; size.value = n.fontSize;
+    size.setAttribute('aria-label', 'Размер шрифта');
+    size.addEventListener('change', function () { n.fontSize = Math.max(8, Math.min(32, num(size.value, 12))); self.redraw(); });
+    textStyle.appendChild(size);
+    var weight = document.createElement('select');
+    [['normal', 'Обычный'], ['bold', 'Жирный']].forEach(function (pair) { var o = document.createElement('option'); o.value = pair[0]; o.textContent = pair[1]; if (n.fontWeight === pair[0]) o.selected = true; weight.appendChild(o); });
+    weight.setAttribute('aria-label', 'Начертание');
+    weight.addEventListener('change', function () { n.fontWeight = weight.value; self.redraw(); });
+    textStyle.appendChild(weight);
+    var family = document.createElement('select');
+    [['sans-serif', 'Без засечек'], ['serif', 'С засечками'], ['monospace', 'Моноширинный']].forEach(function (pair) { var o = document.createElement('option'); o.value = pair[0]; o.textContent = pair[1]; if (n.fontFamily === pair[0]) o.selected = true; family.appendChild(o); });
+    family.setAttribute('aria-label', 'Семейство шрифта');
+    family.addEventListener('change', function () { n.fontFamily = family.value; self.redraw(); });
+    textStyle.appendChild(family);
+    var textColor = document.createElement('input');
+    textColor.type = 'color'; textColor.value = /^#[0-9a-f]{6}$/i.test(n.textColor || '') ? n.textColor : '#1a232b';
+    textColor.setAttribute('aria-label', 'Цвет текста');
+    textColor.addEventListener('input', function () { n.textColor = textColor.value; self.redraw(); });
+    textStyle.appendChild(textColor);
+    panel.appendChild(textStyle);
+
     var typeWrap = document.createElement('div');
     typeWrap.className = 'ws-field';
     var typeLabel = document.createElement('label');
@@ -859,6 +887,33 @@
 
     field('Подпись на стрелке', e.label, function (v) { e.label = v; self.redraw(); });
 
+    var labelStyle = document.createElement('div');
+    labelStyle.className = 'ws-text-style';
+    var labelStyleTitle = document.createElement('strong');
+    labelStyleTitle.textContent = 'Текст подписи';
+    labelStyle.appendChild(labelStyleTitle);
+    var labelSize = document.createElement('input');
+    labelSize.type = 'number'; labelSize.min = '8'; labelSize.max = '32'; labelSize.value = e.labelFontSize;
+    labelSize.setAttribute('aria-label', 'Размер шрифта подписи');
+    labelSize.addEventListener('change', function () { e.labelFontSize = Math.max(8, Math.min(32, num(labelSize.value, 11))); self.redraw(); });
+    labelStyle.appendChild(labelSize);
+    var labelWeight = document.createElement('select');
+    [['normal', 'Обычный'], ['bold', 'Жирный']].forEach(function (pair) { var o = document.createElement('option'); o.value = pair[0]; o.textContent = pair[1]; if (e.labelFontWeight === pair[0]) o.selected = true; labelWeight.appendChild(o); });
+    labelWeight.setAttribute('aria-label', 'Начертание подписи');
+    labelWeight.addEventListener('change', function () { e.labelFontWeight = labelWeight.value; self.redraw(); });
+    labelStyle.appendChild(labelWeight);
+    var labelFamily = document.createElement('select');
+    [['sans-serif', 'Без засечек'], ['serif', 'С засечками'], ['monospace', 'Моноширинный']].forEach(function (pair) { var o = document.createElement('option'); o.value = pair[0]; o.textContent = pair[1]; if (e.labelFontFamily === pair[0]) o.selected = true; labelFamily.appendChild(o); });
+    labelFamily.setAttribute('aria-label', 'Семейство шрифта подписи');
+    labelFamily.addEventListener('change', function () { e.labelFontFamily = labelFamily.value; self.redraw(); });
+    labelStyle.appendChild(labelFamily);
+    var labelColor = document.createElement('input');
+    labelColor.type = 'color'; labelColor.value = /^#[0-9a-f]{6}$/i.test(e.labelTextColor || '') ? e.labelTextColor : '#45505a';
+    labelColor.setAttribute('aria-label', 'Цвет подписи');
+    labelColor.addEventListener('input', function () { e.labelTextColor = labelColor.value; self.redraw(); });
+    labelStyle.appendChild(labelColor);
+    panel.appendChild(labelStyle);
+
     var colorWrap = document.createElement('div');
     colorWrap.className = 'ws-field';
     var colorLabel = document.createElement('label');
@@ -999,12 +1054,14 @@
           id: n.id, type: n.type, title: n.title, dept: n.dept,
           description: n.description, page: n.page, url: n.url, icon: n.icon || '',
           query_id: n.queryId || null,
+          font_size: n.fontSize || 12, font_weight: n.fontWeight || 'normal', font_family: n.fontFamily || 'sans-serif', text_color: n.textColor || '',
           x: n.x, y: n.y, w: n.w, h: n.h
         };
       }),
       edges: self.view.edges.map(function (e) {
         return {
-          from: e.from, to: e.to, label: e.label, color: /^#[0-9a-f]{6}$/i.test(e.color || '') ? e.color : '', dashed: e.dashed === true,
+          from: e.from, to: e.to, label: e.label, color: /^#[0-9a-f]{6}$/i.test(e.color || '') ? e.color : '',
+          label_font_size: e.labelFontSize || 11, label_font_weight: e.labelFontWeight || 'normal', label_font_family: e.labelFontFamily || 'sans-serif', label_text_color: e.labelTextColor || '', dashed: e.dashed === true,
           route: e.route, from_side: e.fromSide || '', to_side: e.toSide || '',
           bend: num(e.bend, 50)
         };

@@ -56,6 +56,10 @@
         url: String(raw.url || ''),
         icon: ICONS.indexOf(raw.icon) !== -1 ? raw.icon : '',
         queryId: raw.query_id || null,
+        fontSize: Math.max(8, Math.min(32, num(raw.font_size, 12))),
+        fontWeight: raw.font_weight === 'bold' ? 'bold' : 'normal',
+        fontFamily: raw.font_family === 'serif' ? 'serif' : (raw.font_family === 'monospace' ? 'monospace' : 'sans-serif'),
+        textColor: /^#[0-9a-f]{6}$/i.test(String(raw.text_color || '').trim()) ? String(raw.text_color).trim() : '',
         x: num(raw.x, 0),
         y: num(raw.y, 0),
         w: num(raw.w, 140),
@@ -73,6 +77,10 @@
         fromSide: raw.from_side || '',
         toSide: raw.to_side || '',
         bend: num(raw.bend, 50)
+        ,labelFontSize: Math.max(8, Math.min(32, num(raw.label_font_size, 11))),
+        labelFontWeight: raw.label_font_weight === 'bold' ? 'bold' : 'normal',
+        labelFontFamily: raw.label_font_family === 'serif' ? 'serif' : (raw.label_font_family === 'monospace' ? 'monospace' : 'sans-serif'),
+        labelTextColor: /^#[0-9a-f]{6}$/i.test(String(raw.label_text_color || '').trim()) ? String(raw.label_text_color).trim() : ''
       };
     });
     this.byId = {};
@@ -308,7 +316,11 @@
       if (edge.label) {
         labelGroup.appendChild(svgEl('text', {
           x: drawn.label.x, y: drawn.label.y - 4,
-          'text-anchor': 'middle', 'class': 'ws-edge-label'
+          'text-anchor': 'middle', 'class': 'ws-edge-label',
+          'font-size': edge.labelFontSize + 'px',
+          'font-weight': edge.labelFontWeight,
+          'font-family': edge.labelFontFamily,
+          fill: edge.labelTextColor || undefined
         }, edge.label));
       }
     });
@@ -369,14 +381,18 @@
     }
 
     var textX = cx + (node.icon && node.type !== 'decision' ? 9 : 0);
-    var maxChars = node.type === 'decision' ? 12 : Math.max(9, Math.floor((node.w - (node.icon ? 28 : 0)) / 7.2));
+    var maxChars = node.type === 'decision' ? Math.max(7, Math.floor(140 / node.fontSize)) : Math.max(7, Math.floor((node.w - (node.icon ? 28 : 0)) / (node.fontSize * 0.6)));
     var lines = wrapText(node.title, maxChars);
-    var lineHeight = 14;
+    var lineHeight = Math.max(11, Math.round(node.fontSize * 1.2));
     var startY = cy - ((lines.length - 1) * lineHeight) / 2 + 4;
     lines.forEach(function (line, index) {
       group.appendChild(svgEl('text', {
         x: textX, y: startY + index * lineHeight,
-        'text-anchor': 'middle'
+        'text-anchor': 'middle',
+        'font-size': node.fontSize + 'px',
+        'font-weight': node.fontWeight,
+        'font-family': node.fontFamily,
+        fill: node.textColor || undefined
       }, line));
     });
     return group;
