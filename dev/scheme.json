@@ -168,6 +168,8 @@
       "label": "нет — на доработку",
       "dashed": true,
       "route": "u",
+      "from_side": "top",
+      "to_side": "top",
       "bend": 80
     },
     {

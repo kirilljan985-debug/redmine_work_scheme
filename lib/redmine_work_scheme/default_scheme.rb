@@ -95,7 +95,7 @@ module RedmineWorkScheme
           { 'from' => 'customer', 'to' => 'cirpt', 'label' => 'передача ТЗ', 'dashed' => false },
           { 'from' => 'cirpt', 'to' => 'analyze', 'label' => '', 'dashed' => false },
           { 'from' => 'analyze', 'to' => 'check', 'label' => '', 'dashed' => false },
-          { 'from' => 'check', 'to' => 'customer', 'label' => 'нет — на доработку', 'dashed' => true, 'route' => 'u', 'bend' => 80 },
+          { 'from' => 'check', 'to' => 'customer', 'label' => 'нет — на доработку', 'dashed' => true, 'route' => 'u', 'from_side' => 'top', 'to_side' => 'top', 'bend' => 80 },
           { 'from' => 'check', 'to' => 'approve', 'label' => 'да', 'dashed' => false },
           { 'from' => 'approve', 'to' => 'proj', 'label' => '', 'dashed' => false },
           { 'from' => 'proj', 'to' => 'dev', 'label' => '', 'dashed' => false },
