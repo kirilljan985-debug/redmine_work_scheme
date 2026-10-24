@@ -908,3 +908,96 @@ body.theme-dark .ws-node text, body.dark .ws-node text, body[data-theme="dark"] 
 @media (prefers-reduced-transparency: reduce) {
   .ws-container, #ws-editor, .ws-editor-main, .ws-editor-side { backdrop-filter: none; }
 }
+
+/* Modern layout profile: workspace first, controls grouped into a calm panel. */
+#ws-editor[data-layout="modern"] {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 310px;
+  gap: 18px;
+  align-items: start;
+  padding: 16px;
+  border: 1px solid var(--ws-border);
+  border-radius: 20px;
+  background: var(--ws-surface-muted);
+  box-shadow: var(--ws-shadow);
+}
+
+#ws-editor[data-layout="modern"] .ws-editor-main {
+  grid-column: 1;
+  min-width: 0;
+  padding: 12px;
+  border-radius: 18px;
+}
+
+#ws-editor[data-layout="modern"] .ws-editor-side {
+  grid-column: 2;
+  grid-row: 1;
+  position: sticky;
+  top: 16px;
+  max-height: calc(100vh - 32px);
+  overflow: auto;
+  padding: 12px;
+  border-radius: 18px;
+  scrollbar-width: thin;
+}
+
+[data-layout="modern"] .ws-container {
+  border-radius: 18px;
+  padding: 10px;
+}
+
+[data-layout="modern"] .ws-container > .ws-controls {
+  position: sticky;
+  top: 8px;
+  z-index: 4;
+  margin: -10px -10px 12px;
+  padding: 9px 10px;
+  border-radius: 16px 16px 12px 12px;
+}
+
+[data-layout="modern"] .ws-controls button,
+[data-layout="modern"] .ws-controls select,
+[data-layout="modern"] .ws-edit-link,
+[data-layout="modern"] .ws-editor-actions button,
+[data-layout="modern"] #ws-add-scenario {
+  min-height: 32px;
+  border-radius: 10px;
+}
+
+[data-layout="modern"] .ws-editor-actions {
+  gap: 8px;
+  margin-top: 12px;
+}
+
+[data-layout="modern"] .ws-editor-actions .ws-action-section,
+[data-layout="modern"] .ws-palette,
+[data-layout="modern"] .ws-scenarios-block,
+[data-layout="modern"] .ws-properties,
+[data-layout="modern"] .ws-help,
+[data-layout="modern"] .ws-theme-control,
+[data-layout="modern"] .ws-title-control {
+  border-radius: 13px;
+}
+
+[data-layout="modern"] .ws-editor-side > * { margin-bottom: 10px; }
+[data-layout="modern"] .ws-editor-side > *:last-child { margin-bottom: 0; }
+
+@media (max-width: 900px) {
+  #ws-editor[data-layout="modern"] {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 12px;
+    padding: 10px;
+  }
+  #ws-editor[data-layout="modern"] .ws-editor-main,
+  #ws-editor[data-layout="modern"] .ws-editor-side {
+    grid-column: 1;
+    grid-row: auto;
+    width: 100%;
+    box-sizing: border-box;
+  }
+  #ws-editor[data-layout="modern"] .ws-editor-side {
+    position: static;
+    max-height: none;
+    overflow: visible;
+  }
+}

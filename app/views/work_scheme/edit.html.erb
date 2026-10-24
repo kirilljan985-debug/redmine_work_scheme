@@ -16,7 +16,7 @@
   <%= stylesheet_link_tag 'work_scheme', plugin: :redmine_work_scheme %>
   <%= javascript_include_tag 'work_scheme', plugin: :redmine_work_scheme %>
   <%= javascript_include_tag 'work_scheme_editor', plugin: :redmine_work_scheme %>
-  <div id="ws-editor" data-save-url="<%= work_scheme_save_path %>"
+  <div id="ws-editor" data-layout="modern" data-save-url="<%= work_scheme_save_path %>"
        data-more-label="<%= l(:ws_label_more) %>"
        data-label-save="<%= l(:ws_label_save) %>"
        data-label-saved="<%= l(:ws_label_saved) %>"
@@ -33,7 +33,7 @@
        data-label-bend="<%= l(:ws_label_bend) %>"
        data-label-edge-color="<%= l(:ws_label_edge_color) %>">
     <div class="ws-editor-main">
-      <div class="ws-container" data-work-scheme>
+      <div class="ws-container" data-work-scheme data-layout="modern">
         <script type="application/json" class="ws-data"><%= RedmineWorkScheme::Scheme.safe_json(@scheme[:data]) %></script>
       </div>
     </div>
