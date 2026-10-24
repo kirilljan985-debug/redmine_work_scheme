@@ -144,7 +144,6 @@
   line-height: 1.3;
   background: #fff8f1;
 }
-.ws-playback-status-top { margin: 0 0 6px; border-left: 0; border-bottom: 3px solid var(--ws-primary); border-radius: 5px; }
 
 .ws-playback-status[hidden] { display: none; }
 
@@ -320,7 +319,6 @@
   border-radius: var(--ws-radius) var(--ws-radius) 0 0;
   box-shadow: none;
 }
-.ws-container > .ws-playback-status-top + .ws-controls { margin-top: 0; }
 #ws-editor .ws-container > .ws-controls { margin: 0; }
 
 .ws-palette {
