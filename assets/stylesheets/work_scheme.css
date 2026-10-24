@@ -214,6 +214,8 @@
   stroke-width: 2.6 !important;
 }
 
+.ws-edge-drawing { stroke-linecap: round; }
+
 .ws-edge-complete {
   stroke: #6aa57a !important;
   stroke-width: 1.8 !important;
@@ -226,7 +228,18 @@
 }
 
 .ws-marker { fill: #d66f2c; stroke: #fff; stroke-width: 2; filter: drop-shadow(0 0 5px rgba(214,111,44,.75)); }
+.ws-marker-trail { fill: #f0a15c; opacity: .22; pointer-events: none; }
+.ws-marker-trail-1 { opacity: .14; }
+.ws-marker-trail-2 { opacity: .08; }
 .ws-marker-label { font-size: 11px; font-weight: 700; fill: #8a3d0c; paint-order: stroke; stroke: #fff; stroke-width: 3px; stroke-linejoin: round; }
+
+.ws-node-active .ws-node-icon { animation: ws-icon-pulse 1s ease-in-out infinite alternate; transform-box: fill-box; transform-origin: center; }
+.ws-node-active.ws-node-decision polygon { animation: ws-decision-wait 1.25s ease-in-out infinite alternate; }
+.ws-node-history { transition: opacity .25s ease; }
+.ws-playback-success { animation: ws-success-pop .45s cubic-bezier(.2,.9,.25,1.2) both; pointer-events: none; }
+.ws-success-bubble { fill: #effaf1; stroke: #55a96d; stroke-width: 1.5; filter: drop-shadow(0 4px 7px rgba(55,128,76,.24)); }
+.ws-success-check { fill: none; stroke: #268b4c; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
+.ws-success-label { fill: #24703f; font-size: 12px; font-weight: 700; }
 
 @keyframes ws-pulse {
   from { fill: #fdeee2; }
@@ -234,11 +247,17 @@
 }
 
 @keyframes ws-rework-flow { to { stroke-dashoffset: -12; } }
+@keyframes ws-icon-pulse { from { opacity: .72; transform: scale(.92); } to { opacity: 1; transform: scale(1.12); } }
+@keyframes ws-decision-wait { from { filter: drop-shadow(0 0 2px rgba(214,111,44,.2)); } to { filter: drop-shadow(0 0 10px rgba(214,111,44,.75)); } }
+@keyframes ws-success-pop { from { opacity: 0; transform: translateY(8px) scale(.86); transform-origin: center; } to { opacity: 1; transform: translateY(0) scale(1); transform-origin: center; } }
 
 @media (prefers-reduced-motion: reduce) {
   .ws-node-active rect,
   .ws-node-active polygon { animation: none; }
+  .ws-node-active .ws-node-icon { animation: none; }
+  .ws-node-active.ws-node-decision polygon { animation: none; }
   .ws-edge-rework { animation: none; }
+  .ws-playback-success { animation: none; }
 }
 
 /* Режим правки узлов */

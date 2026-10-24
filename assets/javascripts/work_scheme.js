@@ -97,6 +97,9 @@
     this.playing = false;
     this.playbackSpeed = 0.5;
     this.reworkTriggered = false;
+    this.playbackTrail = null;
+    this.playbackHistory = [];
+    this.playbackSuccess = null;
     this.zoom = 1;
     this.timers = [];
     this.editMode = false;
@@ -690,7 +693,10 @@
         var finalNode = self.byId[steps[steps.length - 1]];
         self.updatePlaybackStatus(scenario, steps.length - 1, finalNode, steps.length, true);
         self.markNodeComplete(finalNode);
-        self.settlePlaybackToken(finalNode, function () { self.finishPlayback(); });
+        self.settlePlaybackToken(finalNode, function () {
+          self.showSuccessBubble(finalNode);
+          self.finishPlayback();
+        });
         return;
       }
       var node = self.byId[steps[index]];
@@ -730,6 +736,7 @@
   WorkSchemeView.prototype.highlightNode = function (node) {
     var group = this.container.querySelector('.ws-node[data-id="' + node.id + '"]');
     if (group) group.classList.add('ws-node-active');
+    this.focusPlaybackNode(node);
   };
 
   WorkSchemeView.prototype.markNodeComplete = function (node) {
@@ -737,14 +744,14 @@
     var group = this.container.querySelector('.ws-node[data-id="' + node.id + '"]');
     if (group) {
       group.classList.remove('ws-node-rework');
-      group.classList.add('ws-node-complete');
+      group.classList.add('ws-node-complete', 'ws-node-history');
     }
   };
 
   WorkSchemeView.prototype.beginRework = function (node) {
     var self = this;
     Array.prototype.forEach.call(self.container.querySelectorAll('.ws-node-complete'), function (el) {
-      el.classList.remove('ws-node-complete');
+      el.classList.remove('ws-node-complete', 'ws-node-history');
     });
     Array.prototype.forEach.call(self.container.querySelectorAll('.ws-edge-complete'), function (el) {
       el.classList.remove('ws-edge-complete');
@@ -759,8 +766,8 @@
 
   WorkSchemeView.prototype.resetRouteStates = function () {
     var self = this;
-    Array.prototype.forEach.call(self.container.querySelectorAll('.ws-node-active, .ws-node-complete, .ws-node-rework'), function (el) {
-      el.classList.remove('ws-node-active', 'ws-node-complete', 'ws-node-rework');
+    Array.prototype.forEach.call(self.container.querySelectorAll('.ws-node-active, .ws-node-complete, .ws-node-history, .ws-node-rework'), function (el) {
+      el.classList.remove('ws-node-active', 'ws-node-complete', 'ws-node-history', 'ws-node-rework');
     });
     Array.prototype.forEach.call(self.container.querySelectorAll('.ws-edge-active, .ws-edge-complete, .ws-edge-rework'), function (el) {
       el.classList.remove('ws-edge-active', 'ws-edge-complete', 'ws-edge-rework');
@@ -770,7 +777,7 @@
   };
 
   WorkSchemeView.prototype.highlightEdge = function (pathEl, rework) {
-    pathEl.classList.add('ws-edge-active');
+    pathEl.classList.add('ws-edge-active', 'ws-edge-drawing');
     if (rework) pathEl.classList.add('ws-edge-rework');
     var reduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     var length = pathEl.getTotalLength ? pathEl.getTotalLength() : 0;
@@ -785,6 +792,7 @@
 
   WorkSchemeView.prototype.markEdgeComplete = function (pathEl) {
     if (!pathEl) return;
+    pathEl.classList.remove('ws-edge-drawing');
     pathEl.classList.add('ws-edge-complete');
     pathEl.style.strokeDashoffset = '0';
   };
@@ -793,23 +801,64 @@
     var self = this;
     if (!self.playbackToken || !self.playbackToken.parentNode) {
       var group = svgEl('g', { 'class': 'ws-playback-token' });
+      self.playbackTrail = [];
+      [8, 6, 4].forEach(function (radius, index) {
+        var trail = svgEl('circle', { r: radius, 'class': 'ws-marker-trail ws-marker-trail-' + index });
+        group.appendChild(trail);
+        self.playbackTrail.push(trail);
+      });
       group.appendChild(svgEl('circle', { r: 10, 'class': 'ws-marker' }));
       self.overlay.appendChild(group);
       self.playbackToken = group;
+      self.playbackHistory = [];
     }
     if (preservePoint && self.playbackPoint) {
       self.setPlaybackPoint(self.playbackPoint);
       return;
     }
     var center = self.nodeCenter(node);
-    self.playbackToken.setAttribute('transform', 'translate(' + center.x + ' ' + center.y + ')');
-    self.playbackPoint = center;
+    self.setPlaybackPoint(center);
   };
 
   WorkSchemeView.prototype.setPlaybackPoint = function (point) {
     if (!this.playbackToken || !point) return;
+    this.playbackHistory.unshift({ x: point.x, y: point.y });
+    this.playbackHistory = this.playbackHistory.slice(0, 7);
     this.playbackToken.setAttribute('transform', 'translate(' + point.x + ' ' + point.y + ')');
+    if (this.playbackTrail) this.playbackTrail.forEach(function (trail, index) {
+      var sample = this.playbackHistory[Math.min((index + 1) * 2, this.playbackHistory.length - 1)] || point;
+      trail.setAttribute('transform', 'translate(' + (sample.x - point.x) + ' ' + (sample.y - point.y) + ')');
+    }, this);
     this.playbackPoint = { x: point.x, y: point.y };
+  };
+
+  WorkSchemeView.prototype.focusPlaybackNode = function (node) {
+    if (!node || !this.container || !this.container.scrollTo) return;
+    var svg = this.container.querySelector('svg');
+    if (!svg || !svg.viewBox || !svg.viewBox.baseVal.width) return;
+    var view = svg.viewBox.baseVal;
+    var rect = svg.getBoundingClientRect();
+    var scale = rect.width / view.width;
+    var target = (node.x + node.w / 2 - view.x) * scale;
+    var left = target - this.container.clientWidth / 2;
+    var reduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    this.container.scrollTo({ left: Math.max(0, left), behavior: reduced ? 'auto' : 'smooth' });
+  };
+
+  WorkSchemeView.prototype.showSuccessBubble = function (node) {
+    var self = this;
+    if (!node || !self.overlay) return;
+    if (self.playbackSuccess) self.playbackSuccess.remove();
+    var center = self.nodeCenter(node);
+    var group = svgEl('g', { 'class': 'ws-playback-success', 'aria-label': 'Готово' });
+    group.appendChild(svgEl('path', {
+      d: 'M ' + (center.x - 72) + ' ' + (node.y - 42) + ' Q ' + (center.x - 72) + ' ' + (node.y - 54) + ' ' + (center.x - 60) + ' ' + (node.y - 54) + ' L ' + (center.x + 60) + ' ' + (node.y - 54) + ' Q ' + (center.x + 72) + ' ' + (node.y - 54) + ' ' + (center.x + 72) + ' ' + (node.y - 42) + ' L ' + (center.x + 72) + ' ' + (node.y - 24) + ' Q ' + (center.x + 72) + ' ' + (node.y - 14) + ' ' + (center.x + 60) + ' ' + (node.y - 14) + ' L ' + (center.x - 60) + ' ' + (node.y - 14) + ' Q ' + (center.x - 72) + ' ' + (node.y - 14) + ' ' + (center.x - 72) + ' ' + (node.y - 24) + ' Z',
+      'class': 'ws-success-bubble'
+    }));
+    group.appendChild(svgEl('path', { d: 'M ' + (center.x - 9) + ' ' + (node.y - 36) + ' l 5 5 l 10 -11', 'class': 'ws-success-check' }));
+    group.appendChild(svgEl('text', { x: center.x + 12, y: node.y - 29, 'text-anchor': 'middle', 'class': 'ws-success-label' }, 'Готово'));
+    self.overlay.appendChild(group);
+    self.playbackSuccess = group;
   };
 
   WorkSchemeView.prototype.settlePlaybackToken = function (node, done) {
@@ -924,7 +973,7 @@
     self.playing = false;
     if (self.playButton) self.playButton.disabled = false;
     // Финальная подсветка гаснет сама через пару секунд
-    self.timer(function () { self.clearHighlights(); }, 2500);
+    self.timer(function () { self.clearHighlights(); }, 5000);
   };
 
   WorkSchemeView.prototype.clearHighlights = function () {
@@ -933,6 +982,10 @@
     var token = self.playbackToken;
     if (token) token.remove();
     self.playbackToken = null;
+    if (self.playbackSuccess) self.playbackSuccess.remove();
+    self.playbackSuccess = null;
+    self.playbackTrail = null;
+    self.playbackHistory = [];
     self.playbackPoint = null;
   };
 
