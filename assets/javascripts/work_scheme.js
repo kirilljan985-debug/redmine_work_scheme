@@ -537,9 +537,9 @@
     status.setAttribute('aria-live', 'polite');
     status.setAttribute('aria-atomic', 'true');
     status.hidden = true;
-    controls.appendChild(status);
-
-    self.container.insertBefore(controls, self.container.firstChild);
+    status.className = 'ws-playback-status ws-playback-status-top';
+    self.container.insertBefore(status, self.container.firstChild);
+    self.container.insertBefore(controls, status.nextSibling);
     self.playButton = play;
     self.playbackStatus = status;
     self.speedSelect = speed;
