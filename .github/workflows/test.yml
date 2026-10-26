@@ -4,10 +4,18 @@ on:
   push:
   pull_request:
 
+permissions:
+  contents: read
+
+concurrency:
+  group: tests-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   redmine:
     name: Redmine ${{ matrix.redmine }}
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     strategy:
       fail-fast: false
       matrix:
@@ -17,6 +25,11 @@ jobs:
         uses: actions/checkout@v4
         with:
           path: plugin
+
+      - name: Syntax check JS
+        run: |
+          node --check plugin/assets/javascripts/work_scheme.js
+          node --check plugin/assets/javascripts/work_scheme_editor.js
 
       - name: Install Redmine (${{ matrix.redmine }})
         run: |
@@ -62,6 +75,7 @@ jobs:
     # не работает под sqlite) — по разделу 4 скилла redmine-plugin-dev.
     name: Redmine 7.0-stable + additionals
     runs-on: ubuntu-latest
+    timeout-minutes: 25
     services:
       postgres:
         image: postgres:15
@@ -81,6 +95,11 @@ jobs:
         uses: actions/checkout@v4
         with:
           path: plugin
+
+      - name: Syntax check JS
+        run: |
+          node --check plugin/assets/javascripts/work_scheme.js
+          node --check plugin/assets/javascripts/work_scheme_editor.js
 
       - name: Install Redmine and additionals
         run: |

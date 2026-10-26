@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <title>Work Scheme preview (dev)</title>
-<link rel="stylesheet" href="../assets/stylesheets/work_scheme.css?v=90">
+<link rel="stylesheet" href="../assets/stylesheets/work_scheme.css?v=91">
 <style>
   body { font-family: system-ui, sans-serif; margin: 20px; max-width: 1100px; background: #dbe7fb; color: #14245c; }
 </style>
@@ -17,14 +17,18 @@
      data-edit-url="/work_scheme/edit"
      data-label-play="Проиграть" data-label-reset="Сброс"
      data-label-edit-page="Редактор схемы"
+     data-label-playback-step="Этап" data-label-playback-done="Готово"
+     data-label-no-scenarios="Сценарии проигрывания пока не добавлены."
+     data-label-tasks="Задач" data-label-progress="Прогресс сценария"
+     data-label-speed="Скорость"
      data-label-zoom-out="Уменьшить" data-label-zoom-in="Увеличить" data-label-zoom-fit="Вписать в блок"
      data-more-label="Подробнее">
   <script type="application/json" class="ws-data"></script>
 </div>
-<script src="../assets/javascripts/work_scheme.js?v=90"></script>
+<script src="../assets/javascripts/work_scheme.js?v=91"></script>
 <script>
   // dev-обвязка: схема из scheme.json + демо-стрелка elbow + демо query_id; инициализация
-  fetch('scheme.json?v=90')
+  fetch('scheme.json?v=91')
     .then(function (r) { return r.text(); })
     .then(function (text) {
       var scheme = JSON.parse(text);

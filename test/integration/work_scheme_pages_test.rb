@@ -43,6 +43,9 @@ class RedmineWorkSchemePagesTest < Redmine::IntegrationTest
   end
 
   test 'scheme page and counts endpoint are accessible anonymously' do
+    # тест рассчитывает на публичный доступ; на инсталляции с принудительным
+    # логином он был бы ложным — фиксируем настройку явно
+    Setting.login_required = false
     get '/work_scheme'
     assert_response :success
     get '/work_scheme/counts?ids='
@@ -129,6 +132,20 @@ class RedmineWorkSchemePagesTest < Redmine::IntegrationTest
     get '/work_scheme/counts?ids='
     assert_response :success
     assert_equal({}, JSON.parse(@response.body)['counts'])
+  end
+
+  test 'counts endpoint accepts array-style ids and survives id flood' do
+    public_query = IssueQuery.create!(name: 'WS public query', visibility: Query::VISIBILITY_PUBLIC, user_id: 1)
+    flood = (1..150).map { |i| "99999999#{i}" }.join('&ids[]=')
+
+    log_user 'jsmith', 'jsmith'
+    get "/work_scheme/counts?ids[]=#{public_query.id}&ids[]=#{public_query.id}"
+    assert_response :success
+    counts = JSON.parse(@response.body)['counts']
+    assert_equal public_query.issue_count, counts[public_query.id.to_s]
+
+    get "/work_scheme/counts?ids[]=#{flood}"
+    assert_response :success, 'flood of oversized ids must not produce 500'
   end
 
   test 'save endpoint validates and stores scheme' do

@@ -178,10 +178,11 @@ python -m http.server 8123        # запустить из папки плаг�
 ## Структура
 
 ```
-init.rb                                    регистрация плагина + настройки
+init.rb                                    регистрация плагина + настройки (v0.3.0)
 lib/redmine_work_scheme/scheme.rb          валидатор схемы (чистая логика)
 lib/redmine_work_scheme/default_scheme.rb  схема по умолчанию (сценарий отдела)
-app/controllers/work_scheme_controller.rb  show / stage / edit / save
+lib/dashboard_blocks/work_scheme_block.rb  блок дашборда additionals (необязательно)
+app/controllers/work_scheme_controller.rb  show / stage / counts / edit / save
 app/views/work_scheme/_block.html.erb      блок схемы
 app/views/work_scheme/edit.html.erb        страница редактора
 app/views/settings/_work_scheme.html.erb   JSON в настройках плагина
@@ -195,6 +196,12 @@ dev/preview.html, dev/editor.html          dev-превью без Redmine
 AGENTS.md                                  память проекта: правила, грабли, статус
 PLAN.md                                    живой план задач с критериями готовности
 ```
+
+## Ограничения локализации
+
+Кнопки и подписи страницы схемы переведены (ru/en); тексты визуального
+редактора и сообщения валидатора схемы — русские независимо от локали
+(валидатор намеренно не зависит от I18n-окружения, см. `AGENTS.md`).
 
 ## Лицензия
 

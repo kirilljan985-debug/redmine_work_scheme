@@ -21,15 +21,15 @@ module RedmineWorkScheme
     # Возвращает {data: нормализованная схема или nil, errors: [строки]}
     def parse(json_string)
       str = json_string.to_s
-      return result(nil, [I18n_error(:ws_error_empty)]) if str.strip.empty?
+      return result(nil, [message_for(:ws_error_empty)]) if str.strip.empty?
 
       raw =
         begin
           JSON.parse(str)
         rescue JSON::ParserError => e
-          return result(nil, [format(I18n_error(:ws_error_invalid_json), message: e.message)])
+          return result(nil, [interpolate(message_for(:ws_error_invalid_json), message: e.message)])
         end
-      return result(nil, [I18n_error(:ws_error_not_object)]) unless raw.is_a?(Hash)
+      return result(nil, [message_for(:ws_error_not_object)]) unless raw.is_a?(Hash)
 
       errors = []
       nodes = normalize_nodes(raw['nodes'], errors)
@@ -50,7 +50,7 @@ module RedmineWorkScheme
         )
       end
     rescue StandardError => e
-      result(nil, [format(I18n_error(:ws_error_unexpected), message: e.message)])
+      result(nil, [interpolate(message_for(:ws_error_unexpected), message: e.message)])
     end
 
     # Узел по id (nil, если нет)
@@ -78,14 +78,14 @@ module RedmineWorkScheme
 
     def normalize_nodes(raw_nodes, errors)
       unless raw_nodes.is_a?(Array) && raw_nodes.any?
-        errors << I18n_error(:ws_error_no_nodes)
+        errors << message_for(:ws_error_no_nodes)
         return []
       end
 
       seen = {}
       raw_nodes.each_with_index.map do |raw, index|
         unless raw.is_a?(Hash)
-          errors << format(I18n_error(:ws_error_node_not_object), index: index + 1)
+          errors << interpolate(message_for(:ws_error_node_not_object), index: index + 1)
           next nil
         end
         node = normalize_node(raw, index, seen, errors)
@@ -97,28 +97,28 @@ module RedmineWorkScheme
     def normalize_node(raw, index, seen, errors)
       id = raw['id'].to_s.strip
       if id.empty?
-        errors << format(I18n_error(:ws_error_node_no_id), index: index + 1)
+        errors << interpolate(message_for(:ws_error_node_no_id), index: index + 1)
         return nil
       end
       unless id =~ /\A[A-Za-z0-9_-]+\z/
-        errors << format(I18n_error(:ws_error_node_bad_id), id: id)
+        errors << interpolate(message_for(:ws_error_node_bad_id), id: id)
         return nil
       end
       if seen[id]
-        errors << format(I18n_error(:ws_error_node_dup_id), id: id)
+        errors << interpolate(message_for(:ws_error_node_dup_id), id: id)
         return nil
       end
 
       type = raw['type'].to_s.strip
       type = 'process' if type.empty?
       unless NODE_TYPES.include?(type)
-        errors << format(I18n_error(:ws_error_node_bad_type), id: id, type: type)
+        errors << interpolate(message_for(:ws_error_node_bad_type), id: id, type: type)
         return nil
       end
 
       title = raw['title'].to_s.strip
       if title.empty?
-        errors << format(I18n_error(:ws_error_node_no_title), id: id)
+        errors << interpolate(message_for(:ws_error_node_no_title), id: id)
         return nil
       end
 
@@ -128,7 +128,7 @@ module RedmineWorkScheme
       # как и javascript:/data: — это href клика по узлу.
       unless url.empty? || url =~ %r{\Ahttps?://}i ||
              (url.start_with?('/') && !url.start_with?('//'))
-        errors << format(I18n_error(:ws_error_node_bad_url), id: id, url: url)
+        errors << interpolate(message_for(:ws_error_node_bad_url), id: id, url: url)
         return nil
       end
 
@@ -156,7 +156,7 @@ module RedmineWorkScheme
     def normalize_edges(raw_edges, nodes, errors)
       return [] if raw_edges.nil?
       unless raw_edges.is_a?(Array)
-        errors << I18n_error(:ws_error_edges_not_array)
+        errors << message_for(:ws_error_edges_not_array)
         return []
       end
 
@@ -164,19 +164,19 @@ module RedmineWorkScheme
       seen_pairs = {}
       raw_edges.each_with_index.map do |raw, index|
         unless raw.is_a?(Hash)
-          errors << format(I18n_error(:ws_error_edge_not_object), index: index + 1)
+          errors << interpolate(message_for(:ws_error_edge_not_object), index: index + 1)
           next nil
         end
         from = raw['from'].to_s.strip
         to = raw['to'].to_s.strip
         unless ids.include?(from) && ids.include?(to)
-          errors << format(I18n_error(:ws_error_edge_bad_nodes), index: index + 1, from: from, to: to)
+          errors << interpolate(message_for(:ws_error_edge_bad_nodes), index: index + 1, from: from, to: to)
           next nil
         end
         from_side = normalize_side(raw['from_side'])
         to_side = normalize_side(raw['to_side'])
         if from_side == :invalid || to_side == :invalid
-          errors << format(I18n_error(:ws_error_edge_bad_side),
+          errors << interpolate(message_for(:ws_error_edge_bad_side),
                            index: index + 1, side: from_side == :invalid ? raw['from_side'] : raw['to_side'])
           next nil
         end
@@ -184,7 +184,7 @@ module RedmineWorkScheme
         # Пара регистрируется после по-рёберных проверок — отброшенное ребро
         # не должно давать второму такому же ложную ошибку «повтор связи».
         if seen_pairs.key?("#{from}>#{to}")
-          errors << format(I18n_error(:ws_error_edge_dup), index: index + 1, from: from, to: to)
+          errors << interpolate(message_for(:ws_error_edge_dup), index: index + 1, from: from, to: to)
           next nil
         end
         seen_pairs["#{from}>#{to}"] = true
@@ -214,7 +214,7 @@ module RedmineWorkScheme
     def normalize_scenarios(raw_scenarios, nodes, errors)
       return [] if raw_scenarios.nil?
       unless raw_scenarios.is_a?(Array)
-        errors << I18n_error(:ws_error_scenarios_not_array)
+        errors << message_for(:ws_error_scenarios_not_array)
         return []
       end
 
@@ -222,18 +222,18 @@ module RedmineWorkScheme
       seen = {}
       raw_scenarios.each_with_index.map do |raw, index|
         unless raw.is_a?(Hash)
-          errors << format(I18n_error(:ws_error_scenario_not_object), index: index + 1)
+          errors << interpolate(message_for(:ws_error_scenario_not_object), index: index + 1)
           next nil
         end
         id = raw['id'].to_s.strip
         steps = raw['steps'].is_a?(Array) ? raw['steps'].map { |s| s.to_s.strip } : []
         unknown = steps.reject { |s| ids.include?(s) }
         if id.empty? || raw['title'].to_s.strip.empty? || steps.empty? || unknown.any?
-          errors << format(I18n_error(:ws_error_scenario_invalid), index: index + 1, unknown: unknown.join(', '))
+          errors << interpolate(message_for(:ws_error_scenario_invalid), index: index + 1, unknown: unknown.join(', '))
           next nil
         end
         if seen[id]
-          errors << format(I18n_error(:ws_error_scenario_dup_id), id: id)
+          errors << interpolate(message_for(:ws_error_scenario_dup_id), id: id)
           next nil
         end
         seen[id] = true
@@ -256,7 +256,7 @@ module RedmineWorkScheme
       return '' if color.empty?
       return color if color =~ /\A#[0-9a-fA-F]{6}\z/
 
-      errors << format(I18n_error(:ws_error_edge_bad_color), index: index + 1)
+      errors << interpolate(message_for(:ws_error_edge_bad_color), index: index + 1)
       ''
     end
 
@@ -265,7 +265,8 @@ module RedmineWorkScheme
       return '' if color.empty?
       return color if color =~ /\A#[0-9a-fA-F]{6}\z/
 
-      errors << format(I18n_error(:ws_error_bad_text_color), index: index + 1, kind: kind == :node ? 'узла' : 'связи')
+      key = kind == :node ? :ws_error_bad_text_color_node : :ws_error_bad_text_color_edge
+      errors << interpolate(message_for(key), index: index + 1)
       ''
     end
 
@@ -274,14 +275,17 @@ module RedmineWorkScheme
       [[size, 8].max, 32].min
     end
 
+    # Верхняя граница отсекает значения вне диапазона колонки БД, чтобы
+    # query_id из конфига не ломал find_by в counts.
     def positive_int_or_nil(value)
       int = int_value(value, 0)
-      int.positive? ? int : nil
+      int.positive? && int <= 999_999_999 ? int : nil
     end
 
     def int_value(value, default)
       case value
       when Integer then value
+      when Numeric then value.round
       when String then value.strip =~ /\A-?\d+\z/ ? value.strip.to_i : default
       else default
       end
@@ -307,23 +311,24 @@ module RedmineWorkScheme
       'ws_error_node_no_title' => 'Узел "%{id}" без поля "title".',
       'ws_error_node_bad_url' => 'Узел "%{id}": url должен начинаться с http://, https:// или "/" (задано: "%{url}").',
       'ws_error_edges_not_array' => '"edges" должен быть массивом.',
-      'ws_error_edge_not_object' => 'Связь №%{index} — не объект.',
-      'ws_error_edge_bad_nodes' => 'Связь №%{index} ссылается на неизвестные узлы (from: "%{from}", to: "%{to}").',
-      'ws_error_edge_dup' => 'Связь №%{index}: повтор связи "%{from}" → "%{to}".',
-      'ws_error_edge_bad_side' => 'Связь №%{index}: недопустимая сторона "%{side}" (допустимо: left, right, top, bottom или пусто).',
-      'ws_error_edge_bad_color' => 'Связь №%{index}: цвет должен быть в формате #RRGGBB или пустым.',
-      'ws_error_bad_text_color' => 'Элемент №%{index} (%{kind}): цвет текста должен быть в формате #RRGGBB или пустым.',
+      'ws_error_edge_not_object' => 'Стрелка №%{index} — не объект.',
+      'ws_error_edge_bad_nodes' => 'Стрелка №%{index} ссылается на неизвестные узлы (from: "%{from}", to: "%{to}").',
+      'ws_error_edge_dup' => 'Стрелка №%{index}: повтор стрелки "%{from}" → "%{to}".',
+      'ws_error_edge_bad_side' => 'Стрелка №%{index}: недопустимая сторона "%{side}" (допустимо: left, right, top, bottom или пусто).',
+      'ws_error_edge_bad_color' => 'Стрелка №%{index}: цвет должен быть в формате #RRGGBB или пустым.',
+      'ws_error_bad_text_color_node' => 'Узел №%{index}: цвет текста должен быть в формате #RRGGBB или пустым.',
+      'ws_error_bad_text_color_edge' => 'Стрелка №%{index}: цвет текста должен быть в формате #RRGGBB или пустым.',
       'ws_error_scenarios_not_array' => '"scenarios" должен быть массивом.',
       'ws_error_scenario_not_object' => 'Сценарий №%{index} — не объект.',
       'ws_error_scenario_invalid' => 'Сценарий №%{index} заполнен неверно (нужны id, title и steps существующих узлов; неизвестные узлы: %{unknown}).',
       'ws_error_scenario_dup_id' => 'Дубликат сценария "%{id}".'
     }.freeze
 
-    def I18n_error(key)
+    def message_for(key)
       MESSAGES[key.to_s] || key.to_s
     end
 
-    def format(template, values)
+    def interpolate(template, values)
       template.gsub(/%\{(\w+)\}/) { values[$1.to_sym].to_s }
     end
   end

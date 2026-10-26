@@ -18,8 +18,6 @@
   --ws-node-text: #1a232b;
   --ws-button-text: #1f2d38;
   --ws-success: #39835a;
-  --ws-warning: #b37a20;
-  --ws-danger: #b34a4a;
   --ws-radius: 7px;
   --ws-shadow: 0 4px 14px rgba(36, 59, 78, .12);
 }
@@ -253,7 +251,6 @@
 .ws-marker-trail-1 { opacity: .28; }
 .ws-marker-trail-2 { opacity: .16; }
 .ws-marker-direction { fill: #ffffff; opacity: .92; filter: drop-shadow(0 0 4px rgba(214,111,44,.7)); pointer-events: none; }
-.ws-marker-label { font-size: 11px; font-weight: 700; fill: #8a3d0c; paint-order: stroke; stroke: #fff; stroke-width: 3px; stroke-linejoin: round; }
 
 .ws-node-active .ws-node-icon { animation: ws-icon-pulse 1s ease-in-out infinite alternate; transform-box: fill-box; transform-origin: center; }
 .ws-node-active.ws-node-decision polygon { animation: ws-decision-wait 1.25s ease-in-out infinite alternate; }
@@ -297,11 +294,6 @@
 }
 
 /* Режим правки узлов */
-
-.ws-edit-toggle.ws-active {
-  background: #fdeee2;
-  border-color: #d66f2c;
-}
 
 .ws-edit-mode .ws-node {
   cursor: move;
@@ -371,12 +363,6 @@
   padding: 3px 10px;
   background: #fff;
   cursor: pointer;
-}
-
-.ws-editor-actions button.ws-active,
-#ws-add-edge.ws-active {
-  background: #fdeee2;
-  border-color: #d66f2c;
 }
 
 .ws-container > .ws-controls {
@@ -561,10 +547,6 @@
   font-size: 11px;
   color: #64707c;
   margin-bottom: 8px;
-}
-
-#ws-obj-panel .ws-dashed-label {
-  font-size: 12px;
 }
 
 /* Единый визуальный слой просмотра и редактора */

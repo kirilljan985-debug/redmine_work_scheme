@@ -167,12 +167,19 @@
     });
     if (!isFinite(minX)) return { minX: 0, minY: 0, maxX: 300, maxY: 120 };
     // Дуги поверх схемы могут выходить за границы узлов — учитываем их вылет
+    // (формула подъёма должна совпадать с edgePath, включая масштаб bend/50)
     self.edges.forEach(function (edge) {
       if (edge.route !== 'arc' && edge.route !== 'u') return;
       var a = self.byId[edge.from];
       var b = self.byId[edge.to];
       if (!a || !b) return;
-      var lift = edge.route === 'u' ? 26 + num(edge.bend, 50) : Math.max(46, Math.abs(a.x + a.w / 2 - (b.x + b.w / 2)) / 4);
+      var lift;
+      if (edge.route === 'u') {
+        lift = 26 + num(edge.bend, 50);
+      } else {
+        var baseLift = Math.max(46, Math.abs(a.x + a.w / 2 - (b.x + b.w / 2)) / 4);
+        lift = baseLift * (edge.bend / 50);
+      }
       minY = Math.min(minY, Math.min(a.y, b.y) - lift - 14);
     });
     return { minX: minX, minY: minY, maxX: maxX, maxY: maxY };
@@ -370,6 +377,7 @@
     svg.appendChild(self.overlay);
 
     self.container.appendChild(svg);
+    self.svg = svg;
     self.attachTooltip();
     self.buildControls();
 
@@ -508,7 +516,7 @@
       self.container.insertBefore(controls, self.container.firstChild);
       var empty = document.createElement('div');
       empty.className = 'ws-empty-note';
-      empty.textContent = 'Сценарии проигрывания пока не добавлены.';
+      empty.textContent = self.label('no-scenarios', 'Сценарии проигрывания пока не добавлены.');
       self.container.insertBefore(empty, self.container.querySelector('svg'));
       self.zoomControls = zoom;
       return;
@@ -581,7 +589,7 @@
     var svg = self.container.querySelector('svg');
     var timeline = document.createElement('div');
     timeline.className = 'ws-playback-timeline';
-    timeline.setAttribute('aria-label', 'Прогресс сценария');
+    timeline.setAttribute('aria-label', self.label('progress', 'Прогресс сценария'));
     if (svg) {
       self.container.insertBefore(status, svg);
       self.container.insertBefore(timeline, svg);
@@ -672,6 +680,8 @@
             node.x = Math.round((node.x + delta.x) / 2) * 2;
             node.y = Math.round((node.y + delta.y) / 2) * 2;
             self.render();
+            // редактор вешает хук: вернуть выделение, hit-пути и dirty
+            if (typeof self.onNodeDragEnd === 'function') self.onNodeDragEnd();
           }
         };
         document.addEventListener('pointermove', onMove);
@@ -902,14 +912,15 @@
     if (!node || !self.overlay) return;
     if (self.playbackSuccess) self.playbackSuccess.remove();
     var center = self.nodeCenter(node);
-    var group = svgEl('g', { 'class': 'ws-playback-success', 'aria-label': 'Готово' });
+    var doneText = self.label('playback-done', 'Готово');
+    var group = svgEl('g', { 'class': 'ws-playback-success', 'aria-label': doneText });
     group.appendChild(svgEl('path', {
       d: 'M ' + (center.x - 72) + ' ' + (node.y - 42) + ' Q ' + (center.x - 72) + ' ' + (node.y - 54) + ' ' + (center.x - 60) + ' ' + (node.y - 54) + ' L ' + (center.x + 60) + ' ' + (node.y - 54) + ' Q ' + (center.x + 72) + ' ' + (node.y - 54) + ' ' + (center.x + 72) + ' ' + (node.y - 42) + ' L ' + (center.x + 72) + ' ' + (node.y - 24) + ' Q ' + (center.x + 72) + ' ' + (node.y - 14) + ' ' + (center.x + 60) + ' ' + (node.y - 14) + ' L ' + (center.x - 60) + ' ' + (node.y - 14) + ' Q ' + (center.x - 72) + ' ' + (node.y - 14) + ' ' + (center.x - 72) + ' ' + (node.y - 24) + ' Z',
       'class': 'ws-success-bubble'
     }));
     group.appendChild(svgEl('circle', { cx: center.x - 46, cy: node.y - 34, r: 8, 'class': 'ws-success-icon' }));
     group.appendChild(svgEl('path', { d: 'M ' + (center.x - 50) + ' ' + (node.y - 34) + ' l 3 3 l 6 -7', 'class': 'ws-success-check' }));
-    group.appendChild(svgEl('text', { x: center.x + 14, y: node.y - 29, 'text-anchor': 'middle', 'class': 'ws-success-label' }, 'Готово'));
+    group.appendChild(svgEl('text', { x: center.x + 14, y: node.y - 29, 'text-anchor': 'middle', 'class': 'ws-success-label' }, doneText));
     self.overlay.appendChild(group);
     self.playbackSuccess = group;
   };
@@ -1006,7 +1017,6 @@
       if (progress < 1) {
         window.requestAnimationFrame(tick);
       } else {
-        self.timer(function () {}, self.playbackDelay(350));
         done();
       }
     };
@@ -1108,6 +1118,9 @@
       var counts = data && data.counts ? data.counts : {};
       countsCache[cacheKey] = counts;
       self.counts = counts;
+      // если View уже пересоздан (undo/redo редактора), его svg отцеплён —
+      // поздний ответ прежнего экземпляра не должен сносить бейджи нового
+      if (!self.svg || self.svg.parentNode !== self.container) return;
       self.renderBadges();
     }).catch(function () {
       // ошибка счётчиков не должна ломать схему — бейджи просто не рисуются
@@ -1176,7 +1189,7 @@
       if (count !== null && count !== undefined) {
         var countLine = document.createElement('div');
         countLine.className = 'ws-tooltip-count';
-        countLine.textContent = 'Задач: ' + count;
+        countLine.textContent = self.label('tasks', 'Задач') + ': ' + count;
         tooltip.appendChild(countLine);
       }
       var target = self.stageTarget(node);
@@ -1229,6 +1242,9 @@
     Array.prototype.forEach.call(
       document.querySelectorAll('[data-work-scheme]'),
       function (container) {
+        // редактор строит свой View на этом же контейнере — не дублируем
+        // (иначе второй render и два fetch счётчиков с гонкой бейджей)
+        if (container.closest && container.closest('#ws-editor')) return;
         try {
           var dataEl = container.querySelector('script.ws-data');
           if (!dataEl) return;

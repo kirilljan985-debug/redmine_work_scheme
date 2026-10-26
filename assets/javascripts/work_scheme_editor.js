@@ -22,9 +22,6 @@
       save: root.getAttribute('data-label-save') || 'Сохранить схему',
       saved: root.getAttribute('data-label-saved') || 'Схема сохранена',
       download: root.getAttribute('data-label-download') || 'Скачать JSON',
-      addNode: root.getAttribute('data-label-add-node') || 'Добавить узел',
-      addEdge: root.getAttribute('data-label-add-edge') || 'Добавить стрелку',
-      addEdgeHint: root.getAttribute('data-label-add-edge-hint') || 'Кликните исходный узел, затем целевой',
       swap: root.getAttribute('data-label-swap') || 'Развернуть направление',
       del: root.getAttribute('data-label-delete') || 'Удалить',
       node: root.getAttribute('data-label-node') || 'Узел',
@@ -41,6 +38,12 @@
     this.view = new View(root.querySelector('.ws-container'), scheme);
     root.setAttribute('data-ws-theme', scheme.theme || 'classic');
     this.view.editMode = true;        // перетаскивание узлов включено
+    var editor = this;
+    this.view.onNodeDragEnd = function () {
+      editor.markDirty();
+      editor.redraw();
+      editor.renderNodePanel();
+    };
     this.sel = null;                  // {type:'node', id} | {type:'edge', key}
     this.selectedIds = [];
     this.dirty = false;
@@ -97,6 +100,12 @@
     var View = window.WorkScheme.View;
     this.view = new View(this.root.querySelector('.ws-container'), data);
     this.view.editMode = true;
+    var editor = this;
+    this.view.onNodeDragEnd = function () {
+      editor.markDirty();
+      editor.redraw();
+      editor.renderNodePanel();
+    };
     this.view.render();
     this.seq = this.maxNodeSeq() + 1;
     this.sel = null;
@@ -274,12 +283,13 @@
           } else if (item[0].indexOf('s') !== -1) {
             node.h = Math.max(minH, height + dy);
           }
-          self.markDirty();
           self.redraw();
         };
+        // dirty и один снимок в историю — по завершении жеста, а не на каждый кадр
         var onUp = function () {
           document.removeEventListener('pointermove', onMove);
           document.removeEventListener('pointerup', onUp);
+          self.markDirty();
         };
         document.addEventListener('pointermove', onMove);
         document.addEventListener('pointerup', onUp);
@@ -431,21 +441,25 @@
     var container = self.view.container;
 
     var markFormDirty = function (ev) {
-      if (ev.target.closest && (ev.target.closest('.ws-field') || ev.target.closest('.ws-scenario-row') || ev.target.id === 'ws-title')) self.markDirty();
+      if (ev.target.closest && (ev.target.closest('.ws-field') || ev.target.closest('.ws-scenario-row') || ev.target.closest('.ws-text-style') || ev.target.id === 'ws-title')) self.markDirty();
     };
     self.root.addEventListener('input', markFormDirty);
     self.root.addEventListener('change', markFormDirty);
     self.root.addEventListener('keydown', function (ev) {
+      // в полях ввода Ctrl+Z/Y и стрелки — нативное поведение, не хоткеи схемы
+      var inField = ev.target.tagName === 'INPUT' || ev.target.tagName === 'TEXTAREA' || ev.target.tagName === 'SELECT';
       if ((ev.ctrlKey || ev.metaKey) && ev.key.toLowerCase() === 'z') {
+        if (inField) return;
         ev.preventDefault();
         if (ev.shiftKey) self.redo(); else self.undo();
         return;
       }
       if ((ev.ctrlKey || ev.metaKey) && ev.key.toLowerCase() === 'y') {
+        if (inField) return;
         ev.preventDefault(); self.redo(); return;
       }
       var node = self.selectedNode();
-      if (!node || ev.target.tagName === 'INPUT' || ev.target.tagName === 'TEXTAREA') return;
+      if (!node || inField) return;
       var delta = ev.shiftKey ? 10 : 2;
       if (ev.key === 'ArrowLeft') node.x -= delta;
       else if (ev.key === 'ArrowRight') node.x += delta;
@@ -461,23 +475,6 @@
       if (ev.target.closest && ev.target.closest('.ws-edge-hit')) return; // свой обработчик
       if (ev.target === container.querySelector('svg')) { self.deselect(); }
     });
-
-    var addNodeBtn = document.getElementById('ws-add-node');
-    if (addNodeBtn) {
-      addNodeBtn.textContent = self.labels.addNode;
-      addNodeBtn.addEventListener('click', function () { self.addNode(); });
-    }
-
-    var addEdgeBtn = document.getElementById('ws-add-edge');
-    if (addEdgeBtn) {
-      addEdgeBtn.textContent = self.labels.addEdge;
-      addEdgeBtn.title = self.labels.addEdgeHint;
-      addEdgeBtn.addEventListener('click', function () {
-        self.pendingFrom = { from: null };
-        addEdgeBtn.classList.add('ws-active');
-        self.setStatus(self.labels.addEdgeHint, '');
-      });
-    }
 
     var addScenarioBtn = document.getElementById('ws-add-scenario');
     if (addScenarioBtn) {
@@ -571,7 +568,7 @@
           self.addPaletteEdge(item.route, item.dashed, self.selectedNode().id, targetId, item.fromSide, item.toSide, item.bend);
         } else {
           self.pendingFrom = { from: targetId, palette: item };
-          self.setStatus('Стрелка готова: выберите блок-цель', '');
+          self.setStatus('Источник выбран: кликните блок-цель', '');
         }
       }
     });
@@ -625,24 +622,10 @@
   Editor.prototype.selectNode = function (id, additive) {
     var self = this;
     if (self.pendingFrom) {
-      if (!self.pendingFrom.from) {
-        self.pendingFrom.from = id;
-        self.setStatus(self.labels.addEdgeHint + ' [откуда: ' + id + ']', '');
-        return;
-      }
+      // pendingFrom ставит только drag-and-drop палитры — from уже задан
       if (self.pendingFrom.from === id) return;
       var palette = self.pendingFrom.palette;
-      if (palette) {
-        self.addPaletteEdge(palette.route, palette.dashed, self.pendingFrom.from, id, palette.fromSide, palette.toSide, palette.bend);
-        return;
-      }
-      var edge = { from: self.pendingFrom.from, to: id, label: '', dashed: false, route: 'straight', fromSide: '', toSide: '', bend: 50 };
-      self.view.edges.push(edge); self.pendingFrom = null;
-      var btn = document.getElementById('ws-add-edge');
-      if (btn) btn.classList.remove('ws-active');
-      self.setStatus('', '');
-      self.redraw();
-      self.selectEdge(edge.from + '>' + edge.to);
+      self.addPaletteEdge(palette.route, palette.dashed, self.pendingFrom.from, id, palette.fromSide, palette.toSide, palette.bend);
       return;
     }
     if (self.activeScenarioId) {
@@ -819,19 +802,6 @@
     delete self.view.byId[id];
     self.markDirty();
     self.deselect();
-  };
-
-  Editor.prototype.addNode = function () {
-    var self = this;
-    var id = 'n' + (self.seq++);
-    var node = {
-      id: id, type: 'process', title: id, dept: '', description: '', page: '', url: '', icon: '',
-      queryId: null, x: 60 + (self.seq % 5) * 30, y: 60 + (self.seq % 4) * 24, w: 140, h: 56
-    };
-    self.view.nodes.push(node);
-    self.view.byId[id] = node;
-    self.markDirty();
-    self.selectNode(id);
   };
 
   /* ---- Панель свойств стрелки ---- */

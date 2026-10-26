@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <title>Work Scheme editor preview (dev)</title>
-<link rel="stylesheet" href="../assets/stylesheets/work_scheme.css?v=90">
+<link rel="stylesheet" href="../assets/stylesheets/work_scheme.css?v=91">
 <style>
   body { font-family: system-ui, sans-serif; margin: 16px; background: #dbe7fb; color: #14245c; }
 </style>
@@ -11,9 +11,8 @@
 <body>
 <h2 id="ws-editor-heading">Редактор схемы (dev-превью)</h2>
 <div id="ws-editor" data-layout="modern" data-save-url=""
-     data-more-label="Подробнее" data-label-save="Сохранить схему" data-label-saved="Схема сохранена"
-     data-label-download="Скачать JSON" data-label-add-node="Добавить узел" data-label-add-edge="Добавить стрелку"
-     data-label-add-edge-hint="Кликните исходный узел, затем целевой" data-label-swap="Развернуть"
+     data-label-save="Сохранить схему" data-label-saved="Схема сохранена"
+     data-label-download="Скачать JSON" data-label-swap="Развернуть"
      data-label-delete="Удалить" data-label-node="Узел" data-label-edge="Стрелка"
      data-label-scenarios="Сценарии проигрывания" data-label-steps-hint="id узлов через запятую"
      data-label-bend="Изгиб" data-label-edge-color="Цвет стрелки">
@@ -89,12 +88,12 @@
     <div id="ws-save-status"></div>
   </div>
 </div>
-<script src="../assets/javascripts/work_scheme.js?v=90"></script>
-<script src="../assets/javascripts/work_scheme_editor.js?v=90"></script>
+<script src="../assets/javascripts/work_scheme.js?v=91"></script>
+<script src="../assets/javascripts/work_scheme_editor.js?v=91"></script>
 <script>
   // dev-обвязка: после загрузки схемы повторно инициируем редактор
   // (editor.js вешает init на DOMContentLoaded, который к моменту fetch уже прошёл)
-  fetch('scheme.json?v=90')
+  fetch('scheme.json?v=91')
     .then(function (r) { return r.text(); })
     .then(function (text) {
       document.querySelector('script.ws-data').textContent = text;

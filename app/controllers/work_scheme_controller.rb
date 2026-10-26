@@ -12,8 +12,10 @@ class WorkSchemeController < ApplicationController
   # Отвечает только по запросам, видимым текущему пользователю; недоступные,
   # несуществующие и некорректные id молча отсутствуют в ответе.
   def counts
+    # верхняя граница отсекает Bignum: ActiveRecord на id вне диапазона
+    # колонки бросает RangeError ещё на find_by
     ids = Array(params[:ids]).join(',').split(',').map { |value| value.to_i }
-                             .uniq.select { |id| id.positive? }.first(100)
+                             .uniq.select { |id| id.between?(1, 2**62) }.first(100)
     counts = {}
     ids.each do |id|
       query = IssueQuery.find_by(id: id)
@@ -34,8 +36,6 @@ class WorkSchemeController < ApplicationController
       render_404
       return
     end
-  rescue StandardError
-    render_404
   end
 
   # Визуальный редактор схемы (только администратор)

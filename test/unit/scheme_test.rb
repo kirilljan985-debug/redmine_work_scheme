@@ -241,6 +241,59 @@ class RedmineWorkSchemeSchemeTest < ActiveSupport::TestCase
     assert_equal 2, parsed[:data]['edges'].length
   end
 
+  test 'edge rejected for bad side does not mark its pair as duplicate' do
+    parsed = RedmineWorkScheme::Scheme.parse(valid_scheme_json_with_nodes(
+      [{ 'id' => 'a', 'title' => 'A' }, { 'id' => 'b', 'title' => 'B' }],
+      [{ 'from' => 'a', 'to' => 'b', 'from_side' => 'diagonal' }, { 'from' => 'a', 'to' => 'b' }]
+    ))
+    assert_equal 1, parsed[:errors].size, 'only the bad-side error is expected'
+    assert parsed[:errors].first.include?('diagonal')
+  end
+
+  test 'duplicate scenario id returns error' do
+    parsed = RedmineWorkScheme::Scheme.parse({
+      'nodes' => [{ 'id' => 'a', 'title' => 'A' }],
+      'edges' => [],
+      'scenarios' => [{ 'id' => 's', 'title' => 'S1', 'steps' => ['a'] },
+                       { 'id' => 's', 'title' => 'S2', 'steps' => ['a'] }]
+    }.to_json)
+    assert parsed[:errors].any? { |e| e.include?('s') }
+  end
+
+  test 'url edges: uppercase scheme, bare slash and stripped value' do
+    [['HTTPS://EXAMPLE.COM/X', 'HTTPS://EXAMPLE.COM/X'],
+     ['/', '/'],
+     [' /x', '/x']].each do |raw, expected|
+      parsed = RedmineWorkScheme::Scheme.parse(valid_scheme_json_with_nodes(
+        [{ 'id' => 'a', 'title' => 'A', 'url' => raw }]
+      ))
+      assert_empty parsed[:errors], "url #{raw.inspect} must pass"
+      assert_equal expected, parsed[:data]['nodes'].first['url']
+    end
+  end
+
+  test 'numeric clamps: bend, font size, float coordinates, huge query_id' do
+    parsed = RedmineWorkScheme::Scheme.parse(valid_scheme_json_with_nodes(
+      [{ 'id' => 'a', 'title' => 'A', 'x' => 20.5, 'font_size' => 5, 'query_id' => 999_999_999_999_999 },
+       { 'id' => 'b', 'title' => 'B' }],
+      [{ 'from' => 'a', 'to' => 'a', 'bend' => 300 }, { 'from' => 'a', 'to' => 'b', 'route' => 'u', 'bend' => -5 }]
+    ))
+    assert_empty parsed[:errors]
+    node = parsed[:data]['nodes'].first
+    assert_equal 21, node['x'], 'float coordinates round'
+    assert_equal 8, node['font_size'], 'font size lower clamp'
+    assert_nil node['query_id'], 'query_id beyond DB range becomes nil'
+    assert_equal 200, parsed[:data]['edges'][0]['bend'], 'bend upper clamp'
+    assert_equal 0, parsed[:data]['edges'][1]['bend'], 'bend lower clamp'
+  end
+
+  test 'nodes and edges of wrong type return errors' do
+    parsed = RedmineWorkScheme::Scheme.parse({ 'nodes' => 'x', 'edges' => [], 'scenarios' => [] }.to_json)
+    assert parsed[:errors].any?
+    parsed = RedmineWorkScheme::Scheme.parse({ 'nodes' => [{ 'id' => 'a', 'title' => 'A' }], 'edges' => 'x', 'scenarios' => [] }.to_json)
+    assert parsed[:errors].any?
+  end
+
   private
 
   def valid_scheme_json_with_nodes(nodes, edges = [])
