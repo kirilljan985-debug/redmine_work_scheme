@@ -231,13 +231,14 @@ class RedmineWorkSchemeSchemeTest < ActiveSupport::TestCase
       [{ 'from' => 'a', 'to' => 'b' }, { 'from' => 'a', 'to' => 'b' }]
     ))
     assert parsed[:errors].any?, 'duplicate edge pair must be rejected'
-    assert_equal 1, parsed[:data]['edges'].length
+    assert_nil parsed[:data], 'scheme with errors must not produce data'
 
     parsed = RedmineWorkScheme::Scheme.parse(valid_scheme_json_with_nodes(
       [{ 'id' => 'a', 'title' => 'A' }, { 'id' => 'b', 'title' => 'B' }],
       [{ 'from' => 'a', 'to' => 'b' }, { 'from' => 'b', 'to' => 'a' }]
     ))
     assert_empty parsed[:errors], 'reverse pair is a different edge and must pass'
+    assert_equal 2, parsed[:data]['edges'].length
   end
 
   private
