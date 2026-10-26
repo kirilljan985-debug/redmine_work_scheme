@@ -15,6 +15,11 @@ if defined?(DashboardBlocks::Base)
       assert_equal 'work_scheme', DashboardBlocks::WorkSchemeBlock.block_id
     end
 
+    test 'dashboard block is offered on welcome and project dashboards' do
+      assert DashboardBlocks::WorkSchemeBlock.offered_on?(:welcome)
+      assert DashboardBlocks::WorkSchemeBlock.offered_on?(:project)
+    end
+
     test 'block scheme falls back to default scheme' do
       # Схема — собственный метод блока, dashboard-контекст не нужен.
       # Типизированные ридеры настроек (width/height) требуют реального

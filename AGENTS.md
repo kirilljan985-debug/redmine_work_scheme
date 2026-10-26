@@ -560,3 +560,20 @@ focus текущего блока, timeline шагов, поворот marker п
   включая новый eager-load smoke check и 4 новых counts-теста); свободные
   треки — расширение настроек Additionals-блока, мобильная компоновка,
   мини-карта больших схем.
+
+## Текущая точка — 2026-10-26 (блок схемы на дашбордах проектов)
+
+- Пользователь сообщил: блок «Work Scheme» не появляется в «Добавить блок»
+  additionals. Диагноз по исходникам additionals (`DashboardBlocks::Base`):
+  блок был объявлен `dashboards :welcome` и фильтром `offered_on?` предлагался
+  только на главной. Правка: `dashboards :welcome, :project` — в additionals
+  4.7+ ровно два типа дашбордов (Welcome, Project), схема глобальная, ридеры
+  width/height работают в обоих контекстах.
+- Новый тест «dashboard block is offered on welcome and project dashboards»
+  (class-level `offered_on?`, guard `defined?(DashboardBlocks::Base)`).
+- Version 0.3.1; README — раздел «Блок в дашборде Additionals» с чек-листом
+  «если блока нет в списке» (старая копия плагина без
+  `lib/dashboard_blocks/work_scheme_block.rb`, рестарт, additionals ≥ 4.7).
+- Грабль диагностике на будущее: «нет блока в списке additionals» — сначала
+  сверять развёрнутую копию плагина с репо и тип дашборда (welcome/project),
+  потом смотреть код.
