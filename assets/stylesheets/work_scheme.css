@@ -103,6 +103,19 @@
 .ws-node-decision .ws-node-icon { color: #a87918; }
 .ws-node-end .ws-node-icon { color: #2f8b4c; }
 
+/* Живые счётчики: бейдж с числом задач запроса у узла */
+.ws-badge { pointer-events: none; }
+.ws-badge circle {
+  fill: #3569a8;
+  stroke: #ffffff;
+  stroke-width: 1.5;
+}
+.ws-badge text {
+  font-size: 10px;
+  font-weight: bold;
+  fill: #ffffff;
+}
+
 .ws-node { cursor: pointer; }
 .ws-node:hover rect,
 .ws-node:hover polygon,
@@ -143,6 +156,7 @@
 
 .ws-tooltip-title { font-weight: bold; margin-bottom: 2px; }
 .ws-tooltip-dept { color: #64707c; font-style: italic; margin-bottom: 4px; }
+.ws-tooltip-count { color: #3569a8; font-weight: bold; }
 .ws-tooltip-desc { color: #333; }
 .ws-tooltip-more {
   margin-top: 6px;

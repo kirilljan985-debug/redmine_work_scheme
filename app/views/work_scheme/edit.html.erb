@@ -33,7 +33,9 @@
        data-label-bend="<%= l(:ws_label_bend) %>"
        data-label-edge-color="<%= l(:ws_label_edge_color) %>">
     <div class="ws-editor-main">
-      <div class="ws-container" data-work-scheme data-layout="modern">
+      <div class="ws-container" data-work-scheme data-layout="modern"
+           data-counts-url="<%= work_scheme_counts_path %>"
+           data-query-base-url="<%= issues_path %>">
         <script type="application/json" class="ws-data"><%= RedmineWorkScheme::Scheme.safe_json(@scheme[:data]) %></script>
       </div>
     </div>

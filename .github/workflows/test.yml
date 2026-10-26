@@ -40,6 +40,10 @@ jobs:
           bundle exec rake db:migrate RAILS_ENV=test
         working-directory: redmine
 
+      - name: Eager-load smoke check (как production)
+        run: RAILS_ENV=test bundle exec rails runner 'Rails.application.eager_load!; puts :EAGER_OK'
+        working-directory: redmine
+
       - name: Run plugin tests
         run: |
           set -o pipefail

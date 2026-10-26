@@ -16,6 +16,10 @@
     paper: '#f4f1e8'
   };
 
+  // Кэш живых счётчиков на страницу: один fetch на набор query_id,
+  // повторные рендеры и undo/redo редактора переиспользуют ответ.
+  var countsCache = {};
+
   function svgEl(name, attrs, text) {
     var el = document.createElementNS(SVG_NS, name);
     if (attrs) {
@@ -53,6 +57,9 @@
     this.scheme = scheme || {};
     this.container.setAttribute('data-ws-theme', this.scheme.theme || 'classic');
     this.stageBase = container.getAttribute('data-stage-base-url') || '';
+    this.countsUrl = container.getAttribute('data-counts-url') || '';
+    this.queryBase = container.getAttribute('data-query-base-url') || '';
+    this.counts = {};
     this.nodes = (scheme.nodes || []).map(function (raw) {
       return {
         id: String(raw.id || ''),
@@ -105,6 +112,7 @@
     this.timers = [];
     this.editMode = false;
     this.render();
+    this.loadCounts();
   }
 
   WorkSchemeView.prototype.nodeCenter = function (node) {
@@ -362,6 +370,8 @@
       var oldPanel = self.container.querySelector('.ws-edit-panel');
       if (oldPanel) oldPanel.remove();
     }
+
+    self.renderBadges();
   };
 
   WorkSchemeView.prototype.renderNode = function (node) {
@@ -1097,9 +1107,65 @@
 
   WorkSchemeView.prototype.stageTarget = function (node) {
     if (!node) return '';
+    var queryId = parseInt(node.queryId, 10);
+    if (queryId > 0 && this.queryBase) return this.queryBase + '?query_id=' + queryId;
     if (node.url) return node.url;
     if (node.page && this.stageBase) return this.stageBase + node.id;
     return '';
+  };
+
+  /* ---- Живые счётчики задач по query_id ---- */
+
+  WorkSchemeView.prototype.loadCounts = function () {
+    var self = this;
+    if (!self.countsUrl || !window.fetch) return;
+    var ids = {};
+    self.nodes.forEach(function (node) {
+      var id = parseInt(node.queryId, 10);
+      if (id > 0) ids[id] = true;
+    });
+    var list = Object.keys(ids);
+    if (!list.length) return;
+    var cacheKey = self.countsUrl + '?ids=' + list.join(',');
+    if (Object.prototype.hasOwnProperty.call(countsCache, cacheKey)) {
+      self.counts = countsCache[cacheKey];
+      self.renderBadges();
+      return;
+    }
+    fetch(self.countsUrl + '?ids=' + encodeURIComponent(list.join(',')), {
+      credentials: 'same-origin',
+      headers: { 'Accept': 'application/json' }
+    }).then(function (response) {
+      return response.ok ? response.json() : {};
+    }).then(function (data) {
+      var counts = data && data.counts ? data.counts : {};
+      countsCache[cacheKey] = counts;
+      self.counts = counts;
+      self.renderBadges();
+    }).catch(function () {
+      // ошибка счётчиков не должна ломать схему — бейджи просто не рисуются
+    });
+  };
+
+  WorkSchemeView.prototype.renderBadges = function () {
+    var self = this;
+    Array.prototype.forEach.call(self.container.querySelectorAll('.ws-badge'), function (badge) {
+      badge.remove();
+    });
+    if (!self.overlay) return;
+    self.nodes.forEach(function (node) {
+      var queryId = parseInt(node.queryId, 10);
+      var count = queryId > 0 ? self.counts[String(queryId)] : null;
+      if (count === null || count === undefined) return;
+      var badge = svgEl('g', { 'class': 'ws-badge' });
+      badge.appendChild(svgEl('circle', {
+        cx: node.x + node.w - 8, cy: node.y - 8, r: 11
+      }));
+      badge.appendChild(svgEl('text', {
+        x: node.x + node.w - 8, y: node.y - 4.5, 'text-anchor': 'middle'
+      }, String(count)));
+      self.overlay.appendChild(badge);
+    });
   };
 
   WorkSchemeView.prototype.attachTooltip = function () {
@@ -1137,6 +1203,14 @@
         desc.className = 'ws-tooltip-desc';
         desc.textContent = node.description;
         tooltip.appendChild(desc);
+      }
+      var queryId = parseInt(node.queryId, 10);
+      var count = queryId > 0 ? self.counts[String(queryId)] : null;
+      if (count !== null && count !== undefined) {
+        var countLine = document.createElement('div');
+        countLine.className = 'ws-tooltip-count';
+        countLine.textContent = 'Задач: ' + count;
+        tooltip.appendChild(countLine);
       }
       var target = self.stageTarget(node);
       if (target) {

@@ -8,6 +8,21 @@ class WorkSchemeController < ApplicationController
     @scheme = parsed_scheme
   end
 
+  # Живые счётчики: число задач сохранённых запросов для бейджей на схеме.
+  # Отвечает только по запросам, видимым текущему пользователю; недоступные,
+  # несуществующие и некорректные id молча отсутствуют в ответе.
+  def counts
+    ids = params[:ids].to_s.split(',').map { |value| value.to_i }
+                       .uniq.select { |id| id.positive? }.first(100)
+    counts = {}
+    ids.each do |id|
+      query = IssueQuery.find_by(id: id)
+      next if query.nil? || !query.visible?
+      counts[id.to_s] = query.issue_count
+    end
+    render json: { counts: counts }
+  end
+
   def stage
     scheme = parsed_scheme
     @node = scheme[:data] && RedmineWorkScheme::Scheme.node(scheme[:data], params[:id])

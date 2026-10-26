@@ -14,6 +14,8 @@ class RedmineWorkSchemePagesTest < Redmine::IntegrationTest
     assert_response :success
     assert_select 'div.ws-container[data-work-scheme]'
     assert_select 'script.ws-data'
+    assert_select 'div.ws-container[data-counts-url="/work_scheme/counts"]'
+    assert_select 'div.ws-container[data-query-base-url="/issues"]'
     assert_match 'Заказчик', response.body
     assert_match 'Опытная эксплуатация', response.body
   end
@@ -65,6 +67,38 @@ class RedmineWorkSchemePagesTest < Redmine::IntegrationTest
     assert_response :success
     assert_select '#ws-editor'
     assert_select 'script.ws-data'
+    assert_select '#ws-editor .ws-container[data-counts-url="/work_scheme/counts"]'
+  end
+
+  test 'counts endpoint returns counts only for queries visible to user' do
+    public_query = IssueQuery.create!(name: 'WS public query', visibility: Query::VISIBILITY_PUBLIC, user_id: 1)
+    hidden_query = IssueQuery.create!(name: 'WS hidden query', visibility: Query::VISIBILITY_PRIVATE, user_id: 1)
+
+    log_user 'jsmith', 'jsmith'
+    get "/work_scheme/counts?ids=#{public_query.id},#{hidden_query.id},999999,abc"
+    assert_response :success
+    counts = JSON.parse(@response.body)['counts']
+    assert counts.key?(public_query.id.to_s)
+    assert_not counts.key?(hidden_query.id.to_s), 'чужой приватный запрос не должен считаться'
+    assert_not counts.key?('999999')
+    assert_not counts.key?('abc')
+  end
+
+  test 'counts endpoint returns private query for its owner' do
+    hidden_query = IssueQuery.create!(name: 'WS hidden query', visibility: Query::VISIBILITY_PRIVATE, user_id: 1)
+
+    log_user 'admin', 'admin'
+    get "/work_scheme/counts?ids=#{hidden_query.id}"
+    assert_response :success
+    counts = JSON.parse(@response.body)['counts']
+    assert counts.key?(hidden_query.id.to_s)
+  end
+
+  test 'counts endpoint returns empty counts for empty ids' do
+    log_user 'jsmith', 'jsmith'
+    get '/work_scheme/counts?ids='
+    assert_response :success
+    assert_equal({}, JSON.parse(@response.body)['counts'])
   end
 
   test 'save endpoint validates and stores scheme' do
