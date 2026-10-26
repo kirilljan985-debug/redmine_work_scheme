@@ -53,4 +53,72 @@ jobs:
       - name: Report failure details
         if: failure()
         run: |
+          [ -f /tmp/test_output.log ] || exit 0
+          echo "::error::$(python3 -c "import urllib.parse; data = open('/tmp/test_output.log', 'rb').read()[-4000:].decode('utf-8', 'replace'); print(urllib.parse.quote(data)[:6000])")"
+
+  additionals:
+    # Ветка интеграции с additionals не выполняется в обычной матрице (там ядро
+    # без плагинов), поэтому гоняем её отдельно на PostgreSQL (additionals >= 4.7
+    # не работает под sqlite) — по разделу 4 скилла redmine-plugin-dev.
+    name: Redmine 7.0-stable + additionals
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: redmine_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - name: Check out plugin
+        uses: actions/checkout@v4
+        with:
+          path: plugin
+
+      - name: Install Redmine and additionals
+        run: |
+          git clone --depth 1 --branch 7.0-stable https://github.com/redmine/redmine.git redmine
+          git clone --depth 1 https://github.com/alphanodes/additionals.git redmine/plugins/additionals
+          mv plugin redmine/plugins/redmine_work_scheme
+          sudo apt-get update
+          sudo apt-get install -y libpq-dev
+          cp redmine/plugins/redmine_work_scheme/.github/ci/database-additionals.yml redmine/config/database.yml
+
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.3'
+          working-directory: redmine
+
+      - name: Bundle install
+        run: bundle install --jobs 4 --retry 3
+        working-directory: redmine
+
+      - name: Prepare test database
+        run: |
+          bundle exec rake generate_secret_token
+          bundle exec rake db:create db:migrate RAILS_ENV=test
+        working-directory: redmine
+
+      - name: Eager-load smoke check (как production)
+        run: RAILS_ENV=test bundle exec rails runner 'Rails.application.eager_load!; puts :EAGER_OK'
+        working-directory: redmine
+
+      - name: Run plugin tests
+        run: |
+          set -o pipefail
+          bundle exec rake redmine:plugins:test NAME=redmine_work_scheme RAILS_ENV=test 2>&1 | tee /tmp/test_output.log
+        working-directory: redmine
+
+      - name: Report failure details
+        if: failure()
+        run: |
+          [ -f /tmp/test_output.log ] || exit 0
           echo "::error::$(python3 -c "import urllib.parse; data = open('/tmp/test_output.log', 'rb').read()[-4000:].decode('utf-8', 'replace'); print(urllib.parse.quote(data)[:6000])")"

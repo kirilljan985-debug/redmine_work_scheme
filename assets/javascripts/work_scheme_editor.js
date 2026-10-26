@@ -476,25 +476,32 @@
       });
     }
 
-    document.getElementById('ws-add-scenario').textContent = '+ ' + self.labels.scenarios;
-    document.getElementById('ws-add-scenario').addEventListener('click', function () {
-      self.view.scheme.scenarios = self.view.scheme.scenarios || [];
-      var scenario = { id: 'scenario' + (self.view.scheme.scenarios.length + 1), title: 'Сценарий', steps: [] };
-      self.view.scheme.scenarios.push(scenario);
-      self.activeScenarioId = scenario.id;
-      self.root.classList.add('ws-scenario-capture');
-      self.markDirty();
-      self.renderScenarios();
-      self.setStatus('Кликом добавляйте блоки в сценарий', 'dirty');
-    });
+    var addScenarioBtn = document.getElementById('ws-add-scenario');
+    if (addScenarioBtn) {
+      addScenarioBtn.textContent = '+ ' + self.labels.scenarios;
+      addScenarioBtn.addEventListener('click', function () {
+        self.view.scheme.scenarios = self.view.scheme.scenarios || [];
+        var scenario = { id: 'scenario' + (self.view.scheme.scenarios.length + 1), title: 'Сценарий', steps: [] };
+        self.view.scheme.scenarios.push(scenario);
+        self.activeScenarioId = scenario.id;
+        self.root.classList.add('ws-scenario-capture');
+        self.markDirty();
+        self.renderScenarios();
+        self.setStatus('Кликом добавляйте блоки в сценарий', 'dirty');
+      });
+    }
 
     var saveBtn = document.getElementById('ws-save');
-    saveBtn.textContent = self.labels.save;
-    saveBtn.addEventListener('click', function () { self.save(); });
+    if (saveBtn) {
+      saveBtn.textContent = self.labels.save;
+      saveBtn.addEventListener('click', function () { self.save(); });
+    }
 
     var dlBtn = document.getElementById('ws-download');
-    dlBtn.textContent = self.labels.download;
-    dlBtn.addEventListener('click', function () { self.download(); });
+    if (dlBtn) {
+      dlBtn.textContent = self.labels.download;
+      dlBtn.addEventListener('click', function () { self.download(); });
+    }
 
     var undoBtn = document.getElementById('ws-undo');
     var redoBtn = document.getElementById('ws-redo');
@@ -805,6 +812,7 @@
       s.steps = s.steps.filter(function (step) { return step !== id; });
     });
     delete self.view.byId[id];
+    self.markDirty();
     self.deselect();
   };
 
@@ -817,6 +825,7 @@
     };
     self.view.nodes.push(node);
     self.view.byId[id] = node;
+    self.markDirty();
     self.selectNode(id);
   };
 
@@ -980,6 +989,7 @@
     del.textContent = self.labels.del;
     del.addEventListener('click', function () {
       self.view.edges = self.view.edges.filter(function (x) { return x !== e; });
+      self.markDirty();
       self.deselect();
     });
     rowBtns.appendChild(del);
@@ -1090,9 +1100,14 @@
       },
       body: body
     }).then(function (resp) {
-      return resp.json().then(function (data) { return { status: resp.status, data: data }; });
+      // Сервер может ответить не-JSON (например, HTML 500) — не падаем на parse
+      return resp.text().then(function (text) {
+        var data = null;
+        try { data = JSON.parse(text); } catch (_) { data = null; }
+        return { status: resp.status, data: data };
+      });
     }).then(function (res) {
-      if (res.status === 200 && res.data.ok) {
+      if (res.status === 200 && res.data && res.data.ok) {
         self.dirty = false;
         self.setStatus('✓ ' + self.labels.saved, 'ok');
       } else {

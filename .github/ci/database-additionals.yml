@@ -1,0 +1,7 @@
+test:
+  adapter: postgresql
+  database: redmine_test
+  host: 127.0.0.1
+  username: postgres
+  password: postgres
+  encoding: utf8

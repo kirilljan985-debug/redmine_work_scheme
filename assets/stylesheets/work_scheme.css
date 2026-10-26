@@ -144,6 +144,9 @@
   display: none;
   max-width: 300px;
   background: #ffffff;
+  /* Тултип всегда на белом фоне — фиксируем тёмный текст, иначе в тёмных
+     темах он наследует светлый --ws-text и становится нечитаемым */
+  color: #1f2d38;
   border: 1px solid #b8c2cc;
   border-radius: 4px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
@@ -195,8 +198,7 @@
   line-height: 1.3;
   background: #fff8f1;
 }
-.ws-playback-status-below { margin: 0 0 8px; }
-.ws-playback-status-below { padding: 3px 8px; font-size: 11px; line-height: 1.25; max-width: 100%; box-sizing: border-box; }
+.ws-playback-status-below { margin: 0 0 8px; padding: 3px 8px; font-size: 11px; line-height: 1.25; max-width: 100%; box-sizing: border-box; }
 .ws-empty-note, .ws-empty-state { color: var(--ws-muted); font-size: 12px; }
 .ws-empty-note { padding: 7px 9px; border: 1px dashed var(--ws-border-strong); border-radius: 5px; background: var(--ws-surface); }
 
@@ -1050,5 +1052,25 @@ body.theme-dark .ws-node text, body.dark .ws-node text, body[data-theme="dark"] 
     position: static;
     max-height: none;
     overflow: visible;
+  }
+}
+
+/* Reduced-motion: отключаем и микро-transition, они идут после основного
+   media-блока, чтобы гарантированно выигрывать каскад у hover-правил */
+@media (prefers-reduced-motion: reduce) {
+  .ws-timeline-step,
+  .ws-palette-item,
+  .ws-controls button,
+  .ws-editor-actions button,
+  .ws-edit-link,
+  #ws-add-scenario {
+    transition: none;
+  }
+  .ws-controls button:hover,
+  .ws-editor-actions button:hover,
+  .ws-edit-link:hover,
+  #ws-add-scenario:hover,
+  .ws-palette-item:hover {
+    transform: none;
   }
 }

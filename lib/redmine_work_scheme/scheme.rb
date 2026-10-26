@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'json'
 
 module RedmineWorkScheme
@@ -120,6 +122,14 @@ module RedmineWorkScheme
         return nil
       end
 
+      url = raw['url'].to_s.strip
+      # Допустимы http(s)-ссылки и адреса от корня сайта (например, Wiki);
+      # всё прочее (javascript:, data:, …) отклоняем — это href клика по узлу.
+      unless url.empty? || url =~ %r{\Ahttps?://}i || url.start_with?('/')
+        errors << format(I18n_error(:ws_error_node_bad_url), id: id, url: url)
+        return nil
+      end
+
       {
         'id' => id,
         'type' => type,
@@ -127,7 +137,7 @@ module RedmineWorkScheme
         'dept' => raw['dept'].to_s.strip,
         'description' => raw['description'].to_s.strip,
         'page' => raw['page'].to_s,
-        'url' => raw['url'].to_s.strip,
+        'url' => url,
         'icon' => ICONS.include?(raw['icon'].to_s.strip) ? raw['icon'].to_s.strip : '',
         'query_id' => positive_int_or_nil(raw['query_id']),
         'font_size' => text_size(raw['font_size'], 12),
@@ -149,6 +159,7 @@ module RedmineWorkScheme
       end
 
       ids = nodes.map { |n| n['id'] }
+      seen_pairs = {}
       raw_edges.each_with_index.map do |raw, index|
         unless raw.is_a?(Hash)
           errors << format(I18n_error(:ws_error_edge_not_object), index: index + 1)
@@ -160,6 +171,12 @@ module RedmineWorkScheme
           errors << format(I18n_error(:ws_error_edge_bad_nodes), index: index + 1, from: from, to: to)
           next nil
         end
+        # Повтор пары ломает проигрывание: путь ребра перезаписывается последним.
+        if seen_pairs.key?("#{from}>#{to}")
+          errors << format(I18n_error(:ws_error_edge_dup), index: index + 1, from: from, to: to)
+          next nil
+        end
+        seen_pairs["#{from}>#{to}"] = true
         from_side = normalize_side(raw['from_side'])
         to_side = normalize_side(raw['to_side'])
         if from_side == :invalid || to_side == :invalid
@@ -284,9 +301,11 @@ module RedmineWorkScheme
       'ws_error_node_dup_id' => 'Дубликат узла "%{id}".',
       'ws_error_node_bad_type' => 'Узел "%{id}": недопустимый тип "%{type}" (допустимо: start, process, decision, end).',
       'ws_error_node_no_title' => 'Узел "%{id}" без поля "title".',
+      'ws_error_node_bad_url' => 'Узел "%{id}": url должен начинаться с http://, https:// или "/" (задано: "%{url}").',
       'ws_error_edges_not_array' => '"edges" должен быть массивом.',
       'ws_error_edge_not_object' => 'Связь №%{index} — не объект.',
       'ws_error_edge_bad_nodes' => 'Связь №%{index} ссылается на неизвестные узлы (from: "%{from}", to: "%{to}").',
+      'ws_error_edge_dup' => 'Связь №%{index}: повтор связи "%{from}" → "%{to}".',
       'ws_error_edge_bad_side' => 'Связь №%{index}: недопустимая сторона "%{side}" (допустимо: left, right, top, bottom или пусто).',
       'ws_error_edge_bad_color' => 'Связь №%{index}: цвет должен быть в формате #RRGGBB или пустым.',
       'ws_error_bad_text_color' => 'Элемент №%{index} (%{kind}): цвет текста должен быть в формате #RRGGBB или пустым.',

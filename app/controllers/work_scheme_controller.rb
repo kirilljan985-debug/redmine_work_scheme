@@ -1,8 +1,8 @@
+# frozen_string_literal: true
+
 # Контроллер схемы: страница схемы, страницы этапов, визуальный редактор.
 class WorkSchemeController < ApplicationController
   layout 'base'
-
-  helper :work_scheme
 
   def show
     @scheme = parsed_scheme
@@ -12,13 +12,17 @@ class WorkSchemeController < ApplicationController
   # Отвечает только по запросам, видимым текущему пользователю; недоступные,
   # несуществующие и некорректные id молча отсутствуют в ответе.
   def counts
-    ids = params[:ids].to_s.split(',').map { |value| value.to_i }
-                       .uniq.select { |id| id.positive? }.first(100)
+    ids = Array(params[:ids]).join(',').split(',').map { |value| value.to_i }
+                             .uniq.select { |id| id.positive? }.first(100)
     counts = {}
     ids.each do |id|
       query = IssueQuery.find_by(id: id)
       next if query.nil? || !query.visible?
-      counts[id.to_s] = query.issue_count
+      begin
+        counts[id.to_s] = query.issue_count
+      rescue StandardError
+        # битый запрос не должен ронять ответ — счётчик просто отсутствует
+      end
     end
     render json: { counts: counts }
   end
@@ -60,7 +64,7 @@ class WorkSchemeController < ApplicationController
     render json: { ok: true }
   rescue StandardError => e
     Rails.logger.error("Work Scheme save failed: #{e.message}")
-    render json: { errors: [e.message] }, status: :internal_server_error
+    render json: { errors: [l(:ws_error_save_failed)] }, status: :internal_server_error
   end
 
   private

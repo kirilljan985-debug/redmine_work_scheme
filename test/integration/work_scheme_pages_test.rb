@@ -20,6 +20,36 @@ class RedmineWorkSchemePagesTest < Redmine::IntegrationTest
     assert_match 'Опытная эксплуатация', response.body
   end
 
+  test 'scheme data script contains raw parseable JSON' do
+    # Регрессия P0: <%= %> экранировал кавычки в &quot;, внутри <script> они не
+    # декодируются и JSON.parse падал — схема не рисовалась на живом Redmine.
+    log_user 'admin', 'admin'
+    get '/work_scheme'
+    assert_response :success
+    script = response.body[/<script type="application\/json" class="ws-data">(.*?)<\/script>/m, 1]
+    assert script.present?, 'ws-data script not found'
+    assert_not script.include?('&quot;'), 'JSON inside <script> must not be HTML-escaped'
+    data = JSON.parse(script)
+    assert data['nodes'].any?
+    assert_equal 'Заказчик', data['nodes'].first['title']
+  end
+
+  test 'scheme page hides editor link for non-admin' do
+    log_user 'jsmith', 'jsmith'
+    get '/work_scheme'
+    assert_response :success
+    assert_select 'div.ws-container[data-work-scheme]'
+    assert_select 'div.ws-container[data-edit-url=""]'
+  end
+
+  test 'scheme page and counts endpoint are accessible anonymously' do
+    get '/work_scheme'
+    assert_response :success
+    get '/work_scheme/counts?ids='
+    assert_response :success
+    assert_equal({}, JSON.parse(@response.body)['counts'])
+  end
+
   test 'stage page renders wiki text for node' do
     log_user 'admin', 'admin'
     get '/work_scheme/stages/analyze'

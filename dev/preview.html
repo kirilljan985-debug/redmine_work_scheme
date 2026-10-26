@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <title>Work Scheme preview (dev)</title>
-<link rel="stylesheet" href="../assets/stylesheets/work_scheme.css?v=87">
+<link rel="stylesheet" href="../assets/stylesheets/work_scheme.css?v=88">
 <style>
   body { font-family: system-ui, sans-serif; margin: 20px; max-width: 1100px; background: #dbe7fb; color: #14245c; }
 </style>
@@ -24,10 +24,10 @@
      data-label-copy="Копировать" data-more-label="Подробнее">
   <script type="application/json" class="ws-data"></script>
 </div>
-<script src="../assets/javascripts/work_scheme.js?v=87"></script>
+<script src="../assets/javascripts/work_scheme.js?v=88"></script>
 <script>
   // dev-обвязка: схема из scheme.json + демо-стрелка elbow + демо query_id; инициализация
-  fetch('scheme.json?v=87')
+  fetch('scheme.json?v=88')
     .then(function (r) { return r.text(); })
     .then(function (text) {
       var scheme = JSON.parse(text);

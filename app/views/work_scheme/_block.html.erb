@@ -8,23 +8,18 @@
         <li><%= error %></li>
       <% end %>
     </ul>
-    <p>Проверьте JSON схемы в настройках плагина.</p>
+    <p><%= l(:ws_hint_check_settings) %></p>
   </div>
 <% else %>
   <% additionals_block = defined?(dashboard_block) && dashboard_block %>
-  <% block_style = additionals_block ? "--ws-block-width: #{dashboard_block.width}%; --ws-block-height: #{dashboard_block.height}px;" : nil %>
   <%= stylesheet_link_tag 'work_scheme', plugin: :redmine_work_scheme %>
   <%= javascript_include_tag 'work_scheme', plugin: :redmine_work_scheme %>
-  <div class="ws-container<%= ' ws-additionals-block' if additionals_block %>"<%= " style=\"#{block_style}\"" if block_style %> data-work-scheme
+  <div class="ws-container<%= ' ws-additionals-block' if additionals_block %>" data-work-scheme<% if additionals_block %> style="--ws-block-width: <%= dashboard_block.width %>%; --ws-block-height: <%= dashboard_block.height %>px;"<% end %>
        data-stage-base-url="<%= work_scheme_stage_path('__ID__').gsub('__ID__', '') %>"
        data-counts-url="<%= work_scheme_counts_path %>"
        data-query-base-url="<%= issues_path %>"
        data-label-play="<%= l(:ws_label_play) %>"
        data-label-reset="<%= l(:ws_label_reset) %>"
-       data-label-edit="<%= l(:ws_label_edit) %>"
-       data-label-edit-hint="<%= l(:ws_label_edit_hint) %>"
-       data-label-coords="<%= l(:ws_label_coords) %>"
-       data-label-copy="<%= l(:ws_label_copy) %>"
        data-label-playback-step="<%= l(:ws_label_playback_step) %>"
        data-label-playback-done="<%= l(:ws_label_playback_done) %>"
        data-label-speed="<%= l(:ws_label_speed) %>"
@@ -33,8 +28,10 @@
        data-label-zoom-fit="<%= l(:ws_label_zoom_fit) %>"
        data-label-edit-page="<%= l(:ws_label_edit_page) %>"
        data-edit-url="<%= User.current.admin? ? work_scheme_edit_path : '' %>"
-       data-editable="<%= User.current.admin? %>"
        data-more-label="<%= l(:ws_label_more) %>">
-    <script type="application/json" class="ws-data"><%= RedmineWorkScheme::Scheme.safe_json(scheme[:data]) %></script>
+    <%# JSON выводится сырым (<%==): внутри <script> HTML-сущности не декодируются,
+        а кавычки после <%= превратились бы в &quot; и сломали JSON.parse.
+        Вылет из тега ("<" в данных) уже закрыт заменой в Scheme.safe_json. %>
+    <script type="application/json" class="ws-data"><%== RedmineWorkScheme::Scheme.safe_json(scheme[:data]) %></script>
   </div>
 <% end %>

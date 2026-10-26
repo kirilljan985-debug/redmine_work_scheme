@@ -119,6 +119,18 @@
     return { x: node.x + node.w / 2, y: node.y + node.h / 2 };
   };
 
+  // Безопасный поиск группы узла: id приходит из JSON схемы, поэтому
+  // экранируем его для селектора и глотаем ошибку вместо падения рендера.
+  WorkSchemeView.prototype.nodeEl = function (id) {
+    var escaped = id;
+    if (window.CSS && CSS.escape) escaped = CSS.escape(id);
+    try {
+      return this.container.querySelector('.ws-node[data-id="' + escaped + '"]');
+    } catch (e) {
+      return null;
+    }
+  };
+
   WorkSchemeView.prototype.anchor = function (node, side) {
     var c = this.nodeCenter(node);
     if (side === 'right') return { x: node.x + node.w, y: c.y };
@@ -788,7 +800,7 @@
   };
 
   WorkSchemeView.prototype.highlightNode = function (node) {
-    var group = this.container.querySelector('.ws-node[data-id="' + node.id + '"]');
+    var group = this.nodeEl(node.id);
     if (group) group.classList.add('ws-node-active');
     this.focusPlaybackNode(node);
   };
@@ -812,7 +824,7 @@
 
   WorkSchemeView.prototype.markNodeComplete = function (node) {
     if (!node) return;
-    var group = this.container.querySelector('.ws-node[data-id="' + node.id + '"]');
+    var group = this.nodeEl(node.id);
     if (group) {
       group.classList.remove('ws-node-active', 'ws-node-rework');
       group.classList.add('ws-node-complete', 'ws-node-history');
@@ -830,7 +842,7 @@
       el.style.strokeDashoffset = '';
     });
     if (node) {
-      var group = self.container.querySelector('.ws-node[data-id="' + node.id + '"]');
+      var group = self.nodeEl(node.id);
       if (group) {
         group.classList.remove('ws-node-active');
         group.classList.add('ws-node-rework');

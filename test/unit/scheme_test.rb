@@ -205,6 +205,41 @@ class RedmineWorkSchemeSchemeTest < ActiveSupport::TestCase
     assert_equal 'classic', parsed[:data]['theme']
   end
 
+  test 'url accepts http(s) and site-relative links only' do
+    [['https://example.com/x', 'https://example.com/x'],
+     ['http://example.com', 'http://example.com'],
+     ['/projects/demo/wiki/help', '/projects/demo/wiki/help'],
+     ['', '']].each do |raw, expected|
+      parsed = RedmineWorkScheme::Scheme.parse(valid_scheme_json_with_nodes(
+        [{ 'id' => 'a', 'title' => 'A', 'url' => raw }]
+      ))
+      assert_empty parsed[:errors], "url #{raw.inspect} must pass"
+      assert_equal expected, parsed[:data]['nodes'].first['url']
+    end
+
+    ['javascript:alert(1)', 'data:text/html,x'].each do |raw|
+      parsed = RedmineWorkScheme::Scheme.parse(valid_scheme_json_with_nodes(
+        [{ 'id' => 'a', 'title' => 'A', 'url' => raw }]
+      ))
+      assert parsed[:errors].any? { |e| e.include?('a') }, "url #{raw.inspect} must be rejected"
+    end
+  end
+
+  test 'duplicate edge pair returns error' do
+    parsed = RedmineWorkScheme::Scheme.parse(valid_scheme_json_with_nodes(
+      [{ 'id' => 'a', 'title' => 'A' }, { 'id' => 'b', 'title' => 'B' }],
+      [{ 'from' => 'a', 'to' => 'b' }, { 'from' => 'a', 'to' => 'b' }]
+    ))
+    assert parsed[:errors].any?, 'duplicate edge pair must be rejected'
+    assert_equal 1, parsed[:data]['edges'].length
+
+    parsed = RedmineWorkScheme::Scheme.parse(valid_scheme_json_with_nodes(
+      [{ 'id' => 'a', 'title' => 'A' }, { 'id' => 'b', 'title' => 'B' }],
+      [{ 'from' => 'a', 'to' => 'b' }, { 'from' => 'b', 'to' => 'a' }]
+    ))
+    assert_empty parsed[:errors], 'reverse pair is a different edge and must pass'
+  end
+
   private
 
   def valid_scheme_json_with_nodes(nodes, edges = [])
