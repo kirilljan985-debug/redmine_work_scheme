@@ -460,6 +460,11 @@ focus текущего блока, timeline шагов, поворот marker п
   вне запроса считает для уже сброшенного User.current — эталон в тесте брать
   тем же методом модели при явно выставленном `User.current` (две итерации:
   `Issue.visible(user).count` ≠ base_scope запроса).
+- Скилл `redmine-plugin-dev` (~/.zcode/skills) синхронизирован с уроками
+  проекта: ERB-экранирование JSON в script (раздел 2 + новый раздел 12),
+  гварды defined? в тест-файлах, эталоны с User.current, границы id до
+  find_by, гигиена CI (node --check, timeout/permissions/concurrency),
+  обязательность loader-декларации для additionals (раздел 9).
 
 ## Предыдущая точка — 2026-10-26 (второе ревью: правки внесены)
 
