@@ -376,11 +376,8 @@
     if (self.editMode) {
       self.container.classList.add('ws-edit-mode');
       self.attachDrag();
-      if (self.showCoordPanel !== false) self.buildEditPanel();
     } else {
       self.container.classList.remove('ws-edit-mode');
-      var oldPanel = self.container.querySelector('.ws-edit-panel');
-      if (oldPanel) oldPanel.remove();
     }
 
     self.renderBadges();
@@ -681,48 +678,6 @@
         document.addEventListener('pointerup', onUp);
       });
     });
-  };
-
-  WorkSchemeView.prototype.buildEditPanel = function () {
-    var self = this;
-    var panel = document.createElement('div');
-    panel.className = 'ws-edit-panel';
-
-    var title = document.createElement('div');
-    title.className = 'ws-edit-title';
-    title.textContent = self.label('coords', 'Координаты узлов — перенесите x/y в настройки схемы:');
-    panel.appendChild(title);
-
-    var textarea = document.createElement('textarea');
-    textarea.className = 'ws-edit-textarea';
-    textarea.readOnly = true;
-    textarea.rows = 8;
-    textarea.value = self.nodes.map(function (node) {
-      return JSON.stringify({ id: node.id, x: node.x, y: node.y, w: node.w, h: node.h });
-    }).join('\n');
-    panel.appendChild(textarea);
-
-    var copy = document.createElement('button');
-    copy.type = 'button';
-    copy.className = 'ws-copy';
-    copy.textContent = self.label('copy', 'Копировать');
-    copy.addEventListener('click', function () {
-      textarea.focus();
-      textarea.select();
-      var copied = false;
-      try { copied = document.execCommand('copy'); } catch (e) { copied = false; }
-      if (!copied && navigator.clipboard && navigator.clipboard.writeText) {
-        navigator.clipboard.writeText(textarea.value);
-        copied = true;
-      }
-      copy.textContent = copied ? '✓' : self.label('copy', 'Копировать');
-      self.timer(function () {
-        copy.textContent = self.label('copy', 'Копировать');
-      }, 1200);
-    });
-    panel.appendChild(copy);
-
-    self.container.appendChild(panel);
   };
 
   WorkSchemeView.prototype.timer = function (fn, ms) {

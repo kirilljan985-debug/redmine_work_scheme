@@ -217,7 +217,7 @@ class RedmineWorkSchemeSchemeTest < ActiveSupport::TestCase
       assert_equal expected, parsed[:data]['nodes'].first['url']
     end
 
-    ['javascript:alert(1)', 'data:text/html,x'].each do |raw|
+    ['javascript:alert(1)', 'data:text/html,x', '//evil.com/x'].each do |raw|
       parsed = RedmineWorkScheme::Scheme.parse(valid_scheme_json_with_nodes(
         [{ 'id' => 'a', 'title' => 'A', 'url' => raw }]
       ))

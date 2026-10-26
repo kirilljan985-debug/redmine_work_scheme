@@ -124,8 +124,10 @@ module RedmineWorkScheme
 
       url = raw['url'].to_s.strip
       # Допустимы http(s)-ссылки и адреса от корня сайта (например, Wiki);
-      # всё прочее (javascript:, data:, …) отклоняем — это href клика по узлу.
-      unless url.empty? || url =~ %r{\Ahttps?://}i || url.start_with?('/')
+      # protocol-relative "//host" ведёт на чужой домен — тоже отклоняем,
+      # как и javascript:/data: — это href клика по узлу.
+      unless url.empty? || url =~ %r{\Ahttps?://}i ||
+             (url.start_with?('/') && !url.start_with?('//'))
         errors << format(I18n_error(:ws_error_node_bad_url), id: id, url: url)
         return nil
       end
@@ -171,12 +173,6 @@ module RedmineWorkScheme
           errors << format(I18n_error(:ws_error_edge_bad_nodes), index: index + 1, from: from, to: to)
           next nil
         end
-        # Повтор пары ломает проигрывание: путь ребра перезаписывается последним.
-        if seen_pairs.key?("#{from}>#{to}")
-          errors << format(I18n_error(:ws_error_edge_dup), index: index + 1, from: from, to: to)
-          next nil
-        end
-        seen_pairs["#{from}>#{to}"] = true
         from_side = normalize_side(raw['from_side'])
         to_side = normalize_side(raw['to_side'])
         if from_side == :invalid || to_side == :invalid
@@ -184,6 +180,14 @@ module RedmineWorkScheme
                            index: index + 1, side: from_side == :invalid ? raw['from_side'] : raw['to_side'])
           next nil
         end
+        # Повтор пары ломает проигрывание: путь ребра перезаписывается последним.
+        # Пара регистрируется после по-рёберных проверок — отброшенное ребро
+        # не должно давать второму такому же ложную ошибку «повтор связи».
+        if seen_pairs.key?("#{from}>#{to}")
+          errors << format(I18n_error(:ws_error_edge_dup), index: index + 1, from: from, to: to)
+          next nil
+        end
+        seen_pairs["#{from}>#{to}"] = true
         route = raw['route'].to_s.strip
         route = 'straight' unless EDGE_ROUTES.include?(route)
         bend = int_value(raw['bend'], 50)

@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <title>Work Scheme preview (dev)</title>
-<link rel="stylesheet" href="../assets/stylesheets/work_scheme.css?v=89">
+<link rel="stylesheet" href="../assets/stylesheets/work_scheme.css?v=90">
 <style>
   body { font-family: system-ui, sans-serif; margin: 20px; max-width: 1100px; background: #dbe7fb; color: #14245c; }
 </style>
@@ -14,20 +14,17 @@
      data-stage-base-url="/work_scheme/stages/"
      data-counts-url="counts.json"
      data-query-base-url="/issues"
-     data-editable="true"
      data-edit-url="/work_scheme/edit"
      data-label-play="Проиграть" data-label-reset="Сброс"
      data-label-edit-page="Редактор схемы"
      data-label-zoom-out="Уменьшить" data-label-zoom-in="Увеличить" data-label-zoom-fit="Вписать в блок"
-     data-label-edit="Правка узлов" data-label-edit-hint="Тащите узлы, потом скопируйте координаты"
-     data-label-coords="Координаты узлов — перенесите x/y в настройки схемы:"
-     data-label-copy="Копировать" data-more-label="Подробнее">
+     data-more-label="Подробнее">
   <script type="application/json" class="ws-data"></script>
 </div>
-<script src="../assets/javascripts/work_scheme.js?v=89"></script>
+<script src="../assets/javascripts/work_scheme.js?v=90"></script>
 <script>
   // dev-обвязка: схема из scheme.json + демо-стрелка elbow + демо query_id; инициализация
-  fetch('scheme.json?v=89')
+  fetch('scheme.json?v=90')
     .then(function (r) { return r.text(); })
     .then(function (text) {
       var scheme = JSON.parse(text);

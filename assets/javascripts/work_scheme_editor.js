@@ -41,7 +41,6 @@
     this.view = new View(root.querySelector('.ws-container'), scheme);
     root.setAttribute('data-ws-theme', scheme.theme || 'classic');
     this.view.editMode = true;        // перетаскивание узлов включено
-    this.view.showCoordPanel = false; // панель координат не нужна — есть полноценный редактор
     this.sel = null;                  // {type:'node', id} | {type:'edge', key}
     this.selectedIds = [];
     this.dirty = false;
@@ -98,7 +97,6 @@
     var View = window.WorkScheme.View;
     this.view = new View(this.root.querySelector('.ws-container'), data);
     this.view.editMode = true;
-    this.view.showCoordPanel = false;
     this.view.render();
     this.seq = this.maxNodeSeq() + 1;
     this.sel = null;
@@ -116,7 +114,12 @@
 
   Editor.prototype.undo = function () {
     if (!this.history.length) return;
-    this.future.push(JSON.stringify(this.serialize()));
+    // markDirty пишет в историю уже применённое состояние; если вершина равна
+    // текущему — снимаем её, иначе первый Ctrl+Z будет холостым.
+    var current = JSON.stringify(this.serialize());
+    if (this.history[this.history.length - 1] === current) this.history.pop();
+    if (!this.history.length) return;
+    this.future.push(current);
     this.restoreSnapshot(this.history.pop());
   };
 
@@ -175,7 +178,7 @@
     self.view.container.querySelectorAll('.ws-node-overlap').forEach(function (el) { el.classList.remove('ws-node-overlap'); });
     overlaps.forEach(function (pair) {
       pair.forEach(function (id) {
-        var el = self.view.container.querySelector('.ws-node[data-id="' + id + '"]');
+        var el = self.view.nodeEl(id);
         if (el) el.classList.add('ws-node-overlap');
       });
     });
@@ -211,7 +214,7 @@
     self.view.render();
     if (self.sel && self.sel.type === 'node') {
       self.selectedIds.forEach(function (id) {
-        var g = self.view.container.querySelector('.ws-node[data-id="' + id + '"]');
+        var g = self.view.nodeEl(id);
         if (g) g.classList.add('ws-selected');
       });
     }
@@ -602,6 +605,7 @@
 
   Editor.prototype.setStatus = function (text, cls) {
     var el = document.getElementById('ws-save-status');
+    if (!el) return;
     el.innerHTML = '';
     var span = document.createElement('span');
     span.className = cls || '';
@@ -613,7 +617,8 @@
     this.sel = null;
     this.selectedIds = [];
     this.root.classList.remove('ws-object-focus');
-    document.getElementById('ws-obj-panel').innerHTML = '<em>Кликните узел или стрелку на схеме</em>';
+    var panel = document.getElementById('ws-obj-panel');
+    if (panel) panel.innerHTML = '<em>Кликните узел или стрелку на схеме</em>';
     this.redraw();
   };
 

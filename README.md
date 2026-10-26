@@ -67,7 +67,7 @@ git clone https://github.com/kirilljan985-debug/redmine_work_scheme.git redmine_
 | `url` | строка | нет | Вместо `page`: адрес для перехода по клику — `http(s)://…` или от корня сайта (`/projects/…/wiki/…`); прочие схемы (`javascript:` и т.п.) валидатор отклоняет |
 | `icon` | строка | нет | Встроенная иконка: `user`, `document`, `search`, `decision`, `certificate`, `gear`, `rocket`; назначается в редакторе перетаскиванием |
 | `query_id` | число | нет | ID сохранённого запроса Redmine для **живого счётчика** (см. ниже) |
-| `x`, `y` | числа | да | Координаты левого верхнего угла |
+| `x`, `y` | числа | нет | Координаты левого верхнего угла (по умолчанию 0) |
 | `w`, `h` | числа | нет | Размер (по умолчанию 140×56) |
 | `font_size`, `font_weight`, `font_family`, `text_color` | число/строка | нет | Стиль заголовка блока на схеме; размер 8–32, семейство `sans-serif`/`serif`/`monospace` |
 
@@ -190,7 +190,7 @@ assets/javascripts/work_scheme_editor.js   визуальный редактор
 assets/stylesheets/work_scheme.css         стили
 config/locales/en.yml, ru.yml              локализация
 test/unit, test/integration                тесты (minitest, в окружении Redmine)
-.github/workflows/test.yml                 CI (Redmine 7.0-stable + master)
+.github/workflows/test.yml                 CI (Redmine 7.0-stable, master, + additionals)
 dev/preview.html, dev/editor.html          dev-превью без Redmine
 AGENTS.md                                  память проекта: правила, грабли, статус
 PLAN.md                                    живой план задач с критериями готовности

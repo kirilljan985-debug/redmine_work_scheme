@@ -30,6 +30,8 @@
 [data-ws-theme="paper"] { --ws-surface: #fffefb; --ws-surface-muted: #f3f0e8; --ws-canvas: #f4f1e8; --ws-text: #3f3d39; --ws-muted: #77736b; --ws-border: #d6d1c6; --ws-border-strong: #b8b1a3; --ws-primary: #5f7565; --ws-primary-dark: #465b4d; --ws-primary-soft: #e5eee6; --ws-node-start: #e5eee6; --ws-node-process: #fffefb; --ws-node-decision: #f4ebcf; --ws-node-end: #e3eee4; --ws-node-text: #3f3d39; --ws-radius: 3px; --ws-shadow: 0 2px 7px rgba(70,63,50,.1); }
 [data-ws-theme="graphite"] .ws-node-process rect { fill: #26313a; stroke: #94a3ad; }
 [data-ws-theme="graphite"] .ws-node text { fill: #edf3f7; }
+[data-ws-theme="graphite"] .ws-edge-label { fill: #e7eef3; stroke: #1f2933; }
+[data-ws-theme="graphite"] .ws-speed-label { color: #aebbc5; }
 
 .ws-container {
   position: relative;
@@ -311,40 +313,6 @@
   touch-action: auto;
 }
 
-.ws-edit-panel {
-  margin-top: 8px;
-  padding: 8px;
-  border: 1px dashed #c9a75a;
-  border-radius: 4px;
-  background: #fffcf5;
-}
-
-.ws-edit-title {
-  font-size: 12px;
-  color: #45505a;
-  margin-bottom: 4px;
-}
-
-.ws-edit-textarea {
-  width: 100%;
-  box-sizing: border-box;
-  font-family: monospace;
-  font-size: 11px;
-  line-height: 1.5;
-  border: 1px solid #d5dce3;
-  border-radius: 3px;
-  resize: vertical;
-}
-
-.ws-copy {
-  margin-top: 4px;
-  background: transparent;
-  border: 1px solid #b8c2cc;
-  border-radius: 3px;
-  padding: 2px 10px;
-  cursor: pointer;
-}
-
 /* Визуальный редактор (/work_scheme/edit) */
 
 #ws-editor {
@@ -622,8 +590,7 @@
 .ws-controls select,
 .ws-edit-link,
 .ws-editor-actions button,
-#ws-add-scenario,
-.ws-copy {
+#ws-add-scenario {
   min-height: 30px;
   box-sizing: border-box;
   border: 1px solid var(--ws-border-strong);
@@ -655,8 +622,7 @@
 .ws-controls .ws-reset:hover,
 .ws-controls select:hover,
 .ws-editor-actions button:hover,
-#ws-add-scenario:hover,
-.ws-copy:hover {
+#ws-add-scenario:hover {
   border-color: var(--ws-primary);
   background: var(--ws-primary-soft);
 }
@@ -685,7 +651,6 @@
 }
 
 .ws-tooltip,
-.ws-edit-panel,
 .ws-palette {
   border-color: var(--ws-border);
   border-radius: var(--ws-radius);
@@ -785,8 +750,7 @@
 .ws-controls select,
 .ws-edit-link,
 .ws-editor-actions button,
-#ws-add-scenario,
-.ws-copy {
+#ws-add-scenario {
   min-height: 34px;
   border-color: rgba(112, 143, 213, .25);
   border-radius: 12px;
@@ -814,8 +778,7 @@
 .ws-controls .ws-reset:hover,
 .ws-controls select:hover,
 .ws-editor-actions button:hover,
-#ws-add-scenario:hover,
-.ws-copy:hover {
+#ws-add-scenario:hover {
   border-color: var(--ws-primary);
   background: var(--ws-primary-soft);
   transform: translateY(-1px);
@@ -1037,6 +1000,7 @@
     transition: none;
   }
   .ws-controls button:hover,
+  .ws-controls select:hover,
   .ws-editor-actions button:hover,
   .ws-edit-link:hover,
   #ws-add-scenario:hover,
