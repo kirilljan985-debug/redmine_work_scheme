@@ -44,7 +44,7 @@
 «dashboard block is offered on welcome and project dashboards», version 0.3.1,
 в README новый раздел «Блок в дашборде Additionals» с чек-листом «если блока
 нет в списке». ruby -c по трём изменённым .rb — OK, git diff --check — OK.
-Коммит и CI — см. точку продолжения в AGENTS.md.
+Коммит `3c070e3`; CI зелёный на трёх джобах (run 40338988916).
 
 ## Предыдущая работа — обновление скилла и документации (2026-10-26)
 
