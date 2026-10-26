@@ -463,6 +463,14 @@ focus текущего блока, timeline шагов, поворот marker п
   ненадобностью.
 - Свободные треки не изменились: расширение настроек Additionals-блока
   (тема/автопроигрывание), мобильная компоновка, мини-карта.
+- CI: `98737af` зелёный на всех трёх джобах (7.0-stable, master, additionals).
+  Две итерации: первый прогон поймал (1) грабль раздела 3 скилла в моём же
+  тест-файле — `defined?(DashboardBlocks::WorkSchemeBlock)` на pending-autoload
+  возвращал "constant" без additionals, guard заменён на
+  `defined?(DashboardBlocks::Base)`; (2) ридеры настроек блока (width/height)
+  требуют dashboard_content (делегация project) — class-level проверки
+  оставлены, instance-ридеры не тестируются; (3) parse при ошибках отдаёт
+  data: nil — юнит-тест поправлен на assert_nil.
 
 ## Предыдущая точка — 2026-10-26 (W3 выполнен + eager-load фикс)
 
