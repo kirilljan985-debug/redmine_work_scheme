@@ -205,6 +205,29 @@ class RedmineWorkSchemeSchemeTest < ActiveSupport::TestCase
     assert_equal 'classic', parsed[:data]['theme']
   end
 
+  test 'performance accepts known values and defaults to auto' do
+    parsed = RedmineWorkScheme::Scheme.parse(valid_scheme_json_with_nodes(
+      [{ 'id' => 'a', 'title' => 'A', 'x' => 0, 'y' => 0 }]
+    ))
+    assert_equal 'auto', parsed[:data]['performance']
+
+    %w(lite high).each do |mode|
+      parsed = RedmineWorkScheme::Scheme.parse(
+        { 'performance' => mode, 'nodes' => [{ 'id' => 'a', 'title' => 'A' }], 'edges' => [], 'scenarios' => [] }.to_json
+      )
+      assert_empty parsed[:errors]
+      assert_equal mode, parsed[:data]['performance']
+    end
+  end
+
+  test 'unknown performance safely falls back to auto' do
+    parsed = RedmineWorkScheme::Scheme.parse(
+      { 'performance' => 'turbo', 'nodes' => [{ 'id' => 'a', 'title' => 'A' }], 'edges' => [], 'scenarios' => [] }.to_json
+    )
+    assert_empty parsed[:errors]
+    assert_equal 'auto', parsed[:data]['performance']
+  end
+
   test 'url accepts http(s) and site-relative links only' do
     [['https://example.com/x', 'https://example.com/x'],
      ['http://example.com', 'http://example.com'],

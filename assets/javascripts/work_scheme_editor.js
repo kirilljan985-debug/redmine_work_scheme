@@ -58,6 +58,7 @@
     this.wirePalette();
     this.wireTitle();
     this.wireTheme();
+    this.wirePerformance();
   }
 
   Editor.prototype.wireTitle = function () {
@@ -81,6 +82,18 @@
       self.view.scheme.theme = input.value;
       self.root.setAttribute('data-ws-theme', input.value);
       self.view.container.setAttribute('data-ws-theme', input.value);
+      self.markDirty();
+      self.redraw();
+    });
+  };
+
+  Editor.prototype.wirePerformance = function () {
+    var self = this;
+    var input = this.root.querySelector('#ws-performance');
+    if (!input) return;
+    input.value = ['high', 'lite'].indexOf(self.view.scheme.performance) !== -1 ? self.view.scheme.performance : 'auto';
+    input.addEventListener('change', function () {
+      self.view.scheme.performance = input.value;
       self.markDirty();
       self.redraw();
     });
@@ -115,6 +128,8 @@
     if (titleInput) titleInput.value = data.title || 'Схема';
     var themeInput = this.root.querySelector('#ws-theme');
     if (themeInput) themeInput.value = data.theme || 'classic';
+    var performanceInput = this.root.querySelector('#ws-performance');
+    if (performanceInput) performanceInput.value = ['high', 'lite'].indexOf(data.performance) !== -1 ? data.performance : 'auto';
     this.root.setAttribute('data-ws-theme', data.theme || 'classic');
     this.renderScenarios();
     this.dirty = true;
@@ -1038,6 +1053,7 @@
     return {
       title: self.view.scheme.title || 'Схема',
       theme: self.view.scheme.theme || 'classic',
+      performance: ['high', 'lite'].indexOf(self.view.scheme.performance) !== -1 ? self.view.scheme.performance : 'auto',
       nodes: self.view.nodes.map(function (n) {
         return {
           id: n.id, type: n.type, title: n.title, dept: n.dept,

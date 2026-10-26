@@ -73,6 +73,24 @@
   min-height: 200px;
 }
 
+/* Обёртка статичного SVG и слоя-оверлея: зум масштабирует обёртку,
+   оверлей повторяет коробку основного svg (тот же viewBox). */
+.ws-canvas {
+  position: relative;
+  width: 100%;
+}
+
+.ws-canvas .ws-overlay-svg {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  max-height: none;
+  pointer-events: none;
+}
+
 .ws-process-background,
 .ws-process-grid {
   pointer-events: none;
@@ -245,15 +263,14 @@
   animation: ws-rework-flow .8s linear infinite;
 }
 
-.ws-marker { fill: #d66f2c; stroke: #fff; stroke-width: 2; filter: drop-shadow(0 0 5px rgba(214,111,44,.75)); }
+.ws-marker { fill: #d66f2c; stroke: #fff; stroke-width: 2; }
 .ws-marker-trail-line { fill: none; stroke: #f0a15c; stroke-width: 4; stroke-linecap: round; stroke-linejoin: round; opacity: .55; pointer-events: none; }
 .ws-marker-trail { fill: #f0a15c; opacity: .42; pointer-events: none; }
 .ws-marker-trail-1 { opacity: .28; }
 .ws-marker-trail-2 { opacity: .16; }
-.ws-marker-direction { fill: #ffffff; opacity: .92; filter: drop-shadow(0 0 4px rgba(214,111,44,.7)); pointer-events: none; }
+.ws-marker-direction { fill: #ffffff; opacity: .92; pointer-events: none; }
 
 .ws-node-active .ws-node-icon { animation: ws-icon-pulse 1s ease-in-out infinite alternate; transform-box: fill-box; transform-origin: center; }
-.ws-node-active.ws-node-decision polygon { animation: ws-decision-wait 1.25s ease-in-out infinite alternate; }
 .ws-node-history { transition: opacity .25s ease; }
 .ws-playback-success { animation: ws-success-pop .45s cubic-bezier(.2,.9,.25,1.2) both; pointer-events: none; }
 .ws-success-bubble { fill: #effaf1; stroke: #55a96d; stroke-width: 1.5; filter: drop-shadow(0 4px 7px rgba(55,128,76,.24)); }
@@ -276,22 +293,40 @@
 
 @keyframes ws-rework-flow { to { stroke-dashoffset: -12; } }
 @keyframes ws-icon-pulse { from { opacity: .72; transform: scale(.92); } to { opacity: 1; transform: scale(1.12); } }
-@keyframes ws-decision-wait { from { filter: drop-shadow(0 0 2px rgba(214,111,44,.2)); } to { filter: drop-shadow(0 0 10px rgba(214,111,44,.75)); } }
 @keyframes ws-success-pop { from { opacity: 0; transform: translateY(8px) scale(.86); transform-origin: center; } to { opacity: 1; transform: translateY(0) scale(1); transform-origin: center; } }
 @keyframes ws-branch-option { from { opacity: .45; } to { opacity: .9; } }
-@keyframes ws-completion-flash { 0% { filter: brightness(1); } 45% { filter: brightness(1.45) drop-shadow(0 0 8px rgba(83,164,106,.7)); } 100% { filter: brightness(1); } }
+/* Флеш готовности без brightness/drop-shadow: анимация фильтров перерисовывает
+   элемент с растром фильтра каждый кадр, прозрачность — заметно дешевле. */
+@keyframes ws-completion-flash { 0% { opacity: 1; } 45% { opacity: .45; } 100% { opacity: 1; } }
 
 @media (prefers-reduced-motion: reduce) {
   .ws-node-active rect,
   .ws-node-active polygon { animation: none; }
   .ws-node-active .ws-node-icon { animation: none; }
-  .ws-node-active.ws-node-decision polygon { animation: none; }
   .ws-edge-rework { animation: none; }
   .ws-playback-success { animation: none; }
   .ws-marker-trail-line { opacity: .35; }
   .ws-edge-branch-option { animation: none; }
   .ws-completion-flash { animation: none; }
 }
+
+/* Облегчённый режим (класс ставит рендерер: поле performance=lite,
+   слабое устройство или адаптация по кадрам): без фильтров, пульсаций
+   и хвоста маркера. Цвета состояний остаются, анимации — нет. */
+.ws-lite .ws-node rect,
+.ws-lite .ws-node polygon,
+.ws-lite .ws-marker,
+.ws-lite .ws-marker-direction,
+.ws-lite .ws-success-bubble { filter: none; }
+.ws-lite .ws-node-active rect,
+.ws-lite .ws-node-active polygon,
+.ws-lite .ws-node-active .ws-node-icon,
+.ws-lite .ws-edge-rework,
+.ws-lite .ws-edge-branch-option,
+.ws-lite .ws-completion-flash,
+.ws-lite .ws-playback-success { animation: none; }
+.ws-lite .ws-marker-trail,
+.ws-lite .ws-marker-trail-line { display: none; }
 
 /* Режим правки узлов */
 
@@ -484,7 +519,9 @@
 
 .ws-edge.ws-selected { stroke: #d66f2c !important; stroke-width: 3 !important; }
 
-.ws-edge-hit { cursor: pointer; }
+/* Hit-путь живёт в overlay-svg с pointer-events:none — явно включаем
+   клик по штриху, иначе выбор стрелки в редакторе перестаёт работать. */
+.ws-edge-hit { cursor: pointer; pointer-events: stroke; }
 .ws-edge-hit.ws-selected { stroke: #d66f2c !important; }
 
 @media (max-width: 900px) {
@@ -704,11 +741,14 @@
   filter: drop-shadow(0 2px 2px rgba(36, 59, 78, .08));
 }
 
-/* Glass dashboard language from the supplied reference image. */
+/* Glass dashboard language from the supplied reference image. Без
+   backdrop-filter: блюр большой панели — самая дорогая CSS-операция на
+   слабых GPU, а за непрозрачным контейнером его эффект почти не виден;
+   вместо него поднята непрозрачность стекла. */
 .ws-container,
 #ws-editor {
-  --ws-glass: rgba(255, 255, 255, .64);
-  --ws-glass-strong: rgba(255, 255, 255, .78);
+  --ws-glass: rgba(255, 255, 255, .82);
+  --ws-glass-strong: rgba(255, 255, 255, .9);
   --ws-glass-border: rgba(255, 255, 255, .82);
   --ws-glass-shadow: 0 18px 44px rgba(73, 104, 173, .16);
 }
@@ -718,7 +758,6 @@
   border-radius: 22px;
   background: var(--ws-glass);
   box-shadow: var(--ws-glass-shadow), inset 0 1px 0 rgba(255,255,255,.75);
-  backdrop-filter: blur(18px);
 }
 
 .ws-container > .ws-controls {
@@ -772,7 +811,6 @@
   border-radius: 22px;
   background: var(--ws-glass);
   box-shadow: var(--ws-glass-shadow), inset 0 1px 0 rgba(255,255,255,.78);
-  backdrop-filter: blur(18px);
 }
 
 .ws-editor-main { padding: 12px; }
@@ -871,10 +909,6 @@
   background: rgba(21,29,36,.92);
   border-color: #61717e;
   color: #edf3f7;
-}
-
-@media (prefers-reduced-transparency: reduce) {
-  .ws-container, #ws-editor, .ws-editor-main, .ws-editor-side { backdrop-filter: none; }
 }
 
 /* Modern layout profile: workspace first, controls grouped into a calm panel. */

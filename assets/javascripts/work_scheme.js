@@ -36,6 +36,15 @@
     return isFinite(n) ? n : fallback;
   }
 
+  // Слабое устройство по эвристике браузера: мало ядер или мало памяти.
+  // Поля могут отсутствовать (Firefox не даёт deviceMemory) — тогда фактор 0.
+  function weakDevice() {
+    var nav = window.navigator;
+    var cores = nav.hardwareConcurrency || 0;
+    var mem = nav.deviceMemory || 0;
+    return (cores > 0 && cores <= 4) || (mem > 0 && mem <= 4);
+  }
+
   function wrapText(text, maxChars) {
     var words = String(text || '').split(/\s+/).filter(function (w) { return w.length > 0; });
     var lines = [];
@@ -101,6 +110,10 @@
     this.byId = {};
     this.nodes.forEach(function (node) { this.byId[node.id] = node; }, this);
     this.pathByEdge = {};
+    this._adaptiveLite = false;
+    this.applyPerformanceMode();
+    this.frameTimes = [];
+    this.lastFrameTs = 0;
     this.playing = false;
     this.playbackSpeed = 0.5;
     this.reworkTriggered = false;
@@ -114,6 +127,18 @@
     this.render();
     this.loadCounts();
   }
+
+  // lite: без фильтров/пульсаций/хвоста, ~30 fps; auto может уйти в lite
+  // на лету по замерам кадров (engageLite). Пересчитывается при каждом
+  // render() — так селект «Производительность» в редакторе применяется
+  // сразу, а не после пересоздания View.
+  WorkSchemeView.prototype.applyPerformanceMode = function () {
+    this.performanceMode = ['high', 'lite'].indexOf(this.scheme.performance) !== -1 ? this.scheme.performance : 'auto';
+    if (this.performanceMode === 'high') this.lite = false;
+    else if (this.performanceMode === 'lite') this.lite = true;
+    else this.lite = weakDevice() || this._adaptiveLite;
+    this.container.classList.toggle('ws-lite', this.lite);
+  };
 
   WorkSchemeView.prototype.nodeCenter = function (node) {
     return { x: node.x + node.w / 2, y: node.y + node.h / 2 };
@@ -286,18 +311,24 @@
     Array.prototype.slice.call(self.container.children).forEach(function (child) {
       if (child !== dataEl) self.container.removeChild(child);
     });
+    self.applyPerformanceMode();
     var bounds = self.bounds();
     var pad = 34;
     var width = bounds.maxX - bounds.minX + pad * 2;
     var height = bounds.maxY - bounds.minY + pad * 2;
+    var viewBox = (bounds.minX - pad) + ' ' + (bounds.minY - pad) + ' ' + width + ' ' + height;
+
+    var canvas = document.createElement('div');
+    canvas.className = 'ws-canvas';
+    self.canvas = canvas;
 
     var svg = svgEl('svg', {
-      viewBox: (bounds.minX - pad) + ' ' + (bounds.minY - pad) + ' ' + width + ' ' + height,
+      viewBox: viewBox,
       role: 'img',
       'aria-label': 'scheme'
     });
     svg.style.maxWidth = 'none';
-    svg.style.width = (this.zoom * 100) + '%';
+    canvas.style.width = (this.zoom * 100) + '%';
     var markerId = 'ws-arrow-' + Math.random().toString(36).slice(2, 8);
 
     var defs = svgEl('defs');
@@ -373,11 +404,22 @@
     // Подписи связей — поверх узлов, чтобы не затирались
     svg.appendChild(labelGroup);
 
+    // Слой-оверлей: маркер, хвост, бейджи и «Готово» живут в отдельном
+    // маленьком svg поверх основного — их перерисовка в кадре не задевает
+    // большую статичную картину (главный источник лагов на слабых машинах).
+    canvas.appendChild(svg);
+    var overlaySvg = svgEl('svg', {
+      viewBox: viewBox,
+      'class': 'ws-overlay-svg',
+      'aria-hidden': 'true'
+    });
     self.overlay = svgEl('g', { 'class': 'ws-overlay' });
-    svg.appendChild(self.overlay);
+    overlaySvg.appendChild(self.overlay);
+    canvas.appendChild(overlaySvg);
 
-    self.container.appendChild(svg);
+    self.container.appendChild(canvas);
     self.svg = svg;
+    self.overlaySvg = overlaySvg;
     self.attachTooltip();
     self.buildControls();
 
@@ -517,7 +559,7 @@
       var empty = document.createElement('div');
       empty.className = 'ws-empty-note';
       empty.textContent = self.label('no-scenarios', 'Сценарии проигрывания пока не добавлены.');
-      self.container.insertBefore(empty, self.container.querySelector('svg'));
+      self.container.insertBefore(empty, self.canvas);
       self.zoomControls = zoom;
       return;
     }
@@ -586,13 +628,12 @@
     status.hidden = true;
     self.container.insertBefore(controls, self.container.firstChild);
     status.className = 'ws-playback-status ws-playback-status-below';
-    var svg = self.container.querySelector('svg');
     var timeline = document.createElement('div');
     timeline.className = 'ws-playback-timeline';
     timeline.setAttribute('aria-label', self.label('progress', 'Прогресс сценария'));
-    if (svg) {
-      self.container.insertBefore(status, svg);
-      self.container.insertBefore(timeline, svg);
+    if (self.canvas) {
+      self.container.insertBefore(status, self.canvas);
+      self.container.insertBefore(timeline, self.canvas);
     }
     else self.container.appendChild(status);
     self.playButton = play;
@@ -605,8 +646,8 @@
 
   WorkSchemeView.prototype.setZoom = function (value) {
     this.zoom = Math.max(0.6, Math.min(1.8, Number(value) || 1));
-    var svg = this.container.querySelector('svg');
-    if (svg) svg.style.width = (this.zoom * 100) + '%';
+    var canvas = this.canvas || this.container.querySelector('.ws-canvas');
+    if (canvas) canvas.style.width = (this.zoom * 100) + '%';
     var fit = this.container.querySelector('.ws-zoom-fit');
     if (fit) fit.textContent = Math.round(this.zoom * 100) + '%';
   };
@@ -833,6 +874,9 @@
   WorkSchemeView.prototype.highlightEdge = function (pathEl, rework) {
     pathEl.classList.add('ws-edge-active', 'ws-edge-drawing');
     if (rework) pathEl.classList.add('ws-edge-rework');
+    // В lite рисуем ребро сразу: dash-анимация перерисовывает область пути
+    // каждый кадр, на слабых машинах это заметный провал.
+    if (this.lite) return;
     var reduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     var length = pathEl.getTotalLength ? pathEl.getTotalLength() : 0;
     if (length > 0) {
@@ -856,13 +900,16 @@
     if (!self.playbackToken || !self.playbackToken.parentNode) {
       var group = svgEl('g', { 'class': 'ws-playback-token' });
       self.playbackTrail = [];
-      self.playbackTrailPath = svgEl('path', { 'class': 'ws-marker-trail-line' });
-      group.appendChild(self.playbackTrailPath);
-      [8, 6, 4].forEach(function (radius, index) {
-        var trail = svgEl('circle', { r: radius, 'class': 'ws-marker-trail ws-marker-trail-' + index });
-        group.appendChild(trail);
-        self.playbackTrail.push(trail);
-      });
+      self.playbackTrailPath = null;
+      if (!self.lite) {
+        self.playbackTrailPath = svgEl('path', { 'class': 'ws-marker-trail-line' });
+        group.appendChild(self.playbackTrailPath);
+        [8, 6, 4].forEach(function (radius, index) {
+          var trail = svgEl('circle', { r: radius, 'class': 'ws-marker-trail ws-marker-trail-' + index });
+          group.appendChild(trail);
+          self.playbackTrail.push(trail);
+        });
+      }
       group.appendChild(svgEl('path', { d: 'M 0 -7 L 11 0 L 0 7 Z', 'class': 'ws-marker-direction' }));
       group.appendChild(svgEl('circle', { r: 10, 'class': 'ws-marker' }));
       self.overlay.appendChild(group);
@@ -879,19 +926,53 @@
 
   WorkSchemeView.prototype.setPlaybackPoint = function (point) {
     if (!this.playbackToken || !point) return;
-    this.playbackHistory.unshift({ x: point.x, y: point.y });
-    this.playbackHistory = this.playbackHistory.slice(0, 7);
+    // Кольцевая запись вместо unshift+slice: ноль лишнего мусора в кадре.
+    var history = this.playbackHistory;
+    history.push({ x: point.x, y: point.y });
+    if (history.length > 7) history.shift();
     this.playbackToken.setAttribute('transform', 'translate(' + point.x + ' ' + point.y + ')');
-    if (this.playbackTrail) this.playbackTrail.forEach(function (trail, index) {
-      var sample = this.playbackHistory[Math.min((index + 1) * 2, this.playbackHistory.length - 1)] || point;
-      trail.setAttribute('transform', 'translate(' + (sample.x - point.x) + ' ' + (sample.y - point.y) + ')');
-    }, this);
+    if (this.playbackTrail && this.playbackTrail.length) {
+      var last = history.length - 1;
+      this.playbackTrail.forEach(function (trail, index) {
+        var sample = history[Math.max(0, last - (index + 1) * 2)] || point;
+        trail.setAttribute('transform', 'translate(' + (sample.x - point.x) + ' ' + (sample.y - point.y) + ')');
+      });
+    }
     if (this.playbackTrailPath) {
-      this.playbackTrailPath.setAttribute('d', this.playbackHistory.map(function (sample, index) {
-        return (index ? 'L ' : 'M ') + (sample.x - point.x) + ' ' + (sample.y - point.y);
-      }).join(' '));
+      var d = '';
+      for (var i = history.length - 1; i >= 0; i -= 1) {
+        d += (i === history.length - 1 ? 'M ' : 'L ') + (history[i].x - point.x) + ' ' + (history[i].y - point.y) + ' ';
+      }
+      this.playbackTrailPath.setAttribute('d', d);
     }
     this.playbackPoint = { x: point.x, y: point.y };
+  };
+
+  // Адаптация в auto: копим длительности кадров; если средняя больше ~34 мс
+  // (ниже 30 fps), один раз переводим view в lite — обратно не дёргаем.
+  WorkSchemeView.prototype.noteFrameTime = function (timestamp) {
+    if (this.performanceMode !== 'auto' || this.lite) return;
+    if (this.lastFrameTs) this.frameTimes.push(timestamp - this.lastFrameTs);
+    this.lastFrameTs = timestamp;
+    if (this.frameTimes.length < 20) return;
+    var sum = 0;
+    this.frameTimes.forEach(function (value) { sum += value; });
+    if (sum / this.frameTimes.length > 34) this.engageLite();
+  };
+
+  WorkSchemeView.prototype.engageLite = function () {
+    this._adaptiveLite = true;
+    this.lite = true;
+    this.frameTimes = [];
+    this.container.classList.add('ws-lite');
+  };
+
+  // Пропуск кадров до ~30 fps в lite: rAF тикает чаще, чем нужно слабой машине.
+  WorkSchemeView.prototype.frameDue = function (timestamp) {
+    if (!this.lite) return true;
+    if (timestamp - this.lastFrameTs < 33) return false;
+    this.lastFrameTs = timestamp;
+    return true;
   };
 
   WorkSchemeView.prototype.focusPlaybackNode = function (node) {
@@ -927,6 +1008,7 @@
 
   WorkSchemeView.prototype.animateCompletionChain = function () {
     var self = this;
+    if (self.lite) return; // финальный флеш — чистая анимация фильтров, в lite не нужна
     var items = Array.prototype.slice.call(self.container.querySelectorAll('.ws-node-complete, .ws-edge-complete'));
     items.forEach(function (item, index) {
       self.timer(function () { item.classList.add('ws-completion-flash'); }, index * 55);
@@ -949,6 +1031,11 @@
     var start = null;
     var tick = function (timestamp) {
       if (!self.playing) return;
+      self.noteFrameTime(timestamp);
+      if (!self.frameDue(timestamp)) {
+        window.requestAnimationFrame(tick);
+        return;
+      }
       if (start === null) start = timestamp;
       var linear = duration === 0 ? 1 : Math.min(1, (timestamp - start) / duration);
       var progress = linear * linear * (3 - 2 * linear);
@@ -985,6 +1072,23 @@
       y: 2 * center.y - (fromPoint.y + startPoint.y) / 2
     };
 
+    // Предвыборка пути: 65 точек за один проход вместо двух getPointAtLength
+    // на каждый кадр — нативный вызов недёшев на слабых устройствах.
+    var SAMPLES = 64;
+    var samples = [];
+    for (var i = 0; i <= SAMPLES; i += 1) {
+      samples.push(pathEl.getPointAtLength(total * i / SAMPLES));
+    }
+    var sampleAt = function (length) {
+      var pos = Math.max(0, Math.min(SAMPLES, length / total * SAMPLES));
+      var index = Math.floor(pos);
+      if (index >= SAMPLES) return samples[SAMPLES];
+      var a = samples[index];
+      var b = samples[index + 1];
+      var t = pos - index;
+      return { x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t };
+    };
+
     var ease = function (value) {
       return value * value * (3 - 2 * value);
     };
@@ -1000,20 +1104,33 @@
     var move = function (point) {
       self.setPlaybackPoint({ x: point.x, y: point.y });
     };
+    var direction = marker && marker.querySelector('.ws-marker-direction');
+    var lastAngle = null;
+    // Поворот дешевле брать раз в несколько кадров и только при заметном
+    // изменении угла — это отдельная мутация атрибута на каждый тик.
     var rotate = function (point, nextPoint) {
-      var direction = self.playbackToken && self.playbackToken.querySelector('.ws-marker-direction');
-      if (direction && nextPoint) direction.setAttribute('transform', 'rotate(' + (Math.atan2(nextPoint.y - point.y, nextPoint.x - point.x) * 180 / Math.PI) + ')');
+      if (!direction || !nextPoint || self.lite) return;
+      var angle = Math.atan2(nextPoint.y - point.y, nextPoint.x - point.x) * 180 / Math.PI;
+      if (lastAngle !== null && Math.abs(angle - lastAngle) < 3) return;
+      lastAngle = angle;
+      direction.setAttribute('transform', 'rotate(' + angle + ')');
     };
 
     var tick = function (timestamp) {
       if (!self.playing) return;
+      self.noteFrameTime(timestamp);
+      if (!self.frameDue(timestamp)) {
+        window.requestAnimationFrame(tick);
+        return;
+      }
       if (start === null) start = timestamp;
       var linear = duration === 0 ? 1 : Math.min(1, (timestamp - start) / duration);
       // Smoothstep keeps the marker from snapping at the beginning/end of an edge.
       var progress = linear * linear * (3 - 2 * linear);
-      var point = pathEl.getPointAtLength(total * progress);
+      var length = total * progress;
+      var point = sampleAt(length);
       move(point);
-      rotate(point, pathEl.getPointAtLength(Math.min(total, total * progress + 2)));
+      rotate(point, sampleAt(Math.min(total, length + 2)));
       if (progress < 1) {
         window.requestAnimationFrame(tick);
       } else {
@@ -1022,6 +1139,11 @@
     };
     var bridge = function (timestamp) {
       if (!self.playing) return;
+      self.noteFrameTime(timestamp);
+      if (!self.frameDue(timestamp)) {
+        window.requestAnimationFrame(bridge);
+        return;
+      }
       if (bridgeStart === null) bridgeStart = timestamp;
       var linear = bridgeDuration === 0 ? 1 : Math.min(1, (timestamp - bridgeStart) / bridgeDuration);
       var progress = ease(linear);
@@ -1118,9 +1240,9 @@
       var counts = data && data.counts ? data.counts : {};
       countsCache[cacheKey] = counts;
       self.counts = counts;
-      // если View уже пересоздан (undo/redo редактора), его svg отцеплён —
+      // если View уже пересоздан (undo/redo редактора), его canvas отцеплён —
       // поздний ответ прежнего экземпляра не должен сносить бейджи нового
-      if (!self.svg || self.svg.parentNode !== self.container) return;
+      if (!self.canvas || self.canvas.parentNode !== self.container) return;
       self.renderBadges();
     }).catch(function () {
       // ошибка счётчиков не должна ломать схему — бейджи просто не рисуются

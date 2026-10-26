@@ -56,6 +56,14 @@
           <option value="paper">Paper Canvas</option>
         </select>
       </div>
+      <div class="ws-theme-control">
+        <label for="ws-performance"><%= l(:ws_label_performance) %></label>
+        <select id="ws-performance">
+          <option value="auto"><%= l(:ws_label_performance_auto) %></option>
+          <option value="high"><%= l(:ws_label_performance_high) %></option>
+          <option value="lite"><%= l(:ws_label_performance_lite) %></option>
+        </select>
+      </div>
       <details class="ws-properties">
         <summary><%= l(:ws_label_node) %> / <%= l(:ws_label_edge) %></summary>
         <div id="ws-obj-panel"><em><%= l(:ws_label_node) %> / <%= l(:ws_label_edge) %></em></div>

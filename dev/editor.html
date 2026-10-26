@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <title>Work Scheme editor preview (dev)</title>
-<link rel="stylesheet" href="../assets/stylesheets/work_scheme.css?v=91">
+<link rel="stylesheet" href="../assets/stylesheets/work_scheme.css?v=94">
 <style>
   body { font-family: system-ui, sans-serif; margin: 16px; background: #dbe7fb; color: #14245c; }
 </style>
@@ -34,6 +34,10 @@
     <div class="ws-theme-control">
       <label for="ws-theme">Тема интерфейса</label>
       <select id="ws-theme"><option value="classic">Redmine Classic</option><option value="ocean">Ocean Blue</option><option value="graphite">Graphite Dark</option><option value="warm">Warm Office</option><option value="paper">Paper Canvas</option></select>
+    </div>
+    <div class="ws-theme-control">
+      <label for="ws-performance">Производительность</label>
+      <select id="ws-performance"><option value="auto">Авто (по устройству)</option><option value="high">Полная (все эффекты)</option><option value="lite">Облегчённая (слабые устройства)</option></select>
     </div>
     <details class="ws-properties">
       <summary>Узел / Стрелка</summary>
@@ -88,12 +92,12 @@
     <div id="ws-save-status"></div>
   </div>
 </div>
-<script src="../assets/javascripts/work_scheme.js?v=91"></script>
-<script src="../assets/javascripts/work_scheme_editor.js?v=91"></script>
+<script src="../assets/javascripts/work_scheme.js?v=94"></script>
+<script src="../assets/javascripts/work_scheme_editor.js?v=94"></script>
 <script>
   // dev-обвязка: после загрузки схемы повторно инициируем редактор
   // (editor.js вешает init на DOMContentLoaded, который к моменту fetch уже прошёл)
-  fetch('scheme.json?v=91')
+  fetch('scheme.json?v=94')
     .then(function (r) { return r.text(); })
     .then(function (text) {
       document.querySelector('script.ws-data').textContent = text;
