@@ -142,7 +142,9 @@ class RedmineWorkSchemePagesTest < Redmine::IntegrationTest
     get "/work_scheme/counts?ids[]=#{public_query.id}&ids[]=#{public_query.id}"
     assert_response :success
     counts = JSON.parse(@response.body)['counts']
-    assert_equal public_query.issue_count, counts[public_query.id.to_s]
+    # query.issue_count считает для User.current, который вне запроса уже не
+    # jsmith — эталон считаем по явному пользователю
+    assert_equal Issue.visible(User.find_by_login('jsmith')).count, counts[public_query.id.to_s]
 
     get "/work_scheme/counts?ids[]=#{flood}"
     assert_response :success, 'flood of oversized ids must not produce 500'
