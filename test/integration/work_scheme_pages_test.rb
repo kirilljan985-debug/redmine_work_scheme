@@ -110,8 +110,10 @@ class RedmineWorkSchemePagesTest < Redmine::IntegrationTest
   end
 
   test 'top menu shows scheme entry with own icon sprite' do
+    # главная страница не годится: с additionals это их дашборд (500 в
+    # тестовом окружении) — топ-меню одинаково рендерится на нашей странице
     log_user 'admin', 'admin'
-    get '/'
+    get '/work_scheme'
     assert_response :success
     assert_select '#top-menu a[href="/work_scheme"]'
     # иконка — из спрайта плагина (assets/images/icons.svg), а не из ядра

@@ -26,8 +26,9 @@
 <% additionals_block = ws_dash_block || ws_legacy_dash %>
 <%# Ссылка редактора из блока несёт back-путь текущей страницы: «К схеме»
     из редактора вернёт пользователя на дашборд, а не на /work_scheme.
-    defined?-гвард — standalone-рендер партиала в тестах без request. %>
-<% ws_back_path = additionals_block && defined?(request) && request.respond_to?(:path) ? request.path : nil %>
+    defined?-гвард — standalone-рендер партиала в тестах без request;
+    .presence — у рендерера path пустая строка, а не «/» (в Ruby truthy). %>
+<% ws_back_path = additionals_block && defined?(request) && request.respond_to?(:path) ? request.path.presence : nil %>
 <% if scheme %>
   <% if scheme[:errors].any? %>
     <div class="flash error ws-empty-state">

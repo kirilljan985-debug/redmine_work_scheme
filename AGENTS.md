@@ -789,7 +789,13 @@ focus текущего блока, timeline шагов, поворот marker п
   (2) фоновая вкладка IAB троттлится (таймеры раз в ~1 с, smooth-scroll
   отбрасывается) — телеметрия проигрывания врёт, снимать на свежей вкладке;
   (3) Redmine::AssetPath выравнивает `assets/images/*` в корень
-  `plugin_assets/<plugin>/` — спрайт лежит в images/, а URL без `images/`.
+  `plugin_assets/<plugin>/` — спрайт лежит в images/, а URL без `images/`;
+  (4) у `ApplicationController.render` request.path — ПУСТАЯ строка (не
+  «/»), а пустая строка в Ruby truthy: back-параметр из партиала обязан
+  проходить `.presence`; для теста с конкретным путём —
+  `ApplicationController.renderer.new('PATH_INFO' => '/x').render(...)`;
+  (5) с additionals главная страница («/») — их дашборд и в тестовом
+  окружении отдаёт 500: тесты топ-меню гонять на `/work_scheme`, не на `/`.
 - Проверки: jsdom-smoke 28/28; браузерно полный сценарий «Готово 10/10»
   и старт с прокруткой 60→0 мгновенно; ruby -c, node --check, YAML,
   standalone-валидатор, git diff --check; новые тесты меню/back.

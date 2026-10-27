@@ -111,12 +111,14 @@ if defined?(DashboardContent)
     end
 
     test 'dashboard block edit url carries dashboard back path' do
-      # из блока редактор открывается с back-путём: «К схеме» вернёт на дашборд
+      # из блока редактор открывается с back-путём: «К схеме» вернёт на дашборд.
+      # PATH_INFO задаём явно: у renderer'а по умолчанию пустой request.path
       User.current = User.find_by_login('admin')
-      rendered = ApplicationController.render partial: 'work_scheme/block',
-                                              locals: { block: 'work_scheme',
-                                                        settings: { width: 55 } }
-      assert_includes rendered, 'data-edit-url="/work_scheme/edit?back=%2F"',
+      rendered = ApplicationController.renderer.new('PATH_INFO' => '/projects/demo').render(
+        partial: 'work_scheme/block',
+        locals: { block: 'work_scheme', settings: { width: 55 } }
+      )
+      assert_includes rendered, 'data-edit-url="/work_scheme/edit?back=%2Fprojects%2Fdemo"',
                       'edit link must carry the dashboard path as back param'
     ensure
       User.current = nil
