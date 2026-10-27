@@ -57,6 +57,28 @@ whitelist (`update_block_settings` символизирует ключи) — с
    (4.6-интеграция по клону / партиалы и ERB / boot-eager-CI), P0/P1/P2
    исправлены; коммит, push, CI зелёный на 4 джобах; PLAN/AGENTS обновлены.
 
+Результат: реализовано + два раунда правок по ревью. Ревью (3 суб-агента,
+клоны 4.6.0 и main): P0 не найдено; легаси-механика признана
+конвенционально верной (хеш блока, locals, шестерёнка, `@can_edit`,
+remote_form_tag, `_update_layout_setting_dashboard_path`, symbolize_keys).
+Исправлено: P1 — юнит-тест противоречил from_settings (битый JSON → errors,
+дефолт только при пустом; синхронизированы тест и комментарий); P2 —
+`after_initialize` вместо to_prepare (to_prepare в этой конфигурации boot
+не применил патч до тестов — первый legacy-прогон поймал; after_initialize
+= производственно доказанный паттерн web_window); P2 — `block ==
+'work_scheme'` не ловил `work_scheme__N` (нормализация regex + max_occurs
+снят до дефолтной 1); P2 — рендер-тесты партиала (новый класс
+WorkSchemeBlockPartialRenderTest: 6 кейсов на обе additionals-джобы); P3 —
+форма вне гейта валидности схемы, label for = генерируемым id, local
+`dashboard` вместо `@dashboard`, гейт editable?/locked?, defined?-гвард
+ветки формы, README «4.6» вместо «4.0–4.6» (проверен только 4.6.0),
+опечатка.
+CI-итерации: 1-й прогон — to_prepare не применил патч + `dashboard`
+undefined в тестах + remote_form_tag нет в standalone-renderer; 2-й — мой
+тест ждал дефолт 420 при height 99999 (кламп даёт 1200). Итог: коммиты
+`a78550b`, `a622d47`, `b0414e2`; CI зелёный на 4 джобах (run 40473855144),
+включая legacy-additionals (7.0-stable + additionals 4.6.0 + PostgreSQL).
+
 ## Предыдущая работа — оптимизация схемы для слабых устройств (2026-10-26)
 
 Задача: пользователь сообщил, что схема тяжело идёт на слабых устройствах.
