@@ -21,6 +21,19 @@ module RedmineWorkScheme
 
     module_function
 
+    # Единый источник схемы из настроек плагина: страница, блок 4.7+ и
+    # legacy-блок 4.6 читают одинаково. Пустое значение отдаёт схему по
+    # умолчанию; битый JSON возвращается как есть (errors + data: nil) —
+    # страница и блок показывают ошибку админу, а не молча подменяют схему.
+    def from_settings
+      setting = Setting.plugin_redmine_work_scheme
+      setting = setting['json'] if setting.is_a?(Hash)
+      json = setting.to_s.strip.empty? ? RedmineWorkScheme::DefaultScheme.json : setting
+      parse(json)
+    rescue StandardError
+      parse(RedmineWorkScheme::DefaultScheme.json)
+    end
+
     # Возвращает {data: нормализованная схема или nil, errors: [строки]}
     def parse(json_string)
       str = json_string.to_s

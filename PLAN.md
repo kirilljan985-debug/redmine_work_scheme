@@ -19,7 +19,45 @@
 4. Создать коммит и отправить его в GitHub.
 5. Дождаться зелёного CI или зафиксировать диагностику падения в памяти проекта.
 
-## Текущая работа — оптимизация схемы для слабых устройств (2026-10-26)
+## Текущая работа — legacy-поддержка additionals 4.6 + ревью суб-агентами (2026-10-26)
+
+Задача: на живой машине additionals 4.6.0 (легаси-поколение API, требует
+Redmine ≥ 7.0 — сверено по клону тега 4.6.0), поэтому блок схемы там не
+появляется: поддержано только класс-API 4.7+. Реализовать легаси-ветку по
+паттерну redmine_web_window (скилл, раздел 9), затем провести ревью
+суб-агентами и зафиксировать результат.
+
+Ключевые факты 4.6.0 (проверены по исходникам): блок — запись в
+`DashboardContent#block_definitions` {label:, partial:, max_occurs:};
+партиал получает locals `dashboard, settings, block, block_definition,
+user`; шестерёнка переключает скрытый div `#{block}-settings` (гейт
+`@can_edit`); форма `remote_form_tag _update_layout_setting_dashboard_path
+(@project, @dashboard)`; поля `settings[#{block}][key]`; сохранение без
+whitelist (`update_block_settings` символизирует ключи) — санитизация на
+чтении.
+
+Критерии готовности:
+
+1. `lib/redmine_work_scheme/patches/dashboard_content_patch.rb` (имя =
+   константа) добавляет блок work_scheme в block_definitions; модуль
+   объявлен безусловно — безопасен под eager-load без additionals.
+2. `Scheme.from_settings` — единый источник схемы из настроек (контроллер,
+   класс блока 4.7+, legacy-партиал); юнит-тесты (сохранённый JSON / пусто /
+   битый → дефолт).
+3. init.rb — три ветки: 4.7+ loader.extends; legacy (ignore lib/dashboard_blocks
+   + after_initialize include патча); без additionals (ignore). Партиал
+   `_block` работает в трёх контекстах (страница / 4.7+ / legacy) с клампом
+   width/height из settings; `_settings.html.erb` с полями
+   `settings[#{block}][width|height]`; скрытая форма только в legacy под
+   `@can_edit`.
+4. CI: 4-я джоба legacy-additionals (Redmine 7.0-stable + additionals 4.6.0
+   + PostgreSQL + migrate + eager smoke) — легаси-тест регистрации блока
+   выполняется только там.
+5. Версия 0.5.0; README (4.6+/4.7+); локальные проверки; ревью 3 суб-агентами
+   (4.6-интеграция по клону / партиалы и ERB / boot-eager-CI), P0/P1/P2
+   исправлены; коммит, push, CI зелёный на 4 джобах; PLAN/AGENTS обновлены.
+
+## Предыдущая работа — оптимизация схемы для слабых устройств (2026-10-26)
 
 Задача: пользователь сообщил, что схема тяжело идёт на слабых устройствах.
 Заодно фиксируется точка остановки по additionals: на живой машине стоит

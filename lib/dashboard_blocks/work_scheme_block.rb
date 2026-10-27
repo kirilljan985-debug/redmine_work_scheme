@@ -14,12 +14,7 @@ module DashboardBlocks
     setting :height, type: :integer, label: :ws_block_height, min: 200, max: 1200, default: 420
 
     def scheme
-      json = Setting.plugin_redmine_work_scheme
-      json = json['json'] if json.is_a?(Hash)
-      json = RedmineWorkScheme::DefaultScheme.json if json.to_s.strip.empty?
-      RedmineWorkScheme::Scheme.parse(json)
-    rescue StandardError
-      RedmineWorkScheme::Scheme.parse(RedmineWorkScheme::DefaultScheme.json)
+      RedmineWorkScheme::Scheme.from_settings
     end
   end
 end

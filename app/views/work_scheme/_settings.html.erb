@@ -1,0 +1,11 @@
+<%# Форма настроек блока (additionals 4.6): шестерёнка переключает
+    скрытый div в партиале блока, значения сохраняются как
+    settings[блок][ключ]; ограничения совпадают с класс-блоком 4.7+. %>
+<p>
+  <label for="settings_<%= block %>_width"><%= l(:ws_block_width) %></label>
+  <%= number_field_tag "settings[#{block}][width]", (settings[:width] || settings['width']), id: "settings_#{block}_width", min: 30, max: 100 %>
+</p>
+<p>
+  <label for="settings_<%= block %>_height"><%= l(:ws_block_height) %></label>
+  <%= number_field_tag "settings[#{block}][height]", (settings[:height] || settings['height']), id: "settings_#{block}_height", min: 200, max: 1200 %>
+</p>

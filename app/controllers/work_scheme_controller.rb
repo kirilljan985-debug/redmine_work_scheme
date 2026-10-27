@@ -70,13 +70,6 @@ class WorkSchemeController < ApplicationController
   private
 
   def parsed_scheme
-    RedmineWorkScheme::Scheme.parse(settings_json)
-  end
-
-  def settings_json
-    setting = Setting.plugin_redmine_work_scheme
-    setting.is_a?(Hash) ? setting['json'] : nil
-  rescue StandardError
-    nil
+    RedmineWorkScheme::Scheme.from_settings
   end
 end

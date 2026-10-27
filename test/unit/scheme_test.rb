@@ -228,6 +228,33 @@ class RedmineWorkSchemeSchemeTest < ActiveSupport::TestCase
     assert_equal 'auto', parsed[:data]['performance']
   end
 
+  test 'from_settings parses stored json' do
+    previous = Setting.plugin_redmine_work_scheme
+    Setting.plugin_redmine_work_scheme = {
+      'json' => { 'nodes' => [{ 'id' => 'stored', 'title' => 'Из настроек' }], 'edges' => [], 'scenarios' => [] }.to_json
+    }
+    parsed = RedmineWorkScheme::Scheme.from_settings
+    assert_empty parsed[:errors]
+    assert_equal 'stored', parsed[:data]['nodes'].first['id']
+  ensure
+    Setting.plugin_redmine_work_scheme = previous
+  end
+
+  test 'from_settings falls back to default on empty settings and reports broken json' do
+    previous = Setting.plugin_redmine_work_scheme
+    Setting.plugin_redmine_work_scheme = { 'json' => '' }
+    parsed = RedmineWorkScheme::Scheme.from_settings
+    assert_empty parsed[:errors]
+    assert parsed[:data]['nodes'].any?
+
+    Setting.plugin_redmine_work_scheme = { 'json' => '{broken json' }
+    parsed = RedmineWorkScheme::Scheme.from_settings
+    assert parsed[:errors].any?, 'broken json must be reported, not silently replaced'
+    assert_nil parsed[:data]
+  ensure
+    Setting.plugin_redmine_work_scheme = previous
+  end
+
   test 'url accepts http(s) and site-relative links only' do
     [['https://example.com/x', 'https://example.com/x'],
      ['http://example.com', 'http://example.com'],

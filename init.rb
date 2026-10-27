@@ -12,7 +12,7 @@ Redmine::Plugin.register :redmine_work_scheme do
   name 'Work Scheme'
   author 'kirilljan985-debug'
   description 'Interactive scheme of the department process: SVG scheme with tooltips, stage pages, scenario playback and live issue counters.'
-  version '0.4.0'
+  version '0.5.0'
   url 'https://github.com/kirilljan985-debug/redmine_work_scheme'
   author_url 'https://github.com/kirilljan985-debug'
   requires_redmine version_or_higher: '6.0.0'
@@ -21,14 +21,26 @@ Redmine::Plugin.register :redmine_work_scheme do
            partial: 'settings/work_scheme'
 end
 
-# Блок дашборда additionals: каталог lib/dashboard_blocks объявляется через
-# loader, когда additionals с класс-системой доступен, иначе исключается из
-# автозагрузки — иначе eager-загрузка production падает на отсутствии
-# DashboardBlocks::Base (рестарт-луп Redmine).
+# Блок дашборда additionals: два поколения API. 4.7+ — класс в
+# lib/dashboard_blocks через RedminePluginKit::Loader; 4.6 — патч
+# DashboardContent (lib/redmine_work_scheme/patches). Каталог классов без
+# объявления исключается из автозагрузки — иначе eager-загрузка production
+# падает на отсутствии DashboardBlocks::Base (рестарт-луп Redmine).
 if Redmine::Plugin.installed?(:additionals) &&
    defined?(RedminePluginKit::Loader) && defined?(DashboardBlocks::Base)
   loader = RedminePluginKit::Loader.new plugin_id: 'redmine_work_scheme'
   loader.extends %w[dashboard_blocks]
+elsif Redmine::Plugin.installed?(:additionals) && defined?(DashboardContent)
+  # legacy-additionals: классов DashboardBlocks::Base нет, каталог блоков
+  # убрать из автозагрузки, а блок добавить патчем. to_prepare, а не
+  # after_initialize: DashboardContent перезагружается в development, и
+  # патч должен переустанавливаться (повторный include/prepend — no-op).
+  Rails.autoloaders.main.ignore File.expand_path('lib/dashboard_blocks', __dir__)
+  require_relative 'lib/redmine_work_scheme/patches/dashboard_content_patch'
+  Rails.application.config.to_prepare do
+    next unless defined?(DashboardContent)
+    DashboardContent.include RedmineWorkScheme::Patches::DashboardContentPatch
+  end
 else
   Rails.autoloaders.main.ignore File.expand_path('lib/dashboard_blocks', __dir__)
 end

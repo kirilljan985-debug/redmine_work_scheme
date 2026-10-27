@@ -25,7 +25,10 @@ git clone https://github.com/kirilljan985-debug/redmine_work_scheme.git redmine_
 
 **Совместимость:** Redmine 6.0+, Ruby 3.2+. Необязательная интеграция с
 плагином [Additionals](https://www.alphanodes.com/additionals) (блок на
-дашборде) требует additionals 4.7+; без него плагин работает автономно.
+дашборде) поддерживает оба поколения API: additionals **4.7+** (класс-блок)
+и **4.6** (легаси-патч DashboardContent; 4.6.0 требует Redmine 7+, более
+старые legacy-версии не проверялись); без additionals плагин работает
+автономно.
 
 Проверка: «Администрирование → Plugins» — там появится «Work Scheme»;
 страница схемы — по адресу `/work_scheme`.
@@ -141,20 +144,21 @@ git clone https://github.com/kirilljan985-debug/redmine_work_scheme.git redmine_
 
 ## Блок в дашборде Additionals
 
-При установленном additionals 4.7+ блок «Work Scheme» доступен в «Добавить
-блок» на **главной странице** и на **дашбордах проектов**. Настройки блока —
-ширина (30–100%) и высота (200–1200 px). На старых additionals (до 4.7,
-класс-система `DashboardBlocks::Base`) блок не предлагается — поддержка
-legacy-поколения API не реализована.
+При установленном additionals (4.7+ через класс-систему или 4.6 через
+легаси-патч) блок «Work Scheme» доступен в «Добавить блок» на **главной
+странице** и на **дашбордах проектов**. Настройки блока — ширина (30–100%)
+и высота (200–1200 px).
 
 Если блока нет в списке «Добавить блок»:
 
 1. На живой машине в `plugins/redmine_work_scheme` есть файл
-   `lib/dashboard_blocks/work_scheme_block.rb`? Нет — развёрнута старая копия
-   плагина, обновите (`git pull`) до версии с блоком.
+   `lib/dashboard_blocks/work_scheme_block.rb` (4.7+) или
+   `lib/redmine_work_scheme/patches/dashboard_content_patch.rb` (4.6)?
+   Нет — развёрнута старая копия плагина, обновите (`git pull`) до версии
+   с блоком.
 2. Redmine перезапущен после установки/обновления плагина? Плагины
    регистрируются при загрузке.
-3. Версия additionals (Администрирование → Plugins) ≥ 4.7.0?
+3. Версия additionals (Администрирование → Plugins) — 4.6 или 4.7+?
 
 ## Живые счётчики
 
@@ -179,10 +183,10 @@ bundle exec rake redmine:plugins:test NAME=redmine_work_scheme RAILS_ENV=test
 ```
 
 CI: GitHub Actions гоняет тесты на Redmine `7.0-stable` и `master` при каждом push,
-плюс отдельная джоба с установленным additionals (PostgreSQL) — она проверяет
-ветку подключения dashboard-блока. На каждой джобе выполняется smoke-проверка
-eager-загрузки, как в production. При падении хвост тестового лога выводится
-в аннотации прогона.
+плюс две джобы с установленным additionals (PostgreSQL): 4.7+ (класс-блок) и
+4.6 (легаси-патч) — вместе они исполняют обе ветки подключения dashboard-блока.
+На каждой джобе выполняется smoke-проверка eager-загрузки, как в production.
+При падении хвост тестового лога выводится в аннотации прогона.
 
 ## Разработка и dev-превью (без Redmine)
 
