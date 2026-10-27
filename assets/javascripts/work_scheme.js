@@ -818,15 +818,16 @@
         if (isRework) self.reworkTriggered = true;
         if (isRework) self.beginRework(prev); else self.markNodeComplete(prev);
         if (prev && prev.type === 'decision') self.showDecisionBranches(prev, node);
-        // камера кадрирует цель до старта маркера; подсветка цели — по приезде,
-        // иначе на узком холсте она загорается задолго до маркера
+        // рыжая подсветка цели — сразу на старте ребра (вернуто по решению
+        // пользователя); камера кадрирует цель мгновенно и больше не трогает
+        // холст до конца анимации, поэтому схему под маркером не сдвигает
         self.focusPlaybackNode(node);
+        self.highlightNode(node);
         self.showPlaybackToken(prev, true);
         self.highlightEdge(pathEl, isRework);
         var afterEdge = function () {
           if (isRework) self.resetRouteStates(); else self.markEdgeComplete(pathEl);
           self.showPlaybackToken(node, true);
-          self.highlightNode(node);
           index += 1;
           self.timer(step, self.playbackDelay(node.type === 'decision' ? 1050 : 420));
         };
