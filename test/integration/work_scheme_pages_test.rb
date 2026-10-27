@@ -109,6 +109,31 @@ class RedmineWorkSchemePagesTest < Redmine::IntegrationTest
     assert_select '#ws-editor .ws-container[data-counts-url="/work_scheme/counts"]'
   end
 
+  test 'top menu shows scheme entry with own icon sprite' do
+    log_user 'admin', 'admin'
+    get '/'
+    assert_response :success
+    assert_select '#top-menu a[href="/work_scheme"]'
+    # иконка — из спрайта плагина (assets/images/icons.svg), а не из ядра
+    assert_select '#top-menu svg use[href*="redmine_work_scheme/icons"]'
+  end
+
+  test 'editor back link returns to validated back path' do
+    log_user 'admin', 'admin'
+    # из блока дашборда: редактор получил back='/' — «К схеме» ведёт на дашборд
+    get '/work_scheme/edit?back=%2F'
+    assert_response :success
+    assert_select "a[href='/']"
+    get '/work_scheme/edit?back=%2Fprojects%2Fdemo'
+    assert_response :success
+    assert_select "a[href='/projects/demo']"
+    # невалидный back (внешний хост, двойной слэш) отбрасывается
+    get '/work_scheme/edit?back=//evil.com'
+    assert_response :success
+    assert_select "a[href='//evil.com']", count: 0
+    assert_select "a[href='/work_scheme']"
+  end
+
   test 'counts endpoint returns counts only for queries visible to user' do
     public_query = IssueQuery.create!(name: 'WS public query', visibility: Query::VISIBILITY_PUBLIC, user_id: 1)
     hidden_query = IssueQuery.create!(name: 'WS hidden query', visibility: Query::VISIBILITY_PRIVATE, user_id: 1)

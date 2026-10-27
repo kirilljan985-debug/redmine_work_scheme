@@ -24,6 +24,10 @@
   <% ws_height = 1200 if ws_height > 1200 %>
 <% end %>
 <% additionals_block = ws_dash_block || ws_legacy_dash %>
+<%# Ссылка редактора из блока несёт back-путь текущей страницы: «К схеме»
+    из редактора вернёт пользователя на дашборд, а не на /work_scheme.
+    defined?-гвард — standalone-рендер партиала в тестах без request. %>
+<% ws_back_path = additionals_block && defined?(request) && request.respond_to?(:path) ? request.path : nil %>
 <% if scheme %>
   <% if scheme[:errors].any? %>
     <div class="flash error ws-empty-state">
@@ -54,7 +58,7 @@
          data-label-zoom-in="<%= l(:ws_label_zoom_in) %>"
          data-label-zoom-fit="<%= l(:ws_label_zoom_fit) %>"
          data-label-edit-page="<%= l(:ws_label_edit_page) %>"
-         data-edit-url="<%= User.current.admin? ? work_scheme_edit_path : '' %>"
+         data-edit-url="<%= User.current.admin? ? (ws_back_path ? work_scheme_edit_path(back: ws_back_path) : work_scheme_edit_path) : '' %>"
          data-more-label="<%= l(:ws_label_more) %>">
       <%# JSON выводится сырым (<%==): внутри <script> HTML-сущности не декодируются,
           а кавычки после <%= превратились бы в &quot; и сломали JSON.parse.

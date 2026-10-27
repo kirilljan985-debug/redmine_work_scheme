@@ -50,6 +50,12 @@ class WorkSchemeController < ApplicationController
       return
     end
     @scheme = parsed_scheme
+    # Куда вести «К схеме»: ссылка «Редактор схемы» из блока дашборда несёт
+    # back-путь, чтобы схема открылась обратно в блоке, а не на /work_scheme.
+    # Параметр приходит из нашей же ссылки, но проверяем: только путь сайта.
+    back = params[:back].to_s
+    @back_path = back.start_with?('/') && !back.start_with?('//') &&
+                 back.exclude?("\r") && back.exclude?("\n") ? back : nil
   end
 
   # Сохранение схемы из редактора (только администратор)

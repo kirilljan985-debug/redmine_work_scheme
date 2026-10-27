@@ -1,5 +1,5 @@
 <div class="contextual">
-  <%= link_to(l(:ws_label_back_to_scheme), work_scheme_path, class: 'icon icon-back') %>
+  <%= link_to(l(:ws_label_back_to_scheme), @back_path || work_scheme_path, class: 'icon icon-back') %>
 </div>
 <h2 id="ws-editor-heading"><%= l(:ws_label_edit_page) %></h2>
 <% if @scheme[:errors].any? %>

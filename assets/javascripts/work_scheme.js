@@ -781,6 +781,11 @@
 
     var steps = scenario.steps;
     var index = 0;
+    // холст мог остаться прокрученным от прошлого просмотра: тогда первый
+    // блок был за левым краем узкого контейнера (дашборд-блок) и проигрывание
+    // выглядело как старт со второго блока — центрируем первый шаг
+    var firstNode = self.byId[steps[0]];
+    if (firstNode) self.focusPlaybackNode(firstNode, true);
 
     var step = function () {
       if (!self.playing) return;
@@ -1007,7 +1012,7 @@
     return true;
   };
 
-  WorkSchemeView.prototype.focusPlaybackNode = function (node) {
+  WorkSchemeView.prototype.focusPlaybackNode = function (node, instant) {
     if (!node || !this.container || !this.container.scrollTo) return;
     var svg = this.container.querySelector('svg');
     if (!svg || !svg.viewBox || !svg.viewBox.baseVal.width) return;
@@ -1017,7 +1022,10 @@
     var target = (node.x + node.w / 2 - view.x) * scale;
     var left = target - this.container.clientWidth / 2;
     var reduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    this.container.scrollTo({ left: Math.max(0, left), behavior: reduced ? 'auto' : 'smooth' });
+    // instant — старт проигрывания: содержимое должно встать на место до
+    // появления маркера, без анимации прокрутки (smooth в фоновых вкладках
+    // отбрасывается и остаётся на старой позиции)
+    this.container.scrollTo({ left: Math.max(0, left), behavior: reduced || instant ? 'auto' : 'smooth' });
   };
 
   WorkSchemeView.prototype.showSuccessBubble = function (node) {

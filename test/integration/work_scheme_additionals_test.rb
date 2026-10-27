@@ -109,5 +109,17 @@ if defined?(DashboardContent)
       assert_includes rendered, 'data-layout="modern"', 'modern layout must be enabled on the scheme container'
       assert_not_includes rendered, 'ws-additionals-block'
     end
+
+    test 'dashboard block edit url carries dashboard back path' do
+      # из блока редактор открывается с back-путём: «К схеме» вернёт на дашборд
+      User.current = User.find_by_login('admin')
+      rendered = ApplicationController.render partial: 'work_scheme/block',
+                                              locals: { block: 'work_scheme',
+                                                        settings: { width: 55 } }
+      assert_includes rendered, 'data-edit-url="/work_scheme/edit?back=%2F"',
+                      'edit link must carry the dashboard path as back param'
+    ensure
+      User.current = nil
+    end
   end
 end

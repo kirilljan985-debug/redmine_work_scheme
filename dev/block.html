@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>Work Scheme block preview (dev)</title>
+<link rel="stylesheet" href="../assets/stylesheets/work_scheme.css?v=99">
+<style>
+  body { font-family: system-ui, sans-serif; margin: 16px; background: #dbe7fb; color: #14245c; }
+  /* имитация колонки дашборда additionals */
+  .dashboard-column { max-width: 720px; margin: 0 auto; }
+</style>
+</head>
+<body>
+<div class="dashboard-column">
+  <div class="ws-container ws-additionals-block" data-work-scheme data-layout="modern"
+       style="--ws-block-width: 100%; --ws-block-height: 420px;"
+       data-stage-base-url="/work_scheme/stages/"
+       data-counts-url="counts.json"
+       data-query-base-url="/issues"
+       data-label-play="Проиграть" data-label-reset="Сброс"
+       data-label-playback-step="Этап" data-label-playback-done="Готово"
+       data-label-tasks="Задач" data-label-progress="Прогресс сценария"
+       data-label-speed="Скорость"
+       data-label-zoom-out="Уменьшить" data-label-zoom-in="Увеличить" data-label-zoom-fit="Вписать в блок"
+       data-more-label="Подробнее">
+    <script type="application/json" class="ws-data"></script>
+  </div>
+</div>
+<script src="../assets/javascripts/work_scheme.js?v=99"></script>
+<script>
+  fetch('scheme.json?v=99')
+    .then(function (r) { return r.text(); })
+    .then(function (text) {
+      document.querySelector('script.ws-data').textContent = text;
+      window.WorkScheme.init();
+    })
+    .catch(function (e) { document.body.appendChild(document.createTextNode('load error: ' + e)); });
+</script>
+</body>
+</html>

@@ -12,13 +12,23 @@ Redmine::Plugin.register :redmine_work_scheme do
   name 'Work Scheme'
   author 'kirilljan985-debug'
   description 'Interactive scheme of the department process: SVG scheme with tooltips, stage pages, scenario playback and live issue counters.'
-  version '0.5.1'
+  version '0.5.2'
   url 'https://github.com/kirilljan985-debug/redmine_work_scheme'
   author_url 'https://github.com/kirilljan985-debug'
   requires_redmine version_or_higher: '6.0.0'
 
   settings default: { 'json' => RedmineWorkScheme::DefaultScheme.json },
            partial: 'settings/work_scheme'
+
+  # Пункт верхнего меню «Схема» со своей иконкой: спрайт плагина
+  # (assets/images/icons.svg → plugin_assets/redmine_work_scheme/icons.svg),
+  # формат символов как в ядре Redmine 6/7.
+  menu :top_menu, :work_scheme,
+       { controller: 'work_scheme', action: 'show' },
+       caption: :ws_label_scheme,
+       icon: 'work-scheme',
+       plugin: self.id,
+       after: :home
 end
 
 # Блок дашборда additionals: два поколения API. 4.7+ — класс в
