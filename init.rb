@@ -12,7 +12,7 @@ Redmine::Plugin.register :redmine_work_scheme do
   name 'Work Scheme'
   author 'kirilljan985-debug'
   description 'Interactive scheme of the department process: SVG scheme with tooltips, stage pages, scenario playback and live issue counters.'
-  version '0.5.2'
+  version '0.5.3'
   url 'https://github.com/kirilljan985-debug/redmine_work_scheme'
   author_url 'https://github.com/kirilljan985-debug'
   requires_redmine version_or_higher: '6.0.0'
@@ -29,6 +29,13 @@ Redmine::Plugin.register :redmine_work_scheme do
        icon: 'work-scheme',
        plugin: self.id,
        after: :home
+
+  # Тот же пункт в меню приложения: его рендерит секция «Рабочее
+  # пространство» левой панели ModernLayout (mui_main_menu_links ->
+  # menu_items_for(:application_menu)) и главная стоковой темы вне проекта.
+  menu :application_menu, :work_scheme,
+       { controller: 'work_scheme', action: 'show' },
+       caption: :ws_label_scheme
 end
 
 # Блок дашборда additionals: два поколения API. 4.7+ — класс в
