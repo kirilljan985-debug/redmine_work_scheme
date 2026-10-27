@@ -56,12 +56,20 @@ if defined?(DashboardContent)
     test 'legacy locals render container with clamped default style' do
       rendered = ApplicationController.render partial: 'work_scheme/block',
                                               locals: { block: 'work_scheme',
-                                                        settings: { width: 'junk', height: 99_999 } }
+                                                        settings: { width: 'junk', height: 0 } }
       assert_includes rendered, 'data-work-scheme'
       assert_includes rendered, 'ws-additionals-block'
       assert_includes rendered, '--ws-block-width: 100%'
       assert_includes rendered, '--ws-block-height: 420px'
       assert_includes rendered, '<script type="application/json"'
+    end
+
+    test 'legacy oversized settings are clamped to limits' do
+      rendered = ApplicationController.render partial: 'work_scheme/block',
+                                              locals: { block: 'work_scheme',
+                                                        settings: { width: 500, height: 99_999 } }
+      assert_includes rendered, '--ws-block-width: 100%'
+      assert_includes rendered, '--ws-block-height: 1200px'
     end
 
     test 'legacy settings values survive clamping' do
