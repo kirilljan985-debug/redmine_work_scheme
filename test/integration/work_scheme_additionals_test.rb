@@ -47,9 +47,10 @@ end
 
 if defined?(DashboardContent)
   # Рендер партиала во всех контекстах через standalone-renderer. Общий для
-  # обоих поколений: легаси-локали (block/settings/dashboard) и локаль
-  # страницы (scheme) не зависят от поколения; helpers remote_form_tag и
-  # _update_layout_setting_dashboard_path есть в 4.6 и в 4.7+ (проверено
+  # обоих поколений: легаси-локали (block/settings) и локаль страницы (scheme)
+  # не зависят от поколения. Ветку формы настроек проверяем через партиал
+  # work_scheme/settings напрямую: standalone-renderer не подключает хелперы
+  # additionals (remote_form_tag), в реальном дашборде они есть (проверено
   # по обоим клонам).
   class WorkSchemeBlockPartialRenderTest < ActiveSupport::TestCase
     test 'legacy locals render container with clamped default style' do
@@ -71,28 +72,26 @@ if defined?(DashboardContent)
       assert_includes rendered, '--ws-block-height: 700px'
     end
 
-    test 'editable legacy context renders hidden settings form' do
-      dashboard = Struct.new(:editable?, :locked?).new(true, false)
+    test 'legacy locals without dashboard render container and no form' do
+      # В реальном рендере additionals всегда передаёт local dashboard;
+      # партиал обязан не падать и без него (defined?-гвард ветки формы).
       rendered = ApplicationController.render partial: 'work_scheme/block',
-                                              assigns: { can_edit: true },
                                               locals: { block: 'work_scheme',
-                                                        settings: { width: 55 },
-                                                        dashboard: dashboard }
-      assert_includes rendered, 'id="work_scheme-settings"'
-      assert_includes rendered, 'settings[work_scheme][width]'
-      assert_includes rendered, 'settings[work_scheme][height]'
-      assert_includes rendered, 'value="55"'
-    end
-
-    test 'locked legacy context hides settings form' do
-      dashboard = Struct.new(:editable?, :locked?).new(true, true)
-      rendered = ApplicationController.render partial: 'work_scheme/block',
-                                              assigns: { can_edit: true },
-                                              locals: { block: 'work_scheme',
-                                                        settings: {},
-                                                        dashboard: dashboard }
+                                                        settings: { width: 55 } }
       assert_includes rendered, 'data-work-scheme'
       assert_not_includes rendered, 'id="work_scheme-settings"'
+    end
+
+    test 'settings partial renders clamped fields with matched ids' do
+      rendered = ApplicationController.render partial: 'work_scheme/settings',
+                                              locals: { block: 'work_scheme',
+                                                        settings: { width: 55 } }
+      assert_includes rendered, 'id="settings_work_scheme_width"'
+      assert_includes rendered, 'name="settings[work_scheme][width]"'
+      assert_includes rendered, 'value="55"'
+      assert_includes rendered, 'id="settings_work_scheme_height"'
+      assert_includes rendered, 'min="30"'
+      assert_includes rendered, 'max="1200"'
     end
 
     test 'page locals render without additionals block class' do

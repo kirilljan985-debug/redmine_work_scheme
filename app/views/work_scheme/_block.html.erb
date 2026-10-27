@@ -67,8 +67,10 @@
     переключает этот скрытый div; в 4.7+ форму строит класс-система. Форма
     вне гейта валидности схемы: при битом JSON шестерёнка должна работать,
     чтобы админ мог починить блок. Условия повторяют гейт шестерёнки
-    (editable? и не locked?), dashboard — локал из build_dashboard_partial_locals. %>
-<% if ws_legacy_dash && dashboard.editable? && !dashboard.locked? %>
+    (editable? и не locked?); dashboard — локал из build_dashboard_partial_locals,
+    defined? нужен, чтобы партиал не падал без него вне дашборда. %>
+<% if ws_legacy_dash && defined?(dashboard) && dashboard.respond_to?(:editable?) &&
+      dashboard.editable? && !dashboard.try(:locked?) %>
   <div class="hidden" id="<%= block %>-settings">
     <%= remote_form_tag _update_layout_setting_dashboard_path(@project, dashboard) do %>
       <%= render 'work_scheme/settings', block: block, settings: settings %>

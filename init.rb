@@ -32,12 +32,12 @@ if Redmine::Plugin.installed?(:additionals) &&
   loader.extends %w[dashboard_blocks]
 elsif Redmine::Plugin.installed?(:additionals) && defined?(DashboardContent)
   # legacy-additionals: классов DashboardBlocks::Base нет, каталог блоков
-  # убрать из автозагрузки, а блок добавить патчем. to_prepare, а не
-  # after_initialize: DashboardContent перезагружается в development, и
-  # патч должен переустанавливаться (повторный include/prepend — no-op).
+  # убрать из автозагрузки, а блок добавить патчем. after_initialize —
+  # паттерн с производственным доказательством на живой additionals 4.6
+  # (redmine_web_window); повторный include/prepend — no-op.
   Rails.autoloaders.main.ignore File.expand_path('lib/dashboard_blocks', __dir__)
   require_relative 'lib/redmine_work_scheme/patches/dashboard_content_patch'
-  Rails.application.config.to_prepare do
+  Rails.application.config.after_initialize do
     next unless defined?(DashboardContent)
     DashboardContent.include RedmineWorkScheme::Patches::DashboardContentPatch
   end
