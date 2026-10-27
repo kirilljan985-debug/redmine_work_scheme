@@ -785,7 +785,7 @@
     // блок был за левым краем узкого контейнера (дашборд-блок) и проигрывание
     // выглядело как старт со второго блока — центрируем первый шаг
     var firstNode = self.byId[steps[0]];
-    if (firstNode) self.focusPlaybackNode(firstNode, true);
+    if (firstNode) self.focusPlaybackNode(firstNode);
 
     var step = function () {
       if (!self.playing) return;
@@ -818,12 +818,15 @@
         if (isRework) self.reworkTriggered = true;
         if (isRework) self.beginRework(prev); else self.markNodeComplete(prev);
         if (prev && prev.type === 'decision') self.showDecisionBranches(prev, node);
-        self.highlightNode(node);
+        // камера кадрирует цель до старта маркера; подсветка цели — по приезде,
+        // иначе на узком холсте она загорается задолго до маркера
+        self.focusPlaybackNode(node);
         self.showPlaybackToken(prev, true);
         self.highlightEdge(pathEl, isRework);
         var afterEdge = function () {
           if (isRework) self.resetRouteStates(); else self.markEdgeComplete(pathEl);
           self.showPlaybackToken(node, true);
+          self.highlightNode(node);
           index += 1;
           self.timer(step, self.playbackDelay(node.type === 'decision' ? 1050 : 420));
         };
@@ -1012,7 +1015,12 @@
     return true;
   };
 
-  WorkSchemeView.prototype.focusPlaybackNode = function (node, instant) {
+  // Камера проигрывания: мгновенная прокрутка к узлу. Только 'auto':
+  // плавная прокрутка во время анимации маркера сдвигает схему под ним —
+  // в узком контейнере (дашборд-блок) это выглядело как «маркер едет не
+  // по стрелке», подсветка цели «убегала» вперёд, а цепочка плавных
+  // прокруток на каждом шаге подвешивала анимацию.
+  WorkSchemeView.prototype.focusPlaybackNode = function (node) {
     if (!node || !this.container || !this.container.scrollTo) return;
     var svg = this.container.querySelector('svg');
     if (!svg || !svg.viewBox || !svg.viewBox.baseVal.width) return;
@@ -1020,12 +1028,7 @@
     var rect = svg.getBoundingClientRect();
     var scale = rect.width / view.width;
     var target = (node.x + node.w / 2 - view.x) * scale;
-    var left = target - this.container.clientWidth / 2;
-    var reduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    // instant — старт проигрывания: содержимое должно встать на место до
-    // появления маркера, без анимации прокрутки (smooth в фоновых вкладках
-    // отбрасывается и остаётся на старой позиции)
-    this.container.scrollTo({ left: Math.max(0, left), behavior: reduced || instant ? 'auto' : 'smooth' });
+    this.container.scrollTo({ left: Math.max(0, target - this.container.clientWidth / 2) });
   };
 
   WorkSchemeView.prototype.showSuccessBubble = function (node) {

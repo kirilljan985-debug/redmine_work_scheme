@@ -12,7 +12,7 @@ Redmine::Plugin.register :redmine_work_scheme do
   name 'Work Scheme'
   author 'kirilljan985-debug'
   description 'Interactive scheme of the department process: SVG scheme with tooltips, stage pages, scenario playback and live issue counters.'
-  version '0.5.2'
+  version '0.5.3'
   url 'https://github.com/kirilljan985-debug/redmine_work_scheme'
   author_url 'https://github.com/kirilljan985-debug'
   requires_redmine version_or_higher: '6.0.0'
