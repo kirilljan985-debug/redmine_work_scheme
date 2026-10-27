@@ -106,6 +106,7 @@ if defined?(DashboardContent)
       parsed = RedmineWorkScheme::Scheme.from_settings
       rendered = ApplicationController.render partial: 'work_scheme/block', locals: { scheme: parsed }
       assert_includes rendered, 'data-work-scheme'
+      assert_includes rendered, 'data-layout="modern"', 'modern layout must be enabled on the scheme container'
       assert_not_includes rendered, 'ws-additionals-block'
     end
   end

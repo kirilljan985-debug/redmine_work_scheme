@@ -11,6 +11,16 @@
 
   function num(v, d) { var n = Number(v); return isFinite(n) ? n : d; }
 
+  // Числовое поле: пустая строка — не ноль, а «оставить прежнее значение»;
+  // для габаритов дополнительно держим нижнюю границу.
+  function fieldNum(input, fallback, min, max) {
+    var raw = String(input.value).trim();
+    var value = raw === '' ? fallback : num(raw, fallback);
+    if (min !== undefined) value = Math.max(min, value);
+    if (max !== undefined) value = Math.min(max, value);
+    return value;
+  }
+
   var NODE_TYPES = [['start', 'Старт'], ['process', 'Процесс'], ['decision', 'Решение (ромб)'], ['end', 'Финиш']];
   var ROUTES = [['straight', 'Линия'], ['arc', 'Дуга (изгиб)'], ['elbow', 'Угловатая (колено)'], ['u', 'П‑образная']];
   var SIDES = [['', 'авто'], ['left', 'слева'], ['right', 'справа'], ['top', 'сверху'], ['bottom', 'снизу']];
@@ -47,7 +57,8 @@
     this.sel = null;                  // {type:'node', id} | {type:'edge', key}
     this.selectedIds = [];
     this.dirty = false;
-    this.history = [JSON.stringify(this.serialize())];
+    this.savedJson = JSON.stringify(this.serialize()); // база для честного dirty
+    this.history = [this.savedJson];
     this.future = [];
     this.pendingFrom = null;          // режим добавления стрелки: {from: id}
     this.activeScenarioId = null;     // сценарий, который собирается кликами по узлам
@@ -59,6 +70,7 @@
     this.wireTitle();
     this.wireTheme();
     this.wirePerformance();
+    root.__wsEditorInstance = this;   // защита от повторной инициализации root
   }
 
   Editor.prototype.wireTitle = function () {
@@ -101,10 +113,16 @@
 
   Editor.prototype.markDirty = function () {
     var current = JSON.stringify(this.serialize());
-    if (this.history[this.history.length - 1] !== current) this.history.push(current);
+    // без фактического изменения (например, отклонённая правка стрелки)
+    // не пишем снимок, не ставим dirty и не глотаем сообщение об ошибке
+    if (this.history[this.history.length - 1] === current) return;
+    this.history.push(current);
     this.future = [];
     this.dirty = true;
-    this.setStatus('Есть несохранённые изменения', 'dirty');
+    var statusEl = document.getElementById('ws-save-status');
+    if (!(statusEl && statusEl.querySelector('.err'))) {
+      this.setStatus('Есть несохранённые изменения', 'dirty');
+    }
   };
 
   Editor.prototype.restoreSnapshot = function (snapshot) {
@@ -119,37 +137,55 @@
       editor.redraw();
       editor.renderNodePanel();
     };
-    this.view.render();
+    // redraw, а не render: заново строятся hit-пути стрелок и маркеры —
+    // иначе после undo/redo стрелку нельзя выбрать кликом
+    this.redraw();
     this.seq = this.maxNodeSeq() + 1;
     this.sel = null;
     this.selectedIds = [];
     this.root.classList.remove('ws-object-focus');
     var titleInput = this.root.querySelector('#ws-title');
     if (titleInput) titleInput.value = data.title || 'Схема';
+    var heading = document.querySelector('#ws-editor-heading');
+    if (heading) heading.textContent = data.title || 'Схема';
     var themeInput = this.root.querySelector('#ws-theme');
     if (themeInput) themeInput.value = data.theme || 'classic';
     var performanceInput = this.root.querySelector('#ws-performance');
     if (performanceInput) performanceInput.value = ['high', 'lite'].indexOf(data.performance) !== -1 ? data.performance : 'auto';
     this.root.setAttribute('data-ws-theme', data.theme || 'classic');
+    // откат мог удалить сценарий, собиравшийся кликами — иначе остаётся
+    // zombie-режим: класс ws-scenario-capture отключает drag узлов
+    var activeId = this.activeScenarioId;
+    var activeExists = activeId && (data.scenarios || []).filter(function (s) { return s.id === activeId; }).length > 0;
+    if (!activeExists) {
+      this.activeScenarioId = null;
+      this.root.classList.remove('ws-scenario-capture');
+    }
     this.renderScenarios();
-    this.dirty = true;
-    this.setStatus('Есть несохранённые изменения', 'dirty');
+    // Ctrl+Z мог вернуть ровно сохранённое состояние — не пугаем ложным dirty
+    var current = JSON.stringify(this.serialize());
+    this.dirty = current !== this.savedJson;
+    if (this.dirty) this.setStatus('Есть несохранённые изменения', 'dirty');
+    else this.setStatus('✓ ' + this.labels.saved, 'ok');
   };
 
+  // Инвариант истории: history[0] — базовый (сохранённый) снимок, он никогда
+  // не расходуется; history[last] — запись текущего состояния (её пишет
+  // markDirty). Иначе после отката к сохранённому история пустела, и следующий
+  // цикл «изменил → Ctrl+Z» уже ничего не откатывал.
   Editor.prototype.undo = function () {
-    if (!this.history.length) return;
-    // markDirty пишет в историю уже применённое состояние; если вершина равна
-    // текущему — снимаем её, иначе первый Ctrl+Z будет холостым.
+    if (this.history.length < 2) return;
     var current = JSON.stringify(this.serialize());
-    if (this.history[this.history.length - 1] === current) this.history.pop();
-    if (!this.history.length) return;
+    if (this.history[this.history.length - 1] !== current) this.history.push(current);
     this.future.push(current);
-    this.restoreSnapshot(this.history.pop());
+    this.restoreSnapshot(this.history[this.history.length - 2]);
+    this.history.pop();
   };
 
   Editor.prototype.redo = function () {
     if (!this.future.length) return;
-    this.history.push(JSON.stringify(this.serialize()));
+    var current = JSON.stringify(this.serialize());
+    this.history.push(current);
     this.restoreSnapshot(this.future.pop());
   };
 
@@ -233,6 +269,24 @@
     return max;
   };
 
+  // id сценария по максимуму существующих номеров: генерация по длине массива
+  // давала дубликат после «удалил сценарий → добавил», и save отклонялся 422
+  Editor.prototype.nextScenarioId = function () {
+    var scenarios = this.view.scheme.scenarios || [];
+    var max = 0;
+    scenarios.forEach(function (s) {
+      var m = /^scenario(\d+)$/.exec(s.id);
+      if (m) max = Math.max(max, Number(m[1]));
+    });
+    var existing = scenarios.map(function (s) { return s.id; });
+    var candidate = 'scenario' + (max + 1);
+    while (existing.indexOf(candidate) !== -1) {
+      max += 1;
+      candidate = 'scenario' + (max + 1);
+    }
+    return candidate;
+  };
+
   Editor.prototype.redraw = function () {
     var self = this;
     self.view.render();
@@ -281,6 +335,7 @@
         ev.stopPropagation();
         var start = self.svgPoint(ev.clientX, ev.clientY);
         var x = node.x, y = node.y, width = node.w, height = node.h;
+        var moved = false;
         var onMove = function (moveEv) {
           var p = self.svgPoint(moveEv.clientX, moveEv.clientY);
           var dx = p.x - start.x, dy = p.y - start.y;
@@ -298,13 +353,15 @@
           } else if (item[0].indexOf('s') !== -1) {
             node.h = Math.max(minH, height + dy);
           }
+          moved = true;
           self.redraw();
         };
-        // dirty и один снимок в историю — по завершении жеста, а не на каждый кадр
+        // dirty и один снимок в историю — по завершении жеста, причём только
+        // если он реально менял размер (клик по маркеру без движения — не правка)
         var onUp = function () {
           document.removeEventListener('pointermove', onMove);
           document.removeEventListener('pointerup', onUp);
-          self.markDirty();
+          if (moved) self.markDirty();
         };
         document.addEventListener('pointermove', onMove);
         document.addEventListener('pointerup', onUp);
@@ -432,10 +489,12 @@
       tempLine.remove();
       tempDot.remove();
       if (!targetId) { self.redraw(); return; }
-      if (end === 'to' && targetId !== edge.from) {
+      // сброс конца на его же текущий узел — не перепривязка: сторону пользователя
+      // не стираем и холостую запись в историю не создаём
+      if (end === 'to' && targetId !== edge.from && targetId !== edge.to) {
         edge.to = targetId;
         edge.toSide = '';
-      } else if (end === 'from' && targetId !== edge.to) {
+      } else if (end === 'from' && targetId !== edge.to && targetId !== edge.from) {
         edge.from = targetId;
         edge.fromSide = '';
       } else {
@@ -456,13 +515,28 @@
     var container = self.view.container;
 
     var markFormDirty = function (ev) {
-      if (ev.target.closest && (ev.target.closest('.ws-field') || ev.target.closest('.ws-scenario-row') || ev.target.closest('.ws-text-style') || ev.target.id === 'ws-title')) self.markDirty();
+      var t = ev.target;
+      if (!t.closest) return;
+      if (!(t.closest('.ws-field') || t.closest('.ws-scenario-row') || t.closest('.ws-text-style') || t.id === 'ws-title')) return;
+      // range/color тикают 'input' на каждый шаг — живой предпросмотр делает
+      // собственный слушатель элемента; историю пишем один раз по 'change',
+      // иначе Ctrl+Z отматывает изменение по пикселю
+      if (ev.type === 'input' && (t.type === 'range' || t.type === 'color')) return;
+      self.markDirty();
     };
     self.root.addEventListener('input', markFormDirty);
     self.root.addEventListener('change', markFormDirty);
     self.root.addEventListener('keydown', function (ev) {
       // в полях ввода Ctrl+Z/Y и стрелки — нативное поведение, не хоткеи схемы
       var inField = ev.target.tagName === 'INPUT' || ev.target.tagName === 'TEXTAREA' || ev.target.tagName === 'SELECT';
+      if (ev.key === 'Escape' && !inField) {
+        if (self.pendingFrom) {
+          self.pendingFrom = null;
+          self.setStatus('Добавление стрелки отменено', '');
+        }
+        self.deselect();
+        return;
+      }
       if ((ev.ctrlKey || ev.metaKey) && ev.key.toLowerCase() === 'z') {
         if (inField) return;
         ev.preventDefault();
@@ -483,6 +557,13 @@
       else return;
       ev.preventDefault(); self.markDirty(); self.redraw();
     });
+    // закрытие вкладки с несохранёнными правками — без предупреждения терялась работа
+    window.addEventListener('beforeunload', function (ev) {
+      if (!self.dirty) return;
+      ev.preventDefault();
+      ev.returnValue = '';
+      return '';
+    });
 
     container.addEventListener('click', function (ev) {
       var nodeGroup = ev.target.closest ? ev.target.closest('.ws-node') : null;
@@ -496,7 +577,7 @@
       addScenarioBtn.textContent = '+ ' + self.labels.scenarios;
       addScenarioBtn.addEventListener('click', function () {
         self.view.scheme.scenarios = self.view.scheme.scenarios || [];
-        var scenario = { id: 'scenario' + (self.view.scheme.scenarios.length + 1), title: 'Сценарий', steps: [] };
+        var scenario = { id: self.nextScenarioId(), title: 'Сценарий', steps: [] };
         self.view.scheme.scenarios.push(scenario);
         self.activeScenarioId = scenario.id;
         self.root.classList.add('ws-scenario-capture');
@@ -606,13 +687,22 @@
 
   Editor.prototype.addPaletteEdge = function (route, dashed, from, to, fromSide, toSide, bend) {
     var self = this;
+    self.pendingFrom = null;
+    var key = from + '>' + to;
+    var exists = self.view.edges.some(function (x) { return x.from + '>' + x.to === key; });
+    if (exists) {
+      // валидатор отверг бы повтор пары на save — не создаём заведомо битую стрелку
+      self.setStatus('Такая стрелка уже есть', 'err');
+      self.redraw();
+      return null;
+    }
     var edge = { from: from, to: to, label: '', color: '', dashed: dashed === true, route: route || 'straight', fromSide: fromSide || '', toSide: toSide || '', bend: num(bend, 50) };
     self.view.edges.push(edge);
     self.markDirty();
-    self.pendingFrom = null;
     self.setStatus('', '');
     self.redraw();
     self.selectEdge(edge.from + '>' + edge.to);
+    return edge;
   };
 
   Editor.prototype.setStatus = function (text, cls) {
@@ -628,6 +718,9 @@
   Editor.prototype.deselect = function () {
     this.sel = null;
     this.selectedIds = [];
+    // сброс незавершённого добавления стрелки: иначе клик по пустому месту
+    // снимал выделение, а режим «кликните блок-цель» оставался навсегда
+    this.pendingFrom = null;
     this.root.classList.remove('ws-object-focus');
     var panel = document.getElementById('ws-obj-panel');
     if (panel) panel.innerHTML = '<em>Кликните узел или стрелку на схеме</em>';
@@ -638,7 +731,10 @@
     var self = this;
     if (self.pendingFrom) {
       // pendingFrom ставит только drag-and-drop палитры — from уже задан
-      if (self.pendingFrom.from === id) return;
+      if (self.pendingFrom.from === id) {
+        self.setStatus('Источник и цель совпадают — выберите другой блок', 'err');
+        return;
+      }
       var palette = self.pendingFrom.palette;
       self.addPaletteEdge(palette.route, palette.dashed, self.pendingFrom.from, id, palette.fromSide, palette.toSide, palette.bend);
       return;
@@ -739,7 +835,11 @@
     var size = document.createElement('input');
     size.type = 'number'; size.min = '8'; size.max = '32'; size.value = n.fontSize;
     size.setAttribute('aria-label', 'Размер шрифта');
-    size.addEventListener('change', function () { n.fontSize = Math.max(8, Math.min(32, num(size.value, 12))); self.redraw(); });
+    size.addEventListener('change', function () {
+      n.fontSize = fieldNum(size, n.fontSize, 8, 32);
+      size.value = n.fontSize;
+      self.redraw();
+    });
     textStyle.appendChild(size);
     var weight = document.createElement('select');
     [['normal', 'Обычный'], ['bold', 'Жирный']].forEach(function (pair) { var o = document.createElement('option'); o.value = pair[0]; o.textContent = pair[1]; if (n.fontWeight === pair[0]) o.selected = true; weight.appendChild(o); });
@@ -778,7 +878,9 @@
     field('Ссылка (вместо страницы этапа)', n.url, function (v) { n.url = v; });
     field('ID запроса — живой счётчик', n.queryId, function (v) {
       var q = parseInt(v, 10);
-      n.queryId = isFinite(q) && q > 0 ? q : null;
+      // та же верхняя граница, что у валидатора: большее значение он всё равно
+      // молча превратил бы в null, и счётчик исчезал бы без предупреждения
+      n.queryId = isFinite(q) && q > 0 && q <= 999999999 ? q : null;
     });
 
     var geom = document.createElement('div');
@@ -792,7 +894,11 @@
       var input = document.createElement('input');
       input.type = 'number'; input.value = n[pair[0]]; input.setAttribute('aria-label', pair[1]);
       input.addEventListener('change', function () {
-        n[pair[0]] = num(input.value, n[pair[0]]);
+        // пустое поле/мусор возвращают прежнее значение; габариты — не ниже
+        // минимума валидатора (иначе узел исчезает с холста)
+        var min = (pair[0] === 'w' || pair[0] === 'h') ? 20 : undefined;
+        n[pair[0]] = fieldNum(input, n[pair[0]], min);
+        input.value = n[pair[0]];
         self.redraw();
       });
       cell.appendChild(input);
@@ -880,10 +986,12 @@
     };
 
     nodeSelect('Откуда (блок)', e.from, function (v) {
+      if (v === e.to) { self.setStatus('Начало и конец стрелки не могут совпадать', 'err'); self.renderEdgePanel(); return; }
       e.from = v; self.sel.key = e.from + '>' + e.to;
       self.redraw(); self.renderEdgePanel();
     });
     nodeSelect('Куда (блок)', e.to, function (v) {
+      if (v === e.from) { self.setStatus('Начало и конец стрелки не могут совпадать', 'err'); self.renderEdgePanel(); return; }
       e.to = v; self.sel.key = e.from + '>' + e.to;
       self.redraw(); self.renderEdgePanel();
     });
@@ -898,7 +1006,11 @@
     var labelSize = document.createElement('input');
     labelSize.type = 'number'; labelSize.min = '8'; labelSize.max = '32'; labelSize.value = e.labelFontSize;
     labelSize.setAttribute('aria-label', 'Размер шрифта подписи');
-    labelSize.addEventListener('change', function () { e.labelFontSize = Math.max(8, Math.min(32, num(labelSize.value, 11))); self.redraw(); });
+    labelSize.addEventListener('change', function () {
+      e.labelFontSize = fieldNum(labelSize, e.labelFontSize, 8, 32);
+      labelSize.value = e.labelFontSize;
+      self.redraw();
+    });
     labelStyle.appendChild(labelSize);
     var labelWeight = document.createElement('select');
     [['normal', 'Обычный'], ['bold', 'Жирный']].forEach(function (pair) { var o = document.createElement('option'); o.value = pair[0]; o.textContent = pair[1]; if (e.labelFontWeight === pair[0]) o.selected = true; labelWeight.appendChild(o); });
@@ -953,7 +1065,7 @@
       var bendLabel = document.createElement('label');
       bendLabel.textContent = self.labels.bend + ' (' + e.bend + ')';
       var bend = document.createElement('input');
-      bend.type = 'range'; bend.min = '0'; bend.max = '100'; bend.value = String(num(e.bend, 50));
+      bend.type = 'range'; bend.min = '0'; bend.max = '200'; bend.value = String(num(e.bend, 50));
       bend.addEventListener('input', function () {
         e.bend = num(bend.value, 50);
         bendLabel.textContent = self.labels.bend + ' (' + e.bend + ')';
@@ -1099,6 +1211,9 @@
       });
     }).then(function (res) {
       if (res.status === 200 && res.data && res.data.ok) {
+        // база для dirty обновляется: откат Ctrl+Z к сохранённому состоянию
+        // теперь снова покажет «Схема сохранена», а не ложное «есть изменения»
+        self.savedJson = JSON.stringify(self.serialize());
         self.dirty = false;
         self.setStatus('✓ ' + self.labels.saved, 'ok');
       } else {
@@ -1125,6 +1240,9 @@
   function init() {
     var root = document.getElementById('ws-editor');
     if (!root || !window.WorkScheme || !window.WorkScheme.View) return;
+    // повторный init (естественный DOMContentLoaded после dev-синтетического
+    // или наоборот) строил бы второй Editor с дублем обработчиков root
+    if (root.__wsEditorInstance) return;
     try {
       new Editor(root);
     } catch (e) {

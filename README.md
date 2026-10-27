@@ -55,8 +55,6 @@ git clone https://github.com/kirilljan985-debug/redmine_work_scheme.git redmine_
 }
 ```
 
-### Узел (nodes)
-
 `theme` — визуальная тема схемы: `classic`, `ocean`, `graphite`, `warm` или
 `paper`. Тема задаёт фон полотна и оформление редактора.
 
@@ -67,6 +65,11 @@ git clone https://github.com/kirilljan985-debug/redmine_work_scheme.git redmine_
 пульсаций и хвоста маркера, анимация ~30 fps; цвета состояний проигрывания
 сохраняются). Задаётся в редакторе рядом с темой.
 
+Объём схемы ограничен 60 КБ (колонка настроек Redmine имеет лимит записи в
+MySQL) — редактор отклонит сохранение с ошибкой, схема при этом не меняется.
+
+### Узел (nodes)
+
 | Поле | Тип | Обяз. | Описание |
 |------|-----|-------|----------|
 | `id` | строка | да | Латиница/цифры/`-`/`_`, уникальный |
@@ -75,7 +78,7 @@ git clone https://github.com/kirilljan985-debug/redmine_work_scheme.git redmine_
 | `dept` | строка | нет | Ответственный отдел (в подсказке) |
 | `description` | строка | нет | **Короткий текст подсказки при наведении** |
 | `page` | строка | нет | **Полное описание этапа** (wiki-разметка) — страница `/work_scheme/stages/<id>`, открывается кликом по узлу |
-| `url` | строка | нет | Вместо `page`: адрес для перехода по клику — `http(s)://…` или от корня сайта (`/projects/…/wiki/…`); прочие схемы (`javascript:` и т.п.) валидатор отклоняет |
+| `url` | строка | нет | Вместо `page`: адрес для перехода по клику — `http(s)://…` или от корня сайта (`/projects/…/wiki/…`); прочие схемы (`javascript:` и т.п.) валидатор отклоняет. При заданном `query_id` клик ведёт к списку задач запроса — `query_id` приоритетнее |
 | `icon` | строка | нет | Встроенная иконка: `user`, `document`, `search`, `decision`, `certificate`, `gear`, `rocket`; назначается в редакторе перетаскиванием |
 | `query_id` | число | нет | ID сохранённого запроса Redmine для **живого счётчика** (см. ниже) |
 | `x`, `y` | числа | нет | Координаты левого верхнего угла (по умолчанию 0) |
@@ -165,8 +168,9 @@ git clone https://github.com/kirilljan985-debug/redmine_work_scheme.git redmine_
 Счётчик узла = число задач в сохранённом запросе Redmine:
 
 1. Создайте сохранённый запрос (например, «ТЗ на анализе»: трекер «ТЗ»,
-   статус нужной стадии), откройте его и посмотрите ID в адресной строке
-   (`/issues/123?...` — число после `/issues/`).
+   статус нужной стадии) и откройте его — адрес будет вида
+   `/issues?query_id=123`. ID запроса — число после `query_id=`
+   (не путайте с номером задачи из `/issues/123`).
 2. Впишите это число в узел схемы: `"query_id": 123`.
 3. У узла с `query_id` рисуется бейдж с числом задач (правый верхний угол
    блока); клик по такому узлу открывает отфильтрованный список задач
@@ -183,10 +187,13 @@ bundle exec rake redmine:plugins:test NAME=redmine_work_scheme RAILS_ENV=test
 ```
 
 CI: GitHub Actions гоняет тесты на Redmine `7.0-stable` и `master` при каждом push,
-плюс две джобы с установленным additionals (PostgreSQL): 4.7+ (класс-блок) и
-4.6 (легаси-патч) — вместе они исполняют обе ветки подключения dashboard-блока.
-На каждой джобе выполняется smoke-проверка eager-загрузки, как в production.
-При падении хвост тестового лога выводится в аннотации прогона.
+плюс две джобы с установленным additionals (PostgreSQL): 4.7+ (следит за main —
+релизных тегов 4.7 у additionals пока нет) и 4.6 (легаси-патч, зафиксирован на
+теге 4.6.0) — вместе они исполняют обе ветки подключения dashboard-блока. Отдельная
+джоба гоняет jsdom-smoke по JS плагина (инициализация схемы и редактора, проигрывание,
+undo, сериализация — без браузера). На каждой Redmine-джобе выполняется
+smoke-проверка eager-загрузки, как в production. При падении хвост тестового лога
+выводится в аннотации прогона.
 
 ## Разработка и dev-превью (без Redmine)
 
@@ -195,24 +202,29 @@ python -m http.server 8123        # запустить из папки плаг�
 ```
 
 - `http://127.0.0.1:8123/dev/preview.html` — схема: рендер, подсказки,
-  проигрывание сценариев (данные — `dev/scheme.json`, генерируется из схемы
-  по умолчанию).
+  проигрывание сценариев (данные — `dev/scheme.json`, регенерируется из
+  схемы по умолчанию командой `ruby dev/generate_scheme.rb`).
 - `http://127.0.0.1:8123/dev/editor.html` — редактор (кнопка «Сохранить схему»
   в превью не работает — некуда отправлять; на живом Redmine работает).
 
+При правках JS/поднимайте `?v=N` в dev-страницах — иначе браузер отдаст
+старый скрипт из кэша.
+
 Локальные проверки без Redmine: `ruby -c` (.rb), `node --check` (.js),
-`erb -x -T- файл.erb | ruby -c`, чистый minitest по валидатору. Полный прогон —
-только CI (Linux).
+`node test/js/smoke_test.js` (после `npm ci` в `test/js`), чистый minitest по
+валидатору. Полный прогон — только CI (Linux).
 
 ## Структура
 
 ```
-init.rb                                    регистрация плагина + настройки (v0.3.0)
+init.rb                                    регистрация плагина + настройки + ветки подключения additionals
 lib/redmine_work_scheme/scheme.rb          валидатор схемы (чистая логика)
 lib/redmine_work_scheme/default_scheme.rb  схема по умолчанию (сценарий отдела)
-lib/dashboard_blocks/work_scheme_block.rb  блок дашборда additionals (необязательно)
+lib/redmine_work_scheme/patches/dashboard_content_patch.rb  блок для legacy additionals 4.6
+lib/dashboard_blocks/work_scheme_block.rb  блок дашборда additionals 4.7+ (необязательно)
 app/controllers/work_scheme_controller.rb  show / stage / counts / edit / save
-app/views/work_scheme/_block.html.erb      блок схемы
+app/views/work_scheme/_block.html.erb      блок схемы (страница, 4.7+, 4.6)
+app/views/work_scheme/_settings.html.erb   настройки блока для шестерёнки 4.6
 app/views/work_scheme/edit.html.erb        страница редактора
 app/views/settings/_work_scheme.html.erb   JSON в настройках плагина
 assets/javascripts/work_scheme.js          SVG-рендерер (холст, подсказки, проигрывание)
@@ -220,8 +232,10 @@ assets/javascripts/work_scheme_editor.js   визуальный редактор
 assets/stylesheets/work_scheme.css         стили
 config/locales/en.yml, ru.yml              локализация
 test/unit, test/integration                тесты (minitest, в окружении Redmine)
-.github/workflows/test.yml                 CI (Redmine 7.0-stable, master, + additionals)
+test/js/smoke_test.js                      jsdom-smoke по JS (npm ci && node smoke_test.js)
+.github/workflows/test.yml                 CI (Redmine 7.0-stable, master, + additionals, jsdom)
 dev/preview.html, dev/editor.html          dev-превью без Redmine
+dev/generate_scheme.rb                     регенерация dev/scheme.json из схемы по умолчанию
 AGENTS.md                                  память проекта: правила, грабли, статус
 PLAN.md                                    живой план задач с критериями готовности
 ```

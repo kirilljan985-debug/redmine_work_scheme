@@ -86,8 +86,8 @@
         textColor: /^#[0-9a-f]{6}$/i.test(String(raw.text_color || '').trim()) ? String(raw.text_color).trim() : '',
         x: num(raw.x, 0),
         y: num(raw.y, 0),
-        w: num(raw.w, 140),
-        h: num(raw.h, 56)
+        w: Math.max(1, num(raw.w, 140)),
+        h: Math.max(1, num(raw.h, 56))
       };
     });
     this.edges = (scheme.edges || []).map(function (raw) {
@@ -144,6 +144,20 @@
     return { x: node.x + node.w / 2, y: node.y + node.h / 2 };
   };
 
+  // Перевод клиентских координат в систему координат SVG. Без getScreenCTM
+  // drag меряет экранные пиксели и применяет их как юниты viewBox — на узкой
+  // колонке (масштаб ≠ 1) узел отстаёт от курсора и прыгает при отпускании.
+  WorkSchemeView.prototype.svgPoint = function (clientX, clientY) {
+    var svg = this.svg;
+    if (!svg || !svg.createSVGPoint || !svg.getScreenCTM) return null;
+    var matrix = svg.getScreenCTM();
+    if (!matrix) return null;
+    var pt = svg.createSVGPoint();
+    pt.x = clientX;
+    pt.y = clientY;
+    return pt.matrixTransform(matrix.inverse());
+  };
+
   // Безопасный поиск группы узла: id приходит из JSON схемы, поэтому
   // экранируем его для селектора и глотаем ошибку вместо падения рендера.
   WorkSchemeView.prototype.nodeEl = function (id) {
@@ -191,6 +205,11 @@
       maxY = Math.max(maxY, node.y + node.h);
     });
     if (!isFinite(minX)) return { minX: 0, minY: 0, maxX: 300, maxY: 120 };
+    // Облачко «Готово» поднимается на 54 юнита над финишным блоком — не даём
+    // viewBox срезать его верх (актуально для end-узла в верхнем ряду).
+    self.nodes.forEach(function (node) {
+      if (node.type === 'end') minY = Math.min(minY, node.y - 54);
+    });
     // Дуги поверх схемы могут выходить за границы узлов — учитываем их вылет
     // (формула подъёма должна совпадать с edgePath, включая масштаб bend/50)
     self.edges.forEach(function (edge) {
@@ -574,6 +593,9 @@
     });
     select.addEventListener('change', function () {
       var selected = scenarios.filter(function (scenario) { return scenario.id === select.value; })[0];
+      // смена сценария посреди проигрывания: без сброса статус остаётся от
+      // старого сценария, а таймлайн нового красится по чужому индексу
+      self.resetPlayback();
       self.renderPlaybackTimeline(selected);
     });
     controls.appendChild(select);
@@ -703,12 +725,15 @@
         if (!self.editMode) return;
         if (self.container.closest && self.container.closest('.ws-scenario-capture')) return;
         event.preventDefault();
-        var startX = event.clientX;
-        var startY = event.clientY;
+        var start = self.svgPoint(event.clientX, event.clientY);
+        if (!start) return;
+        var startNode = { x: node.x, y: node.y };
 
         var onMove = function (ev) {
-          var dx = ev.clientX - startX;
-          var dy = ev.clientY - startY;
+          var p = self.svgPoint(ev.clientX, ev.clientY);
+          if (!p) return;
+          var dx = p.x - start.x;
+          var dy = p.y - start.y;
           group.setAttribute('transform', 'translate(' + dx + ',' + dy + ')');
           group._wsDrag = { x: dx, y: dy };
         };
@@ -717,9 +742,12 @@
           document.removeEventListener('pointerup', onUp);
           var delta = group._wsDrag || { x: 0, y: 0 };
           delete group._wsDrag;
+          // Вид могли пересоздать (undo/redo во время drag): его canvas уже
+          // отцеплён — повторный render вставил бы устаревшую картину в контейнер
+          if (!self.canvas || self.canvas.parentNode !== self.container) return;
           if (delta.x || delta.y) {
-            node.x = Math.round((node.x + delta.x) / 2) * 2;
-            node.y = Math.round((node.y + delta.y) / 2) * 2;
+            node.x = Math.round((startNode.x + delta.x) / 2) * 2;
+            node.y = Math.round((startNode.y + delta.y) / 2) * 2;
             self.render();
             // редактор вешает хук: вернуть выделение, hit-пути и dirty
             if (typeof self.onNodeDragEnd === 'function') self.onNodeDragEnd();
@@ -874,25 +902,26 @@
   WorkSchemeView.prototype.highlightEdge = function (pathEl, rework) {
     pathEl.classList.add('ws-edge-active', 'ws-edge-drawing');
     if (rework) pathEl.classList.add('ws-edge-rework');
-    // В lite рисуем ребро сразу: dash-анимация перерисовывает область пути
-    // каждый кадр, на слабых машинах это заметный провал.
-    if (this.lite) return;
+    // В lite рисуем ребро сразу: dash-перерисовки дороги, у возвратной ветки
+    // своя CSS-анимация потока. Иначе путь прорисовывается в такт маркеру —
+    // animateMarker двигает stroke-dashoffset по прогрессу движения.
+    if (this.lite || rework) return;
     var reduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     var length = pathEl.getTotalLength ? pathEl.getTotalLength() : 0;
-    if (length > 0) {
-      pathEl.style.strokeDasharray = length + ' ' + length;
-      pathEl.style.strokeDashoffset = reduced ? '0' : String(length);
-      if (!reduced) window.requestAnimationFrame(function () {
-        pathEl.style.strokeDashoffset = '0';
-      });
-    }
+    if (reduced || !(length > 0)) return;
+    pathEl._wsDrawLength = length;
+    pathEl.style.strokeDasharray = length + ' ' + length;
+    pathEl.style.strokeDashoffset = String(length);
   };
 
   WorkSchemeView.prototype.markEdgeComplete = function (pathEl) {
     if (!pathEl) return;
     pathEl.classList.remove('ws-edge-drawing');
     pathEl.classList.add('ws-edge-complete');
-    pathEl.style.strokeDashoffset = '0';
+    // inline-dash побеждал бы CSS-пунктир ws-edge-dashed — чистим оба свойства
+    pathEl._wsDrawLength = null;
+    pathEl.style.strokeDasharray = '';
+    pathEl.style.strokeDashoffset = '';
   };
 
   WorkSchemeView.prototype.showPlaybackToken = function (node, preservePoint) {
@@ -954,6 +983,9 @@
     if (this.performanceMode !== 'auto' || this.lite) return;
     if (this.lastFrameTs) this.frameTimes.push(timestamp - this.lastFrameTs);
     this.lastFrameTs = timestamp;
+    // скользящее окно: массив живёт столько же, сколько страница, и без
+    // ограничения растёт вместе с ценой пересчёта среднего на каждом кадре
+    if (this.frameTimes.length > 20) this.frameTimes.shift();
     if (this.frameTimes.length < 20) return;
     var sum = 0;
     this.frameTimes.forEach(function (value) { sum += value; });
@@ -1055,6 +1087,10 @@
     var marker = self.playbackToken;
     if (!marker) { self.showPlaybackToken(node); marker = self.playbackToken; }
     var total = pathEl.getTotalLength();
+    // Вырожденное ребро (нулевой размер узла): пути нет — просто завершаем
+    // шаг, иначе length/total даёт NaN и цепочка rAF умирает с заблокированной
+    // кнопкой «Проиграть»
+    if (!(total > 0)) { done(); return; }
     var duration = reduced ? 0 : this.playbackDelay(900);
     var start = null;
     var startPoint = pathEl.getPointAtLength(0);
@@ -1130,6 +1166,10 @@
       var length = total * progress;
       var point = sampleAt(length);
       move(point);
+      // прорисовка ребра синхронно с маркером: фронт штриха ровно под ним
+      if (pathEl._wsDrawLength) {
+        pathEl.style.strokeDashoffset = String(pathEl._wsDrawLength * (1 - progress));
+      }
       rotate(point, sampleAt(Math.min(total, length + 2)));
       if (progress < 1) {
         window.requestAnimationFrame(tick);
@@ -1273,6 +1313,9 @@
   WorkSchemeView.prototype.attachTooltip = function () {
     var self = this;
     if (self.container.closest && self.container.closest('#ws-editor')) return;
+    // render() вызывается повторно (undo/redo, пересоздание View) — прежний
+    // mousemove-обработчик надо снять с контейнера, иначе они копятся
+    if (self._onContainerMove) self.container.removeEventListener('mousemove', self._onContainerMove);
     var tooltip = document.createElement('div');
     tooltip.className = 'ws-tooltip';
     self.container.appendChild(tooltip);
@@ -1339,10 +1382,11 @@
     tooltip.addEventListener('mouseenter', cancelHide);
     tooltip.addEventListener('mouseleave', scheduleHide);
 
-    self.container.addEventListener('mousemove', function (event) {
+    self._onContainerMove = function (event) {
       var group = event.target.closest ? event.target.closest('.ws-node') : null;
       if (group) move(event);
-    });
+    };
+    self.container.addEventListener('mousemove', self._onContainerMove);
     Array.prototype.forEach.call(self.container.querySelectorAll('.ws-node'), function (group) {
       var id = group.getAttribute('data-id');
       var node = self.byId[id];
@@ -1356,6 +1400,15 @@
         if (self.editMode) return; // в режиме правки клик не уводит со страницы
         var target = self.stageTarget(node);
         if (target) window.location.href = target;
+      });
+      // role="link" + tabindex обещают клавиатурную навигацию — Enter/Space
+      group.addEventListener('keydown', function (event) {
+        if (event.key !== 'Enter' && event.key !== ' ') return;
+        if (self.editMode) return;
+        var target = self.stageTarget(node);
+        if (!target) return;
+        event.preventDefault();
+        window.location.href = target;
       });
     });
   };

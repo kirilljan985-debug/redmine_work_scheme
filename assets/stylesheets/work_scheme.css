@@ -943,11 +943,15 @@
   scrollbar-width: thin;
 }
 
+/* Атрибут modern может стоять и на самом контейнере (страница схемы,
+   dashboard-блок), и на предке (#ws-editor в редакторе) */
+[data-layout="modern"].ws-container,
 [data-layout="modern"] .ws-container {
   border-radius: 18px;
   padding: 10px;
 }
 
+[data-layout="modern"].ws-container > .ws-controls,
 [data-layout="modern"] .ws-container > .ws-controls {
   position: sticky;
   top: 8px;

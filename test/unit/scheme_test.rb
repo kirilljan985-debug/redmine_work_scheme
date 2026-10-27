@@ -228,6 +228,35 @@ class RedmineWorkSchemeSchemeTest < ActiveSupport::TestCase
     assert_equal 'auto', parsed[:data]['performance']
   end
 
+  test 'node size is clamped to minimum' do
+    # нулевой/отрицательный размер давал невидимый rect и NaN в анимации
+    parsed = RedmineWorkScheme::Scheme.parse(valid_scheme_json_with_nodes(
+      [{ 'id' => 'a', 'title' => 'A', 'w' => 0, 'h' => -50 },
+       { 'id' => 'b', 'title' => 'B', 'w' => 19, 'h' => 19 }]
+    ))
+    assert_empty parsed[:errors]
+    a = parsed[:data]['nodes'][0]
+    b = parsed[:data]['nodes'][1]
+    minimum = RedmineWorkScheme::Scheme::MIN_NODE_SIZE
+    assert_equal minimum, a['w']
+    assert_equal minimum, a['h']
+    assert_equal minimum, b['w']
+    assert_equal minimum, b['h']
+  end
+
+  test 'icon accepts known values and falls back to empty' do
+    parsed = RedmineWorkScheme::Scheme.parse(valid_scheme_json_with_nodes(
+      [{ 'id' => 'a', 'title' => 'A', 'icon' => 'gear' },
+       { 'id' => 'b', 'title' => 'B', 'icon' => 'cloud' },
+       { 'id' => 'c', 'title' => 'C' }]
+    ))
+    assert_empty parsed[:errors]
+    by_id = parsed[:data]['nodes'].index_by { |n| n['id'] }
+    assert_equal 'gear', by_id['a']['icon']
+    assert_equal '', by_id['b']['icon'], 'unknown icon must normalize to empty'
+    assert_equal '', by_id['c']['icon']
+  end
+
   test 'from_settings parses stored json' do
     previous = Setting.plugin_redmine_work_scheme
     Setting.plugin_redmine_work_scheme = {
@@ -308,6 +337,42 @@ class RedmineWorkSchemeSchemeTest < ActiveSupport::TestCase
                        { 'id' => 's', 'title' => 'S2', 'steps' => ['a'] }]
     }.to_json)
     assert parsed[:errors].any? { |e| e.include?('s') }
+  end
+
+  test 'scenario id must follow the node id format' do
+    # id сценария попадает в data-атрибуты и селекторы — тот же формат, что у узлов
+    parsed = RedmineWorkScheme::Scheme.parse({
+      'nodes' => [{ 'id' => 'a', 'title' => 'A' }],
+      'edges' => [],
+      'scenarios' => [{ 'id' => 'a,b', 'title' => 'S', 'steps' => ['a'] }]
+    }.to_json)
+    assert parsed[:errors].any? { |e| e.include?('a,b') }
+    assert_nil parsed[:data]
+
+    parsed = RedmineWorkScheme::Scheme.parse({
+      'nodes' => [{ 'id' => 'a', 'title' => 'A' }],
+      'edges' => [],
+      'scenarios' => [{ 'id' => 're-work_2', 'title' => 'S', 'steps' => ['a'] }]
+    }.to_json)
+    assert_empty parsed[:errors]
+    assert_equal 're-work_2', parsed[:data]['scenarios'].first['id']
+  end
+
+  test 'dashed accepts booleans and true/false strings, rejects garbage' do
+    [[true, true], [false, false], ['true', true], ['false', false], [nil, false]].each do |raw, expected|
+      parsed = RedmineWorkScheme::Scheme.parse(valid_scheme_json_with_nodes(
+        [{ 'id' => 'a', 'title' => 'A' }],
+        [{ 'from' => 'a', 'to' => 'a', 'dashed' => raw }]
+      ))
+      assert_empty parsed[:errors], "dashed #{raw.inspect} must pass"
+      assert_equal expected, parsed[:data]['edges'].first['dashed']
+    end
+
+    parsed = RedmineWorkScheme::Scheme.parse(valid_scheme_json_with_nodes(
+      [{ 'id' => 'a', 'title' => 'A' }],
+      [{ 'from' => 'a', 'to' => 'a', 'dashed' => 'yes' }]
+    ))
+    assert parsed[:errors].any?, 'garbage dashed must be reported, not silently falsified'
   end
 
   test 'url edges: uppercase scheme, bare slash and stripped value' do

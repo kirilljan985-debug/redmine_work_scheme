@@ -12,6 +12,37 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  js-smoke:
+    # Рантайм-JS: инициализация рендерера и редактора в jsdom (проигрывание,
+    # undo, сериализация, уникальные id сценариев). Раньше рантайм не
+    # проверялся ничем, кроме node --check, — регресс уходил в main зелёным.
+    name: JS smoke (jsdom)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out plugin
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: test/js/package-lock.json
+
+      - name: Syntax check JS
+        run: |
+          node --check assets/javascripts/work_scheme.js
+          node --check assets/javascripts/work_scheme_editor.js
+
+      - name: Install jsdom
+        run: npm ci
+        working-directory: test/js
+
+      - name: Run DOM smoke
+        run: node smoke_test.js
+        working-directory: test/js
+
   redmine:
     name: Redmine ${{ matrix.redmine }}
     runs-on: ubuntu-latest
@@ -149,6 +180,8 @@ jobs:
     # Ветка интеграции с additionals не выполняется в обычной матрице (там ядро
     # без плагинов), поэтому гоняем её отдельно на PostgreSQL (additionals >= 4.7
     # не работает под sqlite) — по разделу 4 скилла redmine-plugin-dev.
+    # Релизных тегов 4.7 у additionals нет (последний тег — 4.6.0, main = 4.7.0-main):
+    # джоба сознательно следит за плавающим main как канарейкой линии 4.7+.
     name: Redmine 7.0-stable + additionals
     runs-on: ubuntu-latest
     timeout-minutes: 25

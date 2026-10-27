@@ -4,6 +4,10 @@
 class WorkSchemeController < ApplicationController
   layout 'base'
 
+  # Колонка settings.value — TEXT (64 КБ в MySQL): на не-strict MySQL лишний
+  # хвост тихо обрезался бы при записи. Явный лимит честнее ошибки БД.
+  MAX_SCHEME_KB = 60
+
   def show
     @scheme = parsed_scheme
   end
@@ -55,6 +59,13 @@ class WorkSchemeController < ApplicationController
       return
     end
     json_str = params[:json].to_s
+    if json_str.bytesize > MAX_SCHEME_KB * 1024
+      render json: { errors: [l(:ws_error_scheme_too_large,
+                                  size: (json_str.bytesize.to_f / 1024).ceil,
+                                  limit: MAX_SCHEME_KB)] },
+             status: :unprocessable_entity
+      return
+    end
     parsed = RedmineWorkScheme::Scheme.parse(json_str)
     if parsed[:errors].any?
       render json: { errors: parsed[:errors] }, status: :unprocessable_entity

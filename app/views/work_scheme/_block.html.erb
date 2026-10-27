@@ -38,7 +38,7 @@
   <% else %>
     <%= stylesheet_link_tag 'work_scheme', plugin: :redmine_work_scheme %>
     <%= javascript_include_tag 'work_scheme', plugin: :redmine_work_scheme %>
-    <div class="ws-container<%= ' ws-additionals-block' if additionals_block %>" data-work-scheme<% if additionals_block %> style="--ws-block-width: <%= ws_width %>%; --ws-block-height: <%= ws_height %>px;"<% end %>
+    <div class="ws-container<%= ' ws-additionals-block' if additionals_block %>" data-work-scheme data-layout="modern"<% if additionals_block %> style="--ws-block-width: <%= ws_width %>%; --ws-block-height: <%= ws_height %>px;"<% end %>
          data-stage-base-url="<%= work_scheme_stage_path('__ID__').gsub('__ID__', '') %>"
          data-counts-url="<%= work_scheme_counts_path %>"
          data-query-base-url="<%= issues_path %>"

@@ -1,0 +1,11 @@
+{
+  "name": "redmine_work_scheme_js_smoke",
+  "private": true,
+  "description": "jsdom smoke tests for the plugin JS (no browser, no Redmine; run in CI and locally via npm ci && node smoke_test.js)",
+  "scripts": {
+    "test": "node smoke_test.js"
+  },
+  "devDependencies": {
+    "jsdom": "^24.1.0"
+  }
+}

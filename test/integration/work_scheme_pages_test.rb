@@ -13,6 +13,9 @@ class RedmineWorkSchemePagesTest < Redmine::IntegrationTest
     get '/work_scheme'
     assert_response :success
     assert_select 'div.ws-container[data-work-scheme]'
+    # modern-layout включён атрибутом на самом контейнере (страница и
+    # dashboard-блок) — регрессия: атрибут был только в dev-превью
+    assert_select 'div.ws-container[data-layout="modern"]'
     assert_select 'script.ws-data'
     assert_select 'div.ws-container[data-counts-url="/work_scheme/counts"]'
     assert_select 'div.ws-container[data-query-base-url="/issues"]'
@@ -44,13 +47,16 @@ class RedmineWorkSchemePagesTest < Redmine::IntegrationTest
 
   test 'scheme page and counts endpoint are accessible anonymously' do
     # тест рассчитывает на публичный доступ; на инсталляции с принудительным
-    # логином он был бы ложным — фиксируем настройку явно
+    # логином он был бы ложным — фиксируем настройку явно и восстанавливаем
+    previous = Setting.login_required
     Setting.login_required = false
     get '/work_scheme'
     assert_response :success
     get '/work_scheme/counts?ids='
     assert_response :success
     assert_equal({}, JSON.parse(@response.body)['counts'])
+  ensure
+    Setting.login_required = previous
   end
 
   test 'stage page renders wiki text for node' do
@@ -136,7 +142,11 @@ class RedmineWorkSchemePagesTest < Redmine::IntegrationTest
 
   test 'counts endpoint accepts array-style ids and survives id flood' do
     public_query = IssueQuery.create!(name: 'WS public query', visibility: Query::VISIBILITY_PUBLIC, user_id: 1)
+    overflow_query = IssueQuery.create!(name: 'WS overflow query', visibility: Query::VISIBILITY_PUBLIC, user_id: 1)
     flood = (1..150).map { |i| "99999999#{i}" }.join('&ids[]=')
+    # существующие несуществующие id в диапазоне колонки: занимают слоты лимита
+    far = 900_000_000_000
+    slots = (1..100).map { |i| far + i }
 
     log_user 'jsmith', 'jsmith'
     get "/work_scheme/counts?ids[]=#{public_query.id}&ids[]=#{public_query.id}"
@@ -150,6 +160,17 @@ class RedmineWorkSchemePagesTest < Redmine::IntegrationTest
 
     get "/work_scheme/counts?ids[]=#{flood}"
     assert_response :success, 'flood of oversized ids must not produce 500'
+
+    # лимит первых 100: 100 дальних id + валидный запрос 101-м — уже за лимитом
+    get "/work_scheme/counts?ids[]=#{(slots + [overflow_query.id]).join('&ids[]=')}"
+    assert_response :success
+    counts = JSON.parse(@response.body)['counts']
+    assert_not counts.key?(overflow_query.id.to_s), 'ids beyond the first 100 must be dropped'
+
+    get "/work_scheme/counts?ids[]=#{(slots[0, 99] + [overflow_query.id, slots[99]]).join('&ids[]=')}"
+    assert_response :success
+    counts = JSON.parse(@response.body)['counts']
+    assert counts.key?(overflow_query.id.to_s), 'id at position 100 must still be counted'
   end
 
   test 'save endpoint validates and stores scheme' do
@@ -169,6 +190,21 @@ class RedmineWorkSchemePagesTest < Redmine::IntegrationTest
     assert_response :unprocessable_entity
     assert JSON.parse(@response.body)['errors'].any?
     assert_match 'Старт редактора', Setting.plugin_redmine_work_scheme['json']
+  end
+
+  test 'save endpoint rejects oversized scheme before hitting the DB' do
+    # колонка settings.value — TEXT (64 КБ в MySQL): лимит должен отсекать
+    # раньше записи, иначе на не-strict MySQL JSON тихо обрезался бы
+    log_user 'admin', 'admin'
+    big_scheme = {
+      'nodes' => [{ 'id' => 'big', 'type' => 'start', 'title' => 'Большая схема', 'description' => 'x' * 70_000 }],
+      'edges' => [],
+      'scenarios' => []
+    }.to_json
+    assert_operator big_scheme.bytesize, :>, 64 * 1024
+    post '/work_scheme/save', params: { json: big_scheme }
+    assert_response :unprocessable_entity
+    assert JSON.parse(@response.body)['errors'].any?
   end
 
   test 'save endpoint rejects non-admin' do

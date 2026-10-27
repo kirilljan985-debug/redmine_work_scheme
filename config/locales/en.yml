@@ -73,6 +73,7 @@ en:
   ws_hint_check_settings: "Check the scheme JSON in the plugin settings."
   ws_error_admin_only: "The scheme editor is available to administrators only."
   ws_error_save_failed: "Failed to save the scheme (see the Redmine log for details)."
+  ws_error_scheme_too_large: "The scheme is too large (%{size} KB of %{limit} KB allowed). Shorten the stage wiki texts."
   ws_settings_json: "Scheme JSON"
   ws_settings_hint: "Edit nodes, edges and playback scenarios here. The format is documented in the plugin README. Validation errors are shown here and on the scheme page."
   ws_error_invalid_scheme: "The scheme contains errors:"

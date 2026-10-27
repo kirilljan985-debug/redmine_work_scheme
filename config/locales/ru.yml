@@ -73,6 +73,7 @@ ru:
   ws_hint_check_settings: "Проверьте JSON схемы в настройках плагина."
   ws_error_admin_only: "Редактор схемы доступен только администратору."
   ws_error_save_failed: "Не удалось сохранить схему (подробности в журнале Redmine)."
+  ws_error_scheme_too_large: "Схема слишком большая (%{size} КБ из допустимых %{limit} КБ). Сократите wiki-тексты этапов."
   ws_settings_json: "JSON схемы"
   ws_settings_hint: "Отредактируйте узлы (nodes), связи (edges) и сценарии проигрывания (scenarios). Формат описан в README плагина. Ошибки валидации показываются здесь и на странице схемы."
   ws_error_invalid_scheme: "Схема содержит ошибки:"

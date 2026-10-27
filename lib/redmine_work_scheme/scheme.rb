@@ -18,6 +18,9 @@ module RedmineWorkScheme
     PERFORMANCE_MODES = %w(auto high lite).freeze
     DEFAULT_NODE_WIDTH = 140
     DEFAULT_NODE_HEIGHT = 56
+    # Нижняя граница геометрии: нулевой/отрицательный размер даёт невидимый
+    # rect и NaN в анимации проигрывания (длина пути 0).
+    MIN_NODE_SIZE = 20
 
     module_function
 
@@ -165,8 +168,8 @@ module RedmineWorkScheme
         'text_color' => normalize_text_color(raw['text_color'], errors, index, :node),
         'x' => int_value(raw['x'], 0),
         'y' => int_value(raw['y'], 0),
-        'w' => int_value(raw['w'], DEFAULT_NODE_WIDTH),
-        'h' => int_value(raw['h'], DEFAULT_NODE_HEIGHT)
+        'w' => [int_value(raw['w'], DEFAULT_NODE_WIDTH), MIN_NODE_SIZE].max,
+        'h' => [int_value(raw['h'], DEFAULT_NODE_HEIGHT), MIN_NODE_SIZE].max
       }
     end
 
@@ -219,7 +222,7 @@ module RedmineWorkScheme
           'label_font_weight' => TEXT_WEIGHTS.include?(raw['label_font_weight'].to_s) ? raw['label_font_weight'].to_s : 'normal',
           'label_font_family' => TEXT_FAMILIES.include?(raw['label_font_family'].to_s) ? raw['label_font_family'].to_s : 'sans-serif',
           'label_text_color' => normalize_text_color(raw['label_text_color'], errors, index, :edge),
-          'dashed' => raw['dashed'] == true,
+          'dashed' => normalize_dashed(raw['dashed'], errors, index),
           'route' => route,
           'from_side' => from_side,
           'to_side' => to_side,
@@ -249,6 +252,12 @@ module RedmineWorkScheme
           errors << interpolate(message_for(:ws_error_scenario_invalid), index: index + 1, unknown: unknown.join(', '))
           next nil
         end
+        # Тот же формат, что у id узлов: id попадает в data-атрибуты и
+        # подсказки редактора — произвольные символы там не предусмотрены.
+        unless id =~ /\A[A-Za-z0-9_-]+\z/
+          errors << interpolate(message_for(:ws_error_scenario_bad_id), id: id)
+          next nil
+        end
         if seen[id]
           errors << interpolate(message_for(:ws_error_scenario_dup_id), id: id)
           next nil
@@ -266,6 +275,17 @@ module RedmineWorkScheme
       side = value.to_s.strip.downcase
       return '' if side.empty?
       EDGE_SIDES.include?(side) ? side : :invalid
+    end
+
+    # Булево поле; строковые "true"/"false" принимаем (JSON часто правят
+    # руками), остальное — явная ошибка вместо молчаливого false.
+    def normalize_dashed(value, errors, index)
+      return true if value == true
+      return false if value.nil? || value == false
+      normalized = value.to_s.strip.downcase
+      return normalized == 'true' if %w(true false).include?(normalized)
+      errors << interpolate(message_for(:ws_error_edge_bad_dashed), index: index + 1)
+      false
     end
 
     def normalize_color(value, errors, index)
@@ -333,11 +353,13 @@ module RedmineWorkScheme
       'ws_error_edge_dup' => 'Стрелка №%{index}: повтор стрелки "%{from}" → "%{to}".',
       'ws_error_edge_bad_side' => 'Стрелка №%{index}: недопустимая сторона "%{side}" (допустимо: left, right, top, bottom или пусто).',
       'ws_error_edge_bad_color' => 'Стрелка №%{index}: цвет должен быть в формате #RRGGBB или пустым.',
+      'ws_error_edge_bad_dashed' => 'Стрелка №%{index}: dashed должен быть true или false (допускаются строковые "true"/"false").',
       'ws_error_bad_text_color_node' => 'Узел №%{index}: цвет текста должен быть в формате #RRGGBB или пустым.',
       'ws_error_bad_text_color_edge' => 'Стрелка №%{index}: цвет текста должен быть в формате #RRGGBB или пустым.',
       'ws_error_scenarios_not_array' => '"scenarios" должен быть массивом.',
       'ws_error_scenario_not_object' => 'Сценарий №%{index} — не объект.',
       'ws_error_scenario_invalid' => 'Сценарий №%{index} заполнен неверно (нужны id, title и steps существующих узлов; неизвестные узлы: %{unknown}).',
+      'ws_error_scenario_bad_id' => 'Сценарий "%{id}": id может содержать только латиницу, цифры, "-" и "_".',
       'ws_error_scenario_dup_id' => 'Дубликат сценария "%{id}".'
     }.freeze
 
