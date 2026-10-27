@@ -130,8 +130,9 @@ MySQL) — редактор отклонит сохранение с ошибк�
 
 ## Где что на схеме
 
-- Верхнее меню Redmine: пункт **«Схема»** со своей иконкой — переход на
-  `/work_scheme` из любой страницы.
+- Кнопка «Схема» в шапке: добавляется **кастомной ссылкой** в настройках
+  темы ModernLayout (sidebar settings → custom links, адрес `/work_scheme`);
+  плагин намеренно не регистрирует пункт меню сам.
 - Страница схемы: `/work_scheme` (то же содержимое после встраивания в дашборд
   появится блоком; страница остаётся как прямая ссылка).
 - Страница этапа: `/work_scheme/stages/<id узла>` — генерируется из поля
@@ -236,7 +237,6 @@ app/views/work_scheme/edit.html.erb        страница редактора
 app/views/settings/_work_scheme.html.erb   JSON в настройках плагина
 assets/javascripts/work_scheme.js          SVG-рендерер (холст, подсказки, проигрывание)
 assets/javascripts/work_scheme_editor.js   визуальный редактор
-assets/images/icons.svg                    иконка пункта верхнего меню (спрайт формата ядра)
 assets/stylesheets/work_scheme.css         стили
 config/locales/en.yml, ru.yml              локализация
 test/unit, test/integration                тесты (minitest, в окружении Redmine)

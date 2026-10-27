@@ -20,15 +20,9 @@ Redmine::Plugin.register :redmine_work_scheme do
   settings default: { 'json' => RedmineWorkScheme::DefaultScheme.json },
            partial: 'settings/work_scheme'
 
-  # Пункт верхнего меню «Схема» со своей иконкой: спрайт плагина
-  # (assets/images/icons.svg → plugin_assets/redmine_work_scheme/icons.svg),
-  # формат символов как в ядре Redmine 6/7.
-  menu :top_menu, :work_scheme,
-       { controller: 'work_scheme', action: 'show' },
-       caption: :ws_label_scheme,
-       icon: 'work-scheme',
-       plugin: self.id,
-       after: :home
+  # Кнопка «Схема» в шапке НЕ регистрируется через menu :top_menu — по
+  # решению пользователя она добавляется кастомной ссылкой в настройках
+  # темы ModernLayout (sidebar settings → custom links, адрес /work_scheme).
 end
 
 # Блок дашборда additionals: два поколения API. 4.7+ — класс в
