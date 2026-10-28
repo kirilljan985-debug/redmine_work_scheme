@@ -62,13 +62,50 @@
   }
 
   function WorkSchemeView(container, scheme) {
+    var previous = container.__wsViewInstance;
+    if (previous) {
+      previous.resetPlayback();
+      if (previous._onDocHide) document.removeEventListener('click', previous._onDocHide);
+    }
+    container.__wsViewInstance = this;
     this.container = container;
-    this.scheme = scheme || {};
+    this.schemes = scheme && Array.isArray(scheme.schemes) ? scheme.schemes : null;
+    this.activeSchemeIndex = 0;
+    scheme = this.schemes ? this.schemes[0].json : (scheme || {});
+    this.scheme = scheme;
     this.container.setAttribute('data-ws-theme', this.scheme.theme || 'classic');
     this.stageBase = container.getAttribute('data-stage-base-url') || '';
     this.countsUrl = container.getAttribute('data-counts-url') || '';
     this.queryBase = container.getAttribute('data-query-base-url') || '';
     this.counts = {};
+    this.setScheme(scheme);
+    this.pathByEdge = {};
+    this._adaptiveLite = false;
+    this.applyPerformanceMode();
+    this.frameTimes = [];
+    this.lastFrameTs = 0;
+    this.playing = false;
+    this.playbackSpeed = 0.5;
+    this.reworkTriggered = false;
+    this.playbackTrail = null;
+    this.playbackHistory = [];
+    this.playbackSuccess = null;
+    this.playbackTimeline = null;
+    this.zoom = 1;
+    this.timers = [];
+    this.editMode = false;
+    this.render();
+    this.loadCounts();
+  }
+
+  WorkSchemeView.prototype.destroy = function () {
+    this.resetPlayback();
+    if (this._onDocHide) document.removeEventListener('click', this._onDocHide);
+  };
+
+  WorkSchemeView.prototype.setScheme = function (scheme) {
+    this.scheme = scheme;
+    this.container.setAttribute('data-ws-theme', scheme.theme || 'classic');
     this.nodes = (scheme.nodes || []).map(function (raw) {
       return {
         id: String(raw.id || ''),
@@ -109,24 +146,47 @@
     });
     this.byId = {};
     this.nodes.forEach(function (node) { this.byId[node.id] = node; }, this);
-    this.pathByEdge = {};
-    this._adaptiveLite = false;
-    this.applyPerformanceMode();
-    this.frameTimes = [];
-    this.lastFrameTs = 0;
-    this.playing = false;
-    this.playbackSpeed = 0.5;
-    this.reworkTriggered = false;
-    this.playbackTrail = null;
-    this.playbackHistory = [];
-    this.playbackSuccess = null;
-    this.playbackTimeline = null;
+  };
+
+  WorkSchemeView.prototype.switchScheme = function (index) {
+    if (!this.schemes || !this.schemes[index] || index === this.activeSchemeIndex) return;
+    this.resetPlayback();
+    this.activeSchemeIndex = index;
+    this.setScheme(this.schemes[index].json);
+    this.counts = {};
     this.zoom = 1;
-    this.timers = [];
-    this.editMode = false;
     this.render();
     this.loadCounts();
-  }
+  };
+
+  WorkSchemeView.prototype.buildSchemeTabs = function () {
+    if (!this.schemes || this.schemes.length < 2) return;
+    var self = this;
+    var tabs = document.createElement('div');
+    tabs.className = 'ws-scheme-tabs';
+    tabs.setAttribute('role', 'group');
+    tabs.setAttribute('aria-label', self.container.getAttribute('data-label-schemes') || 'Schemes');
+    self.schemes.forEach(function (entry, index) {
+      var button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'ws-scheme-tab';
+      button.textContent = entry.title || entry.json.title || entry.id;
+      button.setAttribute('aria-pressed', String(index === self.activeSchemeIndex));
+      button.addEventListener('click', function () {
+        self.switchScheme(index);
+        var current = self.container.querySelectorAll('.ws-scheme-tab')[index];
+        if (current) current.focus();
+      });
+      tabs.appendChild(button);
+    });
+    self.container.insertBefore(tabs, self.container.firstChild);
+  };
+
+  WorkSchemeView.prototype.stagePage = function (node) {
+    var entry = this.schemes && this.schemes[this.activeSchemeIndex];
+    var id = this.schemeId || (entry && entry.id);
+    return this.stageBase + (id && id !== 'main' ? encodeURIComponent(id) + '/' : '') + encodeURIComponent(node.id);
+  };
 
   // lite: без фильтров/пульсаций/хвоста, ~30 fps; auto может уйти в lite
   // на лету по замерам кадров (engageLite). Пересчитывается при каждом
@@ -443,6 +503,7 @@
     self.overlaySvg = overlaySvg;
     self.attachTooltip();
     self.buildControls();
+    self.buildSchemeTabs();
 
     if (self.editMode) {
       self.container.classList.add('ws-edit-mode');
@@ -1263,7 +1324,7 @@
     var queryId = parseInt(node.queryId, 10);
     if (queryId > 0 && this.queryBase) return this.queryBase + '?query_id=' + queryId;
     if (node.url) return node.url;
-    if (node.page && this.stageBase) return this.stageBase + node.id;
+    if (node.page && this.stageBase) return this.stagePage(node);
     return '';
   };
 
@@ -1273,7 +1334,7 @@
   WorkSchemeView.prototype.pageTarget = function (node) {
     if (!node) return '';
     if (node.url) return node.url;
-    if (node.page && this.stageBase) return this.stageBase + node.id;
+    if (node.page && this.stageBase) return this.stagePage(node);
     return '';
   };
 
@@ -1295,6 +1356,7 @@
       self.renderBadges();
       return;
     }
+    var requestedScheme = self.scheme;
     fetch(self.countsUrl + '?ids=' + encodeURIComponent(list.join(',')), {
       credentials: 'same-origin',
       headers: { 'Accept': 'application/json' }
@@ -1303,6 +1365,7 @@
     }).then(function (data) {
       var counts = data && data.counts ? data.counts : {};
       countsCache[cacheKey] = counts;
+      if (self.scheme !== requestedScheme || self.container.__wsViewInstance !== self) return;
       self.counts = counts;
       // если View уже пересоздан (undo/redo редактора), его canvas отцеплён —
       // поздний ответ прежнего экземпляра не должен сносить бейджи нового
@@ -1507,7 +1570,7 @@
           if (!dataEl) return;
           if (!dataEl.textContent.trim()) return;
           var scheme = JSON.parse(dataEl.textContent);
-          if (!scheme || !scheme.nodes || !scheme.nodes.length) return;
+          if (!scheme || (!scheme.schemes && (!scheme.nodes || !scheme.nodes.length))) return;
           new WorkSchemeView(container, scheme);
         } catch (e) {
           if (window.console && console.error) console.error('Work Scheme:', e);

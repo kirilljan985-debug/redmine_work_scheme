@@ -227,7 +227,101 @@ function runEditorSuite() {
   w2.document.body.dispatchEvent(new w2.MouseEvent('click', { bubbles: true }));
   check('touch: tap outside hides tooltip', !!tTooltip && tTooltip.style.display === 'none');
 
-  finish();
+  runMultiSuite().then(finish).catch(function (error) { console.error(error); process.exit(1); });
+}
+
+async function runMultiSuite() {
+  const collection = JSON.parse(fs.readFileSync(path.join(pluginRoot, 'dev', 'schemes.json'), 'utf8'));
+  collection.schemes[0].json.nodes[0].query_id = 501;
+  collection.schemes[1].json.nodes[0].query_id = 502;
+  const w = makeWindow(viewerHtml.replace(schemeJsonWithQuery, JSON.stringify(collection)));
+  w.eval(viewerSource);
+  let pending = [];
+  w.fetch = function (url) {
+    return new Promise(function (resolve) { pending.push({ url, resolve }); });
+  };
+  w.WorkScheme.init();
+  const container = w.document.querySelector('[data-work-scheme]');
+  const view = container.__wsViewInstance;
+  check('multi viewer: two tabs before controls', container.querySelectorAll('.ws-scheme-tab').length === 2 && container.firstElementChild.classList.contains('ws-scheme-tabs'));
+  view.play('success');
+  container.querySelectorAll('.ws-scheme-tab')[1].click();
+  check('multi viewer: switch resets playback', !view.playing && view.timers.length === 0);
+  check('multi viewer: switch changes nodes and theme', view.nodes.length === 2 && container.getAttribute('data-ws-theme') === 'graphite');
+  check('multi viewer: scoped page URL', view.pageTarget(view.nodes[0]) === '/work_scheme/stages/support/request');
+  check('multi viewer: query target remains global', view.stageTarget(view.nodes[0]) === '/issues?query_id=502');
+  check('multi viewer: counts requested for selected scheme', pending.length === 2 && pending[1].url.includes('502'));
+  pending[1].resolve({ ok: true, json: () => Promise.resolve({ counts: { '502': 8 } }) });
+  await new Promise(resolve => setTimeout(resolve, 0));
+  pending[0].resolve({ ok: true, json: () => Promise.resolve({ counts: { '501': 99 } }) });
+  await new Promise(resolve => setTimeout(resolve, 0));
+  check('multi viewer: stale count does not replace selected counts', view.counts['502'] === 8 && !view.counts['501']);
+  view.switchScheme(0);
+  check('multi viewer: main keeps legacy page URL', view.pageTarget(view.nodes[0]) === '/work_scheme/stages/customer');
+  check('multi viewer: cached main counts restored', view.counts['501'] === 99);
+
+  let html = fs.readFileSync(path.join(pluginRoot, 'dev', 'editor.html'), 'utf8')
+    .replace(/<script[^>]*src=["'][^"']*["'][^>]*>\s*<\/script>/g, '')
+    .replace(/<script>([\s\S]*?)<\/script>/g, '');
+  const ew = makeWindow(html);
+  ew.eval(viewerSource);
+  ew.eval(editorSource);
+  ew.document.querySelector('script.ws-data').textContent = JSON.stringify(collection);
+  ew.document.dispatchEvent(new ew.Event('DOMContentLoaded'));
+  const root = ew.document.querySelector('#ws-editor');
+  const editor = root.__wsEditorInstance;
+  check('multi editor: collection initialized', editor && editor.schemes.length === 2);
+  const saved = editor.savedJson;
+  editor.switchScheme(1);
+  editor.switchScheme(0);
+  check('multi editor: switching alone stays clean', !editor.dirty && editor.savedJson === saved);
+  editor.view.nodes[0].title = 'Edited main';
+  editor.markDirty();
+  editor.switchScheme(1);
+  editor.view.nodes[0].title = 'Edited support';
+  editor.markDirty();
+  editor.switchScheme(0);
+  check('multi editor: both tabs retain edits', editor.view.nodes[0].title === 'Edited main' && editor.schemes[1].json.nodes[0].title === 'Edited support');
+  check('multi editor: switch resets undo history', editor.history.length === 1 && editor.future.length === 0);
+  editor.deleteScheme();
+  check('multi editor: main cannot be deleted', editor.schemes.length === 2);
+  root.classList.add('ws-scenario-capture', 'ws-object-focus');
+  editor.activeScenarioId = 'success';
+  editor.pendingFrom = { from: 'customer' };
+  editor.addScheme();
+  check('multi editor: starter has valid path and scenario', editor.view.nodes.length === 2 && editor.view.edges.length === 1 && editor.view.scheme.scenarios[0].steps.length === 2);
+  check('multi editor: switch clears selection and capture', !editor.activeScenarioId && !editor.pendingFrom && !root.classList.contains('ws-object-focus') && !root.classList.contains('ws-scenario-capture'));
+  check('multi editor: adding marks collection dirty', editor.dirty && editor.serialize().schemes.length === 3);
+  const newId = editor.schemes[editor.activeSchemeIndex].id;
+  editor.deleteScheme();
+  editor.addScheme();
+  check('multi editor: ids stay unique after delete and add', new Set(editor.schemes.map(entry => entry.id)).size === 3);
+  check('multi editor: deterministic id reuse is valid', editor.schemes[editor.activeSchemeIndex].id === newId);
+  while (editor.schemes.length < 10) editor.addScheme();
+  editor.addScheme();
+  check('multi editor: maximum ten schemes', editor.schemes.length === 10 && root.querySelector('.ws-add-scheme').disabled);
+  editor.saveUrl = '/work_scheme/save';
+  let posted;
+  let completeSave;
+  ew.fetch = function (url, options) {
+    posted = JSON.parse(options.body.get('json'));
+    return new Promise(resolve => { completeSave = resolve; });
+  };
+  editor.save();
+  check('multi editor: save posts entire collection', posted.schemes.length === 10 && posted.schemes[0].json.nodes[0].title === 'Edited main' && posted.schemes[1].json.nodes[0].title === 'Edited support');
+  editor.view.nodes[0].title = 'Changed during save';
+  editor.markDirty();
+  completeSave({ status: 200, text: () => Promise.resolve('{"ok":true}') });
+  await new Promise(resolve => setTimeout(resolve, 0));
+  check('multi editor: edits during save remain dirty', editor.dirty);
+  editor.save();
+  completeSave({ status: 200, text: () => Promise.resolve('{"ok":true}') });
+  await new Promise(resolve => setTimeout(resolve, 0));
+  check('multi editor: successful collection save clears dirty', !editor.dirty);
+  while (editor.schemes.length > 1) { editor.switchScheme(1); editor.deleteScheme(); }
+  check('multi editor: deleting extras restores plain JSON', !!editor.serialize().nodes && !editor.serialize().schemes);
+  w.close();
+  ew.close();
 }
 
 function finish() {

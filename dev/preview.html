@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <title>Work Scheme preview (dev)</title>
-<link rel="stylesheet" href="../assets/stylesheets/work_scheme.css?v=101">
+<link rel="stylesheet" href="../assets/stylesheets/work_scheme.css?v=103">
 <style>
   body { font-family: system-ui, sans-serif; margin: 20px; max-width: 1100px; background: #dbe7fb; color: #14245c; }
 </style>
@@ -15,6 +15,7 @@
      data-counts-url="counts.json"
      data-query-base-url="/issues"
      data-edit-url="/work_scheme/edit"
+     data-label-schemes="Схемы"
      data-label-play="Проиграть" data-label-reset="Сброс"
      data-label-edit-page="Редактор схемы"
      data-label-playback-step="Этап" data-label-playback-done="Готово"
@@ -25,13 +26,14 @@
      data-more-label="Подробнее">
   <script type="application/json" class="ws-data"></script>
 </div>
-<script src="../assets/javascripts/work_scheme.js?v=101"></script>
+<script src="../assets/javascripts/work_scheme.js?v=103"></script>
 <script>
   // dev-обвязка: схема из scheme.json + демо-стрелка elbow + демо query_id; инициализация
-  fetch('scheme.json?v=101')
+  fetch(new URLSearchParams(location.search).has('multi') ? 'schemes.json?v=103' : 'scheme.json?v=103')
     .then(function (r) { return r.text(); })
     .then(function (text) {
-      var scheme = JSON.parse(text);
+      var data = JSON.parse(text);
+      var scheme = data.schemes ? data.schemes[0].json : data;
       // демонстрация elbow-маршрута и явных сторон (только в dev-превью)
       scheme.edges.push({
         from: 'check', to: 'cert', label: 'пример elbow',
@@ -40,7 +42,7 @@
       // демонстрация живых счётчиков: id совпадают с dev/counts.json
       scheme.nodes[0].query_id = 1;
       scheme.nodes[scheme.nodes.length - 1].query_id = 2;
-      document.querySelector('script.ws-data').textContent = JSON.stringify(scheme);
+      document.querySelector('script.ws-data').textContent = JSON.stringify(data);
       window.WorkScheme.init();
     })
     .catch(function (e) { document.body.appendChild(document.createTextNode('load error: ' + e)); });

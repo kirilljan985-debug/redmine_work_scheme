@@ -1,4 +1,5 @@
 en:
+  ws_label_schemes: "Schemes"
   ws_label_scheme: "Scheme"
   ws_label_back_to_scheme: "Back to scheme"
   ws_label_more: "Details"

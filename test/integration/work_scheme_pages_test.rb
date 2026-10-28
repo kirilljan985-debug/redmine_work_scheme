@@ -228,4 +228,52 @@ class RedmineWorkSchemePagesTest < Redmine::IntegrationTest
     post '/work_scheme/save', params: { json: '{"nodes": []}' }
     assert_response :forbidden
   end
+  test 'collection save renders viewer editor settings and scoped stage pages' do
+    log_user 'admin', 'admin'
+    main = JSON.parse(RedmineWorkScheme::DefaultScheme.json)
+    extra = JSON.parse(RedmineWorkScheme::DefaultScheme.json)
+    extra['nodes'].find { |n| n['id'] == 'analyze' }['page'] = 'Support-only description'
+    raw = { 'schemes' => [
+      { 'id' => 'main', 'title' => 'Main', 'json' => main },
+      { 'id' => 'support', 'title' => 'Support', 'json' => extra }
+    ] }
+    post '/work_scheme/save', params: { json: raw.to_json }
+    assert_response :success
+    ['/work_scheme', '/work_scheme/edit'].each do |url|
+      get url
+      assert_response :success
+      script = response.body[/<script type="application\/json" class="ws-data">(.*?)<\/script>/m, 1]
+      data = JSON.parse(script)
+      assert_equal 2, data['schemes'].size
+      assert data['schemes'].last['json']['nodes'].any?
+    end
+    get '/settings/plugin/redmine_work_scheme'
+    assert_response :success
+    assert_select 'div.flash.error', count: 0
+    get '/work_scheme/stages/support/analyze'
+    assert_response :success
+    assert_match 'Support-only description', response.body
+    get '/work_scheme/stages/analyze'
+    assert_response :success
+    assert_not response.body.include?('Support-only description')
+    get '/work_scheme/stages/missing/analyze'
+    assert_response :not_found
+    get '/work_scheme/stages/support/missing'
+    assert_response :not_found
+    stored = Setting.plugin_redmine_work_scheme['json']
+    raw['schemes'][1]['json']['nodes'] = []
+    post '/work_scheme/save', params: { json: raw.to_json }
+    assert_response :unprocessable_entity
+    assert_equal stored, Setting.plugin_redmine_work_scheme['json']
+  end
+
+  test 'collection total size is limited' do
+    log_user 'admin', 'admin'
+    main = JSON.parse(RedmineWorkScheme::DefaultScheme.json)
+    main['nodes'].first['description'] = 'x' * 32_000
+    raw = { 'schemes' => [{ 'id' => 'main', 'json' => main }, { 'id' => 'extra', 'json' => main }] }
+    post '/work_scheme/save', params: { json: raw.to_json }
+    assert_response :unprocessable_entity
+  end
+
 end

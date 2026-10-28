@@ -34,8 +34,9 @@ class WorkSchemeController < ApplicationController
   end
 
   def stage
-    scheme = parsed_scheme
-    @node = scheme[:data] && RedmineWorkScheme::Scheme.node(scheme[:data], params[:id])
+    parsed = RedmineWorkScheme::Scheme.from_settings_collection
+    @node = parsed[:collection] &&
+            RedmineWorkScheme::Scheme.collection_node(parsed[:collection], params[:scheme_id].to_s, params[:id].to_s)
     if @node.nil? || @node['page'].blank?
       render_404
       return
@@ -72,7 +73,9 @@ class WorkSchemeController < ApplicationController
              status: :unprocessable_entity
       return
     end
-    parsed = RedmineWorkScheme::Scheme.parse(json_str)
+    # Коллекция (wrapper с доп-схемами или одиночная схема) валидируется
+    # целиком: одна битая схема — ошибка сохранения, частичных записей нет.
+    parsed = RedmineWorkScheme::Scheme.parse_collection(json_str)
     if parsed[:errors].any?
       render json: { errors: parsed[:errors] }, status: :unprocessable_entity
       return

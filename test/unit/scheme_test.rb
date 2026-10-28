@@ -409,7 +409,103 @@ class RedmineWorkSchemeSchemeTest < ActiveSupport::TestCase
     assert parsed[:errors].any?
   end
 
+  test 'collection preserves plain scheme and settings contract' do
+    parsed = RedmineWorkScheme::Scheme.parse_collection(RedmineWorkScheme::DefaultScheme.json)
+    assert_empty parsed[:errors]
+    assert_equal 'main', parsed[:collection].first['id']
+    previous = Setting.plugin_redmine_work_scheme
+    Setting.plugin_redmine_work_scheme = { 'json' => RedmineWorkScheme::DefaultScheme.json }
+    assert_equal 10, RedmineWorkScheme::Scheme.from_settings[:data]['nodes'].size
+  ensure
+    Setting.plugin_redmine_work_scheme = previous
+  end
+
+  test 'collection normalizes entries and settings expose wrapper' do
+    raw = scheme_collection
+    raw['schemes'][1]['title'] = 'Support title'
+    raw['schemes'][1]['json'] = raw['schemes'][1]['json'].to_json
+    parsed = RedmineWorkScheme::Scheme.parse_collection(raw.to_json)
+    assert_empty parsed[:errors]
+    assert_equal 2, parsed[:collection].size
+    assert_equal 'Support title', parsed[:collection][1]['data']['title']
+    previous = Setting.plugin_redmine_work_scheme
+    Setting.plugin_redmine_work_scheme = { 'json' => raw.to_json }
+    data = RedmineWorkScheme::Scheme.from_settings[:data]
+    assert_equal 2, data['schemes'].size
+    assert_equal 10, data['schemes'][1]['json']['nodes'].size
+  ensure
+    Setting.plugin_redmine_work_scheme = previous
+  end
+
+  test 'collection rejects malformed wrappers atomically' do
+    raw = scheme_collection
+    [nil, [], {}, 5, { 'schemes' => [] }, { 'schemes' => 5 },
+     { 'schemes' => [nil] }, { 'schemes' => [{ 'id' => 'main' }] },
+     { 'schemes' => raw['schemes'], 'nodes' => [] }].each do |bad|
+      parsed = RedmineWorkScheme::Scheme.parse_collection(bad.to_json)
+      assert parsed[:errors].any?, bad.inspect
+      assert_nil parsed[:collection]
+    end
+    raw['schemes'][1]['json']['nodes'] = []
+    parsed = RedmineWorkScheme::Scheme.parse_collection(raw.to_json)
+    assert parsed[:errors].any?
+    assert_nil parsed[:collection]
+  end
+
+  test 'collection enforces ids titles main and total count' do
+    ['bad id', '', 'main'].each do |id|
+      raw = scheme_collection
+      raw['schemes'][1]['id'] = id
+      assert RedmineWorkScheme::Scheme.parse_collection(raw.to_json)[:errors].any?
+    end
+    raw = scheme_collection
+    raw['schemes'].reverse!
+    assert RedmineWorkScheme::Scheme.parse_collection(raw.to_json)[:errors].any?
+    raw = scheme_collection
+    raw['schemes'][1]['title'] = 5
+    assert RedmineWorkScheme::Scheme.parse_collection(raw.to_json)[:errors].any?
+    raw = scheme_collection
+    base = raw['schemes'].first['json']
+    raw['schemes'] = (0...10).map { |i| { 'id' => i.zero? ? 'main' : "s#{i}", 'json' => base } }
+    assert_empty RedmineWorkScheme::Scheme.parse_collection(raw.to_json)[:errors]
+    raw['schemes'] << { 'id' => 'overflow', 'json' => base }
+    assert RedmineWorkScheme::Scheme.parse_collection(raw.to_json)[:errors].any?
+  end
+
+  test 'collection node scopes ids and rejects unknown schemes' do
+    raw = scheme_collection
+    raw['schemes'][1]['json']['nodes'].first['page'] = 'Support only'
+    parsed = RedmineWorkScheme::Scheme.parse_collection(raw.to_json)
+    assert_empty parsed[:errors]
+    collection = parsed[:collection]
+    assert_equal 'Support only', RedmineWorkScheme::Scheme.collection_node(collection, 'support', 'customer')['page']
+    assert_equal RedmineWorkScheme::Scheme.collection_node(collection, 'main', 'customer'),
+                 RedmineWorkScheme::Scheme.collection_node(collection, '', 'customer')
+    assert_nil RedmineWorkScheme::Scheme.collection_node(collection, 'missing', 'customer')
+    assert_nil RedmineWorkScheme::Scheme.collection_node(collection, 'support', 'missing')
+  end
+
+  test 'single entry wrapper still exposes plain scheme' do
+    previous = Setting.plugin_redmine_work_scheme
+    raw = scheme_collection
+    raw['schemes'].pop
+    Setting.plugin_redmine_work_scheme = { 'json' => raw.to_json }
+    parsed = RedmineWorkScheme::Scheme.from_settings
+    assert_empty parsed[:errors]
+    assert_equal 10, parsed[:data]['nodes'].size
+    assert_nil parsed[:data]['schemes']
+  ensure
+    Setting.plugin_redmine_work_scheme = previous
+  end
+
   private
+
+  def scheme_collection
+    { 'schemes' => [
+      { 'id' => 'main', 'json' => JSON.parse(RedmineWorkScheme::DefaultScheme.json) },
+      { 'id' => 'support', 'json' => JSON.parse(RedmineWorkScheme::DefaultScheme.json) }
+    ] }
+  end
 
   def valid_scheme_json_with_nodes(nodes, edges = [])
     { 'nodes' => nodes, 'edges' => edges, 'scenarios' => [] }.to_json

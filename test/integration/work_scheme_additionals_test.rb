@@ -110,6 +110,26 @@ if defined?(DashboardContent)
       assert_not_includes rendered, 'ws-additionals-block'
     end
 
+    test 'dashboard renders collection JSON for both generations' do
+      previous = Setting.plugin_redmine_work_scheme
+      base = JSON.parse(RedmineWorkScheme::DefaultScheme.json)
+      Setting.plugin_redmine_work_scheme = { 'json' => { 'schemes' => [
+        { 'id' => 'main', 'json' => base }, { 'id' => 'support', 'json' => base }
+      ] }.to_json }
+      rendered = ApplicationController.render partial: 'work_scheme/block',
+                                              locals: { block: 'work_scheme', settings: {} }
+      script = rendered[/<script type="application\/json" class="ws-data">(.*?)<\/script>/m, 1]
+      data = JSON.parse(script)
+      assert_equal 2, data['schemes'].size
+      assert_equal 'support', data['schemes'].last['id']
+      if defined?(DashboardBlocks::Base)
+        parsed = DashboardBlocks::WorkSchemeBlock.new(nil).scheme
+        assert_equal 2, parsed[:data]['schemes'].size
+      end
+    ensure
+      Setting.plugin_redmine_work_scheme = previous
+    end
+
     test 'dashboard block edit url carries dashboard back path' do
       # из блока редактор открывается с back-путём: «К схеме» вернёт на дашборд.
       # PATH_INFO задаём явно: у renderer'а по умолчанию пустой request.path

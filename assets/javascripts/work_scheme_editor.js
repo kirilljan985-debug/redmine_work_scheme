@@ -43,10 +43,23 @@
     };
     var dataEl = root.querySelector('script.ws-data');
     if (!dataEl || !dataEl.textContent.trim()) return; // данные загрузятся асинхронно в dev-превью
-    var scheme = JSON.parse(dataEl.textContent);
+    var data = JSON.parse(dataEl.textContent);
     var View = window.WorkScheme.View;
+    var self = this;
+    this.schemes = data.schemes || [{ id: 'main', title: data.title, json: data }];
+    // Нормализуем все вкладки сразу, чтобы первое переключение само по себе
+    // не меняло сериализацию и не ставило ложный dirty.
+    this.schemes = this.schemes.map(function (entry) {
+      var view = new View(document.createElement('div'), entry.json);
+      var normalized = self.serializeScheme(view);
+      view.destroy();
+      return { id: entry.id, title: normalized.title, json: normalized };
+    });
+    this.activeSchemeIndex = 0;
+    var scheme = this.schemes[0].json;
     this.view = new View(root.querySelector('.ws-container'), scheme);
     root.setAttribute('data-ws-theme', scheme.theme || 'classic');
+    this.view.schemeId = this.schemes[0].id;
     this.view.editMode = true;        // перетаскивание узлов включено
     var editor = this;
     this.view.onNodeDragEnd = function () {
@@ -80,6 +93,8 @@
     input.value = self.view.scheme.title || 'Схема';
     input.addEventListener('input', function () {
       self.view.scheme.title = input.value;
+      self.schemes[self.activeSchemeIndex].title = input.value || 'Схема';
+      self.renderSchemeTabs();
       var heading = document.querySelector('#ws-editor-heading');
       if (heading) heading.textContent = input.value || 'Схема';
     });
@@ -129,7 +144,12 @@
     var data;
     try { data = JSON.parse(snapshot); } catch (_) { return; }
     var View = window.WorkScheme.View;
+    if (data.schemes) this.schemes = data.schemes;
+    else this.schemes = [{ id: 'main', title: data.title, json: data }];
+    this.activeSchemeIndex = Math.min(this.activeSchemeIndex, this.schemes.length - 1);
+    data = this.schemes[this.activeSchemeIndex].json;
     this.view = new View(this.root.querySelector('.ws-container'), data);
+    this.view.schemeId = this.schemes[this.activeSchemeIndex].id;
     this.view.editMode = true;
     var editor = this;
     this.view.onNodeDragEnd = function () {
@@ -290,6 +310,7 @@
   Editor.prototype.redraw = function () {
     var self = this;
     self.view.render();
+    self.renderSchemeTabs();
     if (self.sel && self.sel.type === 'node') {
       self.selectedIds.forEach(function (id) {
         var g = self.view.nodeEl(id);
@@ -1160,8 +1181,8 @@
 
   /* ---- Сериализация и сохранение ---- */
 
-  Editor.prototype.serialize = function () {
-    var self = this;
+  Editor.prototype.serializeScheme = function (view) {
+    var self = { view: view || this.view };
     return {
       title: self.view.scheme.title || 'Схема',
       theme: self.view.scheme.theme || 'classic',
@@ -1187,6 +1208,98 @@
     };
   };
 
+  Editor.prototype.serialize = function () {
+    var current = this.serializeScheme();
+    this.schemes[this.activeSchemeIndex].json = current;
+    this.schemes[this.activeSchemeIndex].title = current.title;
+    return this.schemes.length === 1 ? current : { schemes: this.schemes };
+  };
+
+  Editor.prototype.renderSchemeTabs = function () {
+    var self = this;
+    var old = self.root.querySelector('.ws-editor-schemes');
+    if (old) old.remove();
+    var bar = document.createElement('div');
+    bar.className = 'ws-scheme-tabs ws-editor-schemes';
+    bar.setAttribute('role', 'group');
+    bar.setAttribute('aria-label', 'Схемы');
+    self.schemes.forEach(function (entry, index) {
+      var tab = document.createElement('button');
+      tab.type = 'button';
+      tab.className = 'ws-scheme-tab';
+      tab.textContent = entry.title || 'Схема';
+      tab.setAttribute('aria-pressed', String(index === self.activeSchemeIndex));
+      tab.addEventListener('click', function () { self.switchScheme(index); });
+      bar.appendChild(tab);
+    });
+    var add = document.createElement('button');
+    add.type = 'button';
+    add.className = 'ws-add-scheme';
+    add.textContent = '+ Добавить схему';
+    add.disabled = self.schemes.length >= 10;
+    add.addEventListener('click', function () { self.addScheme(); });
+    bar.appendChild(add);
+    var del = document.createElement('button');
+    del.type = 'button';
+    del.className = 'ws-delete-scheme';
+    del.textContent = 'Удалить схему';
+    del.disabled = self.activeSchemeIndex === 0;
+    del.addEventListener('click', function () {
+      if (window.confirm('Удалить выбранную схему?')) self.deleteScheme();
+    });
+    bar.appendChild(del);
+    self.view.container.parentNode.insertBefore(bar, self.view.container);
+  };
+
+  Editor.prototype.switchScheme = function (index) {
+    if (!this.schemes[index] || index === this.activeSchemeIndex) return;
+    this.serialize();
+    this.activateScheme(index);
+  };
+
+  Editor.prototype.activateScheme = function (index) {
+    this.activeSchemeIndex = index;
+    this.activeScenarioId = null;
+    this.pendingFrom = null;
+    this.sel = null;
+    this.selectedIds = [];
+    this.root.classList.remove('ws-scenario-capture', 'ws-object-focus');
+    this.restoreSnapshot(JSON.stringify(this.schemes.length === 1 ? this.schemes[0].json : { schemes: this.schemes }));
+    this.history = [JSON.stringify(this.serialize())];
+    this.future = [];
+    this.renderNodePanel();
+    this.renderEdgePanel();
+    var current = this.root.querySelectorAll('.ws-scheme-tab')[index];
+    if (current) current.focus();
+  };
+
+  Editor.prototype.addScheme = function () {
+    if (this.schemes.length >= 10) return;
+    this.serialize();
+    var seq = 1;
+    while (this.schemes.some(function (entry) { return entry.id === 'scheme' + seq; })) seq += 1;
+    var scheme = {
+      title: 'Новая схема', theme: 'classic', performance: 'auto',
+      nodes: [
+        { id: 'start', type: 'start', title: 'Начало', x: 30, y: 50, w: 140, h: 56 },
+        { id: 'end', type: 'end', title: 'Завершение', x: 300, y: 50, w: 140, h: 56 }
+      ],
+      edges: [{ from: 'start', to: 'end' }],
+      scenarios: [{ id: 'success', title: 'Прохождение', steps: ['start', 'end'] }]
+    };
+    var view = new window.WorkScheme.View(document.createElement('div'), scheme);
+    var normalized = this.serializeScheme(view);
+    view.destroy();
+    this.schemes.push({ id: 'scheme' + seq, title: scheme.title, json: normalized });
+    this.activateScheme(this.schemes.length - 1);
+  };
+
+  Editor.prototype.deleteScheme = function () {
+    if (this.activeSchemeIndex === 0) return;
+    this.schemes.splice(this.activeSchemeIndex, 1);
+    this.activateScheme(0);
+  };
+
   Editor.prototype.save = function () {
     var self = this;
     if (!self.saveUrl) { self.setStatus('Адрес сохранения не задан (dev-превью)', 'err'); return; }
@@ -1194,7 +1307,8 @@
     if (saveButton) saveButton.disabled = true;
     var csrf = document.querySelector('meta[name="csrf-token"]');
     var body = new URLSearchParams();
-    body.append('json', JSON.stringify(self.serialize(), null, 2));
+    var submitted = JSON.stringify(self.serialize());
+    body.append('json', submitted);
     fetch(self.saveUrl, {
       method: 'POST',
       headers: {
@@ -1213,9 +1327,9 @@
       if (res.status === 200 && res.data && res.data.ok) {
         // база для dirty обновляется: откат Ctrl+Z к сохранённому состоянию
         // теперь снова покажет «Схема сохранена», а не ложное «есть изменения»
-        self.savedJson = JSON.stringify(self.serialize());
-        self.dirty = false;
-        self.setStatus('✓ ' + self.labels.saved, 'ok');
+        self.savedJson = submitted;
+        self.dirty = JSON.stringify(self.serialize()) !== submitted;
+        self.setStatus(self.dirty ? 'Есть несохранённые изменения' : '✓ ' + self.labels.saved, self.dirty ? 'dirty' : 'ok');
       } else {
         var errs = (res.data && res.data.errors) || ['HTTP ' + res.status];
         self.setStatus(errs.join('; '), 'err');

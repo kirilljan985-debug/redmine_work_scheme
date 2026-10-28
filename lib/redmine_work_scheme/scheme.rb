@@ -21,6 +21,9 @@ module RedmineWorkScheme
     # Нижняя граница геометрии: нулевой/отрицательный размер даёт невидимый
     # rect и NaN в анимации проигрывания (длина пути 0).
     MIN_NODE_SIZE = 20
+    # Коллекция схем: максимум записей в wrapper {"schemes": [...]}; лимит
+    # общего размера строки — на контроллере (MAX_SCHEME_KB).
+    MAX_SCHEMES = 10
 
     module_function
 
@@ -28,13 +31,30 @@ module RedmineWorkScheme
     # legacy-блок 4.6 читают одинаково. Пустое значение отдаёт схему по
     # умолчанию; битый JSON возвращается как есть (errors + data: nil) —
     # страница и блок показывают ошибку админу, а не молча подменяют схему.
+    # Коллекция из нескольких схем отдаётся как wrapper {"schemes": [...]};
+    # одиночная схема (в т.ч. единственная запись коллекции) — как раньше.
     def from_settings
       setting = Setting.plugin_redmine_work_scheme
       setting = setting['json'] if setting.is_a?(Hash)
       json = setting.to_s.strip.empty? ? RedmineWorkScheme::DefaultScheme.json : setting
-      parse(json)
+      parsed = parse_collection(json)
+      return parsed if parsed[:errors].any? || parsed[:collection].nil?
+
+      data = parsed[:collection].size == 1 ? parsed[:collection][0]['data'] : wrapper_data(parsed[:collection])
+      result(data, [])
     rescue StandardError
       parse(RedmineWorkScheme::DefaultScheme.json)
+    end
+
+    # Коллекция без свёртки одиночной записи: страница этапа ищет узел по
+    # scheme_id (маршрут stages/:scheme_id/:id), легаси-ссылки — без него.
+    def from_settings_collection
+      setting = Setting.plugin_redmine_work_scheme
+      setting = setting['json'] if setting.is_a?(Hash)
+      json = setting.to_s.strip.empty? ? RedmineWorkScheme::DefaultScheme.json : setting
+      parse_collection(json)
+    rescue StandardError
+      parse_collection(RedmineWorkScheme::DefaultScheme.json)
     end
 
     # Возвращает {data: нормализованная схема или nil, errors: [строки]}
@@ -48,6 +68,38 @@ module RedmineWorkScheme
         rescue JSON::ParserError => e
           return result(nil, [interpolate(message_for(:ws_error_invalid_json), message: e.message)])
         end
+      normalize_raw(raw)
+    rescue StandardError => e
+      result(nil, [interpolate(message_for(:ws_error_unexpected), message: e.message)])
+    end
+
+    # Коллекция схем: одиночная схема оборачивается в одну запись (id "main",
+    # legacy-ссылки stages/:id ведут на неё), wrapper {"schemes": [...]}
+    # разбирается поэлементно. All-or-nothing: одна битая схема — ошибка всей
+    # коллекции (иначе молча пропала бы часть вкладок).
+    def parse_collection(json_string)
+      str = json_string.to_s
+      return result(nil, [message_for(:ws_error_empty)]) if str.strip.empty?
+
+      raw =
+        begin
+          JSON.parse(str)
+        rescue JSON::ParserError => e
+          return result(nil, [interpolate(message_for(:ws_error_invalid_json), message: e.message)])
+        end
+      return result(nil, [message_for(:ws_error_not_object)]) unless raw.is_a?(Hash)
+
+      return parse_collection_raw(raw) if raw.key?('schemes')
+
+      parsed = normalize_raw(raw)
+      return result(nil, parsed[:errors]) if parsed[:errors].any?
+
+      { collection: [{ 'id' => 'main', 'title' => parsed[:data]['title'], 'data' => parsed[:data] }], errors: [] }
+    rescue StandardError => e
+      result(nil, [interpolate(message_for(:ws_error_unexpected), message: e.message)])
+    end
+
+    def normalize_raw(raw)
       return result(nil, [message_for(:ws_error_not_object)]) unless raw.is_a?(Hash)
 
       errors = []
@@ -69,8 +121,92 @@ module RedmineWorkScheme
           []
         )
       end
-    rescue StandardError => e
-      result(nil, [interpolate(message_for(:ws_error_unexpected), message: e.message)])
+    end
+
+    def parse_collection_raw(raw)
+      unless raw['schemes'].is_a?(Array)
+        return result(nil, [message_for(:ws_error_schemes_not_array)])
+      end
+      if raw.key?('nodes') || raw.key?('edges')
+        return result(nil, [message_for(:ws_error_scheme_mixed)])
+      end
+      list = raw['schemes']
+      return result(nil, [message_for(:ws_error_schemes_empty)]) if list.empty?
+      if list.size > MAX_SCHEMES
+        return result(nil, [interpolate(message_for(:ws_error_schemes_too_many), limit: MAX_SCHEMES)])
+      end
+
+      errors = []
+      seen = {}
+      entries = []
+      list.each_with_index do |item, index|
+        unless item.is_a?(Hash)
+          errors << interpolate(message_for(:ws_error_scheme_item_not_object), index: index + 1)
+          next
+        end
+        unless item['title'].nil? || item['title'].is_a?(String)
+          errors << 'Название схемы должно быть строкой.'
+          next
+        end
+        id = item['id'].to_s.strip
+        if id.empty?
+          errors << interpolate(message_for(:ws_error_scheme_item_no_id), index: index + 1)
+          next
+        end
+        unless id =~ /\A[A-Za-z0-9_-]+\z/
+          errors << interpolate(message_for(:ws_error_scheme_item_bad_id), id: id)
+          next
+        end
+        if seen[id]
+          errors << interpolate(message_for(:ws_error_scheme_item_dup_id), id: id)
+          next
+        end
+
+        parsed =
+          if item['json'].is_a?(Hash)
+            normalize_raw(item['json'])
+          elsif item['json'].is_a?(String)
+            parse(item['json'])
+          else
+            result(nil, [interpolate(message_for(:ws_error_scheme_item_no_json), id: id)])
+          end
+        if parsed[:errors].any?
+          title = item['title'].to_s.strip
+          title = id if title.empty?
+          parsed[:errors].each do |message|
+            errors << interpolate(message_for(:ws_error_scheme_item_invalid), title: title, message: message)
+          end
+          next
+        end
+
+        seen[id] = true
+        title = item['title'].to_s.strip
+        title = parsed[:data]['title'] if title.empty?
+        title = "Схема #{index + 1}" if title.empty?
+        parsed[:data]['title'] = title
+        entries << { 'id' => id, 'title' => title, 'data' => parsed[:data] }
+      end
+      if entries.any? && entries.first['id'] != 'main'
+        errors << 'Первая схема коллекции должна иметь id "main".'
+      end
+      errors.any? ? result(nil, errors) : { collection: entries, errors: [] }
+    end
+
+    # Wrapper-данные коллекции для встраивания в страницу (та же форма, что
+    # хранится в настройках и постит редактор).
+    def wrapper_data(collection)
+      { 'schemes' => collection.map { |entry| { 'id' => entry['id'], 'title' => entry['title'], 'json' => entry['data'] } } }
+    end
+
+    # Узел из коллекции: scheme_id задаётся маршрутом stages/:scheme_id/:id
+    # для доп-схем; пустой — первая запись; неизвестный — nil (легаси-ссылки
+    # stages/:id всегда указывают на первую схему).
+    def collection_node(collection, scheme_id, node_id)
+      return nil unless collection.is_a?(Array) && collection.any?
+      entry = collection.find { |e| e['id'] == scheme_id } unless scheme_id.to_s.empty?
+      entry = collection.first if scheme_id.to_s.empty?
+      return nil unless entry
+      node(entry['data'], node_id)
     end
 
     # Узел по id (nil, если нет)
@@ -360,7 +496,17 @@ module RedmineWorkScheme
       'ws_error_scenario_not_object' => 'Сценарий №%{index} — не объект.',
       'ws_error_scenario_invalid' => 'Сценарий №%{index} заполнен неверно (нужны id, title и steps существующих узлов; неизвестные узлы: %{unknown}).',
       'ws_error_scenario_bad_id' => 'Сценарий "%{id}": id может содержать только латиницу, цифры, "-" и "_".',
-      'ws_error_scenario_dup_id' => 'Дубликат сценария "%{id}".'
+      'ws_error_scenario_dup_id' => 'Дубликат сценария "%{id}".',
+      'ws_error_schemes_not_array' => '"schemes" должен быть массивом.',
+      'ws_error_schemes_empty' => 'В коллекции нет ни одной схемы.',
+      'ws_error_schemes_too_many' => 'Схем в коллекции больше %{limit}.',
+      'ws_error_scheme_mixed' => 'Нельзя смешивать "schemes" с полями одиночной схемы ("nodes"/"edges").',
+      'ws_error_scheme_item_not_object' => 'Элемент №%{index} коллекции — не объект.',
+      'ws_error_scheme_item_no_id' => 'Элемент №%{index} коллекции без поля "id".',
+      'ws_error_scheme_item_bad_id' => 'Схема "%{id}": id может содержать только латиницу, цифры, "-" и "_".',
+      'ws_error_scheme_item_dup_id' => 'Дубликат id схемы "%{id}".',
+      'ws_error_scheme_item_no_json' => 'Схема "%{id}": нет поля "json" с самой схемой.',
+      'ws_error_scheme_item_invalid' => 'Схема "%{title}": %{message}'
     }.freeze
 
     def message_for(key)

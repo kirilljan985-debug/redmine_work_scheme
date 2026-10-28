@@ -1,4 +1,5 @@
 ru:
+  ws_label_schemes: "Схемы"
   ws_label_scheme: "Схема"
   ws_label_back_to_scheme: "К схеме"
   ws_label_more: "Подробнее"
