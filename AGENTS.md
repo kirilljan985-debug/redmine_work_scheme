@@ -1027,9 +1027,12 @@ redmine-plugin-dev и правила PLAN/AGENTS действуют.
   подсказку. ResizeObserver/resize обновляют fit; destroy снимает глобальные
   handlers, observer, таймеры и отменяет fetch. Counts: no-store, timeout 15 с,
   sequence/instance/scheme guard; HTTP/network/timeout сохраняют прежние числа.
-- Проверки: jsdom 102/102; standalone unit 40 тестов / 208 assertions;
-  Ruby/JS syntax и ru/en parity. Dev v=107: dashboard 420px, full-window
+- Проверки: jsdom 104/104; standalone unit 40 тестов / 208 assertions;
+  Ruby/JS syntax и ru/en parity. Dev v=108: dashboard 420px, full-window
   fallback IAB и выход, scroll полотна, refresh/вкладки, overlay Δ=0, console
   без ошибок. Native fullscreen — jsdom, Nextouch требует живой проверки.
 - Код подготовлен к коммиту/push; CI ожидается. Живой сервер не изменён.
   `.zcode/` не трогалась и не коммитится.
+- Код отправлен как `f1139f9`; при контрольном чтении исправлена блокировка
+  refresh после перехода на вкладку без query_id во время fetch: switch всегда
+  сбрасывает loading/sequence и отменяет таймеры/запрос. Две новые регрессии.

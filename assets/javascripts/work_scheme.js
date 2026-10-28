@@ -167,6 +167,13 @@
   WorkSchemeView.prototype.switchScheme = function (index) {
     if (!this.schemes || !this.schemes[index] || index === this.activeSchemeIndex) return;
     this.resetPlayback();
+    // Даже вкладка без query_id должна снять loading прежнего запроса:
+    // иначе возвращение к нему оставит кнопку обновления заблокированной.
+    this._countsSequence++;
+    this._countsLoading = false;
+    clearTimeout(this._countsTimer);
+    clearTimeout(this._countsTimeout);
+    if (this._countsAbort) this._countsAbort.abort();
     this.activeSchemeIndex = index;
     this.setScheme(this.schemes[index].json);
     this.counts = {};

@@ -261,6 +261,14 @@ async function runMultiSuite() {
   view.switchScheme(0);
   check('multi viewer: main keeps legacy page URL', view.pageTarget(view.nodes[0]) === '/work_scheme/stages/customer');
   check('multi viewer: cached main counts restored', view.counts['501'] === 99);
+  view.loadCounts(true);
+  view.schemes[1].json.nodes[0].query_id = null;
+  view.switchScheme(1);
+  check('multi viewer: no-query tab cancels previous loading state', !view._countsLoading && !container.querySelector('.ws-counts-refresh'));
+  pending[2].resolve({ ok: true, json: () => Promise.resolve({ counts: { '501': 77 } }) });
+  await new Promise(resolve => setTimeout(resolve, 0));
+  view.switchScheme(0);
+  check('multi viewer: returning from no-query tab unlocks refresh', !view._countsLoading && !container.querySelector('.ws-counts-refresh').disabled && view.counts['501'] === 77);
 
   let html = fs.readFileSync(path.join(pluginRoot, 'dev', 'editor.html'), 'utf8')
     .replace(/<script[^>]*src=["'][^"']*["'][^>]*>\s*<\/script>/g, '')
