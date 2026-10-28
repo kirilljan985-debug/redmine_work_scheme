@@ -185,6 +185,53 @@
   pointer-events: auto;
 }
 
+/* Кнопки подсказки на сенсорных экранах: навигация только ими */
+.ws-tooltip-tasks {
+  margin-top: 8px;
+  display: block;
+  padding: 12px 16px;
+  background: #3569a8;
+  color: #ffffff !important;
+  border-radius: 8px;
+  text-align: center;
+  font-weight: bold;
+  text-decoration: none;
+  pointer-events: auto;
+}
+
+.ws-tooltip-close {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 36px;
+  height: 36px;
+  border: 1px solid #b8c2cc;
+  border-radius: 50%;
+  background: #f2f5f8;
+  color: #1f2d38;
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+  pointer-events: auto;
+}
+
+/* Сенсорный ТВ/планшет: крупный текст и тач-зоны не меньше ~44 px */
+.ws-touch .ws-tooltip {
+  max-width: 420px;
+  font-size: 15px;
+  padding: 14px 16px;
+}
+
+.ws-touch .ws-tooltip-more {
+  display: block;
+  margin-top: 10px;
+  padding: 12px 16px;
+  border: 1px solid #3569a8;
+  border-radius: 8px;
+  text-align: center;
+  font-size: 15px;
+}
+
 /* Проигрывание сценариев */
 
 .ws-controls {

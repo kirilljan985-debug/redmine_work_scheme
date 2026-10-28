@@ -136,7 +136,9 @@
     this.performanceMode = ['high', 'lite'].indexOf(this.scheme.performance) !== -1 ? this.scheme.performance : 'auto';
     if (this.performanceMode === 'high') this.lite = false;
     else if (this.performanceMode === 'lite') this.lite = true;
-    else this.lite = weakDevice() || this._adaptiveLite;
+    // сенсорные панели/ТВ — слабые устройства по определению: в auto уводим
+    // их в lite сразу, не дожидаясь адаптивного замера кадров
+    else this.lite = weakDevice() || this._adaptiveLite || detectTouch();
     this.container.classList.toggle('ws-lite', this.lite);
   };
 
@@ -1265,6 +1267,16 @@
     return '';
   };
 
+  /* Цель ссылки «Подробнее» — описание этапа. query_id сознательно не
+     участвует: иначе при заполненных счётчиках wiki-страницы этапов
+     недостижимы ни из подсказки, ни откуда-либо ещё. */
+  WorkSchemeView.prototype.pageTarget = function (node) {
+    if (!node) return '';
+    if (node.url) return node.url;
+    if (node.page && this.stageBase) return this.stageBase + node.id;
+    return '';
+  };
+
   /* ---- Живые счётчики задач по query_id ---- */
 
   WorkSchemeView.prototype.loadCounts = function () {
@@ -1322,9 +1334,22 @@
     });
   };
 
+  /* Сенсорные экраны (интерактивные ТВ и планшеты): hover нет, тап по блоку
+     не должен сразу уводить со страницы — подсказка с кнопками вместо
+     навигации. Приоритет — (hover: none); ontouchstart только как запаска
+     для старых WebView без matchMedia. */
+  function detectTouch() {
+    try {
+      if (window.matchMedia && window.matchMedia('(hover: none)').matches) return true;
+    } catch (e) { /* jsdom и старые WebView без matchMedia */ }
+    return typeof window.ontouchstart !== 'undefined';
+  }
+
   WorkSchemeView.prototype.attachTooltip = function () {
     var self = this;
     if (self.container.closest && self.container.closest('#ws-editor')) return;
+    var touchMode = detectTouch();
+    if (touchMode && self.container.classList) self.container.classList.add('ws-touch');
     // render() вызывается повторно (undo/redo, пересоздание View) — прежний
     // mousemove-обработчик надо снять с контейнера, иначе они копятся
     if (self._onContainerMove) self.container.removeEventListener('mousemove', self._onContainerMove);
@@ -1343,6 +1368,11 @@
       hideTimer = window.setTimeout(function () {
         tooltip.style.display = 'none';
       }, 180);
+    }
+
+    function hideNow() {
+      cancelHide();
+      tooltip.style.display = 'none';
     }
 
     function show(node, event) {
@@ -1369,13 +1399,34 @@
         countLine.textContent = self.label('tasks', 'Задач') + ': ' + count;
         tooltip.appendChild(countLine);
       }
-      var target = self.stageTarget(node);
+      if (touchMode && queryId > 0 && self.queryBase) {
+        // сенсор: навигация только явными кнопками подсказки
+        var tasksLink = document.createElement('a');
+        tasksLink.className = 'ws-tooltip-tasks';
+        tasksLink.href = self.queryBase + '?query_id=' + queryId;
+        tasksLink.textContent = self.label('tasks', 'Задач') +
+          (count !== null && count !== undefined ? ': ' + count : '');
+        tooltip.appendChild(tasksLink);
+      }
+      var target = self.pageTarget(node);
       if (target) {
         var more = document.createElement('a');
         more.className = 'ws-tooltip-more';
         more.href = target;
         more.textContent = self.container.getAttribute('data-more-label') || 'Подробнее';
         tooltip.appendChild(more);
+      }
+      if (touchMode) {
+        var close = document.createElement('button');
+        close.className = 'ws-tooltip-close';
+        close.type = 'button';
+        close.setAttribute('aria-label', '×');
+        close.textContent = '×';
+        close.addEventListener('click', function (event) {
+          event.stopPropagation();
+          hideNow();
+        });
+        tooltip.appendChild(close);
       }
       tooltip.style.display = 'block';
       move(event);
@@ -1394,6 +1445,16 @@
     tooltip.addEventListener('mouseenter', cancelHide);
     tooltip.addEventListener('mouseleave', scheduleHide);
 
+    if (touchMode) {
+      // тап мимо блока и подсказки прячет её; на клики самих блоков это
+      // не срабатывает — они останавливают всплытие
+      if (self._onDocHide) document.removeEventListener('click', self._onDocHide);
+      self._onDocHide = function (event) {
+        if (!tooltip.contains(event.target) &&
+            !(event.target.closest && event.target.closest('.ws-node'))) hideNow();
+      };
+      document.addEventListener('click', self._onDocHide);
+    }
     self._onContainerMove = function (event) {
       var group = event.target.closest ? event.target.closest('.ws-node') : null;
       if (group) move(event);
@@ -1408,8 +1469,17 @@
         show(node, event);
       });
       group.addEventListener('mouseleave', scheduleHide);
-      group.addEventListener('click', function () {
+      group.addEventListener('click', function (event) {
         if (self.editMode) return; // в режиме правки клик не уводит со страницы
+        if (touchMode) {
+          // на сенсорном экране первый тап показывает подсказку с кнопками —
+          // сам блок не уводит со страницы, всплытие остановлено, чтобы
+          // документный обработчик тут же не спрятал подсказку
+          if (event && event.stopPropagation) event.stopPropagation();
+          cancelHide();
+          show(node, event);
+          return;
+        }
         var target = self.stageTarget(node);
         if (target) window.location.href = target;
       });
