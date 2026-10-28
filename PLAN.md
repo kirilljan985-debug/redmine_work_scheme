@@ -33,9 +33,10 @@
   этапов, ≤ 10 схем, ≤ 60 КБ); ТВ-просмотр (viewport с auto-fit, зум,
   полноэкранный режим, touch-pan) и живое обновление счётчиков (вручную или
   30 с/1 мин/5 мин, timeout 15 с, no-store, гварды sequence/instance/scheme).
-- CI: `2e55533` — success, `db2f5f7` — success (все 5 джоб: 7.0-stable,
-  master, additionals 4.7+, additionals 4.6 legacy, js-smoke); локально
-  jsdom 104/104. Прогон по тегу добавляется push'ем тега.
+- CI: `2e55533` — success, `db2f5f7` — success, релизная отметка `dd7e792` —
+  success на обоих прогонах (по `main` и по тегу `v0.5.6`; все 5 джоб:
+  7.0-stable, master, additionals 4.7+, additionals 4.6 legacy, js-smoke);
+  локально jsdom 104/104.
 - Свободные треки остаются замороженными: мини-карта, мобильная компоновка,
   i18n редактора, легаси additionals < 4.6, AJAX-реинициализация блока.
   Разгон — по запросу пользователя.
