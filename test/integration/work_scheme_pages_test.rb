@@ -19,6 +19,12 @@ class RedmineWorkSchemePagesTest < Redmine::IntegrationTest
     assert_select 'script.ws-data'
     assert_select 'div.ws-container[data-counts-url="/work_scheme/counts"]'
     assert_select 'div.ws-container[data-query-base-url="/issues"]'
+    %w[fullscreen fullscreen-exit pan counts-refresh counts-auto counts-manual
+       counts-30s counts-1m counts-5m counts-updated counts-error].each do |label|
+      assert_select "div.ws-container[data-label-#{label}]" do |elements|
+        assert_equal I18n.t("ws_label_#{label.tr('-', '_')}"), elements.first["data-label-#{label}"]
+      end
+    end
     assert_match 'Заказчик', response.body
     assert_match 'Опытная эксплуатация', response.body
   end

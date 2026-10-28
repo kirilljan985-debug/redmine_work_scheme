@@ -19,6 +19,8 @@
   // Кэш живых счётчиков на страницу: один fetch на набор query_id,
   // повторные рендеры и undo/redo редактора переиспользуют ответ.
   var countsCache = {};
+  var countsRequests = {};
+  var countsSerial = 0;
 
   function svgEl(name, attrs, text) {
     var el = document.createElementNS(SVG_NS, name);
@@ -63,10 +65,7 @@
 
   function WorkSchemeView(container, scheme) {
     var previous = container.__wsViewInstance;
-    if (previous) {
-      previous.resetPlayback();
-      if (previous._onDocHide) document.removeEventListener('click', previous._onDocHide);
-    }
+    if (previous) previous.destroy();
     container.__wsViewInstance = this;
     this.container = container;
     this.schemes = scheme && Array.isArray(scheme.schemes) ? scheme.schemes : null;
@@ -94,13 +93,30 @@
     this.zoom = 1;
     this.timers = [];
     this.editMode = false;
+    this.viewerMode = !container.closest('#ws-editor');
+    this._fitMode = this.viewerMode;
+    this.refreshSeconds = 0;
+    this._countsSequence = 0;
+    if (this.viewerMode) this.attachViewerEvents();
     this.render();
     this.loadCounts();
   }
 
   WorkSchemeView.prototype.destroy = function () {
     this.resetPlayback();
+    this._destroyed = true;
+    this._countsSequence++;
+    clearTimeout(this._countsTimer);
+    clearTimeout(this._countsTimeout);
+    if (this._countsAbort) this._countsAbort.abort();
+    if (this._resizeObserver) this._resizeObserver.disconnect();
+    if (this._onResize) window.removeEventListener('resize', this._onResize);
+    if (this._onFullscreen) document.removeEventListener('fullscreenchange', this._onFullscreen);
+    if (this._onEscape) document.removeEventListener('keydown', this._onEscape);
+    if (this._onVisibility) document.removeEventListener('visibilitychange', this._onVisibility);
+    this.leaveFullscreen();
     if (this._onDocHide) document.removeEventListener('click', this._onDocHide);
+    if (this._onContainerMove) this.container.removeEventListener('mousemove', this._onContainerMove);
   };
 
   WorkSchemeView.prototype.setScheme = function (scheme) {
@@ -154,6 +170,9 @@
     this.activeSchemeIndex = index;
     this.setScheme(this.schemes[index].json);
     this.counts = {};
+    this.countsUpdatedAt = null;
+    this.countsError = false;
+    this._fitMode = this.viewerMode;
     this.zoom = 1;
     this.render();
     this.loadCounts();
@@ -397,6 +416,7 @@
     var pad = 34;
     var width = bounds.maxX - bounds.minX + pad * 2;
     var height = bounds.maxY - bounds.minY + pad * 2;
+    self.canvasRatio = height / width;
     var viewBox = (bounds.minX - pad) + ' ' + (bounds.minY - pad) + ' ' + width + ' ' + height;
 
     var canvas = document.createElement('div');
@@ -498,7 +518,16 @@
     overlaySvg.appendChild(self.overlay);
     canvas.appendChild(overlaySvg);
 
-    self.container.appendChild(canvas);
+    self.viewport = null;
+    if (self.viewerMode) {
+      self.viewport = document.createElement('div');
+      self.viewport.className = 'ws-viewport';
+      self.viewport.setAttribute('tabindex', '0');
+      self.viewport.setAttribute('aria-label', self.label('pan', 'Область схемы: перемещение пальцем'));
+      self.viewport.appendChild(canvas);
+      self.container.appendChild(self.viewport);
+      self.attachPan();
+    } else self.container.appendChild(canvas);
     self.svg = svg;
     self.overlaySvg = overlaySvg;
     self.attachTooltip();
@@ -513,6 +542,7 @@
     }
 
     self.renderBadges();
+    if (self.viewerMode) self.layoutViewport();
   };
 
   WorkSchemeView.prototype.renderNode = function (node) {
@@ -621,10 +651,10 @@
     var zoomFit = document.createElement('button');
     zoomFit.type = 'button';
     zoomFit.className = 'ws-zoom-fit';
-    zoomFit.textContent = '100%';
+    zoomFit.textContent = self.label('zoom-fit', 'Вписать схему');
     zoomFit.title = self.label('zoom-fit', 'Вписать в блок');
     zoomFit.setAttribute('aria-label', zoomFit.title);
-    zoomFit.addEventListener('click', function () { self.setZoom(1); });
+    zoomFit.addEventListener('click', function () { self.fitScheme(); });
     zoom.appendChild(zoomFit);
     var zoomIn = document.createElement('button');
     zoomIn.type = 'button';
@@ -635,13 +665,14 @@
     zoomIn.addEventListener('click', function () { self.setZoom(self.zoom + 0.1); });
     zoom.appendChild(zoomIn);
     controls.appendChild(zoom);
+    if (self.viewerMode) self.buildViewerControls(controls);
 
     if (!scenarios.length) {
       self.container.insertBefore(controls, self.container.firstChild);
       var empty = document.createElement('div');
       empty.className = 'ws-empty-note';
       empty.textContent = self.label('no-scenarios', 'Сценарии проигрывания пока не добавлены.');
-      self.container.insertBefore(empty, self.canvas);
+      self.container.insertBefore(empty, self.viewport || self.canvas);
       self.zoomControls = zoom;
       return;
     }
@@ -717,8 +748,8 @@
     timeline.className = 'ws-playback-timeline';
     timeline.setAttribute('aria-label', self.label('progress', 'Прогресс сценария'));
     if (self.canvas) {
-      self.container.insertBefore(status, self.canvas);
-      self.container.insertBefore(timeline, self.canvas);
+      self.container.insertBefore(status, self.viewport || self.canvas);
+      self.container.insertBefore(timeline, self.viewport || self.canvas);
     }
     else self.container.appendChild(status);
     self.playButton = play;
@@ -729,12 +760,220 @@
     self.renderPlaybackTimeline(scenarios[0]);
   };
 
-  WorkSchemeView.prototype.setZoom = function (value) {
-    this.zoom = Math.max(0.6, Math.min(1.8, Number(value) || 1));
+  WorkSchemeView.prototype.setZoom = function (value, fitting) {
+    this._fitMode = !!fitting;
+    this.zoom = Math.max(0.001, Math.min(4, Number(value) || 1));
     var canvas = this.canvas || this.container.querySelector('.ws-canvas');
-    if (canvas) canvas.style.width = (this.zoom * 100) + '%';
-    var fit = this.container.querySelector('.ws-zoom-fit');
-    if (fit) fit.textContent = Math.round(this.zoom * 100) + '%';
+    if (canvas) {
+      canvas.style.width = (this.zoom * 100) + '%';
+      if (this.viewport) {
+        var width = (this.viewport.offsetWidth || this.viewport.clientWidth) * this.zoom;
+        canvas.style.width = Math.floor(width) + 'px';
+        canvas.style.height = Math.floor(width * this.canvasRatio) + 'px';
+      }
+    }
+    var level = this.container.querySelector('.ws-zoom-level');
+    if (level) level.textContent = Math.round(this.zoom * 100) + '%';
+  };
+
+  WorkSchemeView.prototype.fitScheme = function () {
+    if (!this.viewport) return this.setZoom(1);
+    var width = this.viewport.offsetWidth || this.viewport.clientWidth;
+    var height = this.viewport.offsetHeight || this.viewport.clientHeight;
+    if (!width || !height) return;
+    this.setZoom(Math.min(1, height / (width * this.canvasRatio)), true);
+    this.viewport.scrollLeft = 0;
+    this.viewport.scrollTop = 0;
+  };
+
+  WorkSchemeView.prototype.layoutViewport = function () {
+    if (!this.viewport) return;
+    var chromeHeight = 0;
+    Array.prototype.forEach.call(this.container.children, function (child) {
+      if (child.matches('.ws-controls, .ws-scheme-tabs, .ws-playback-status, .ws-playback-timeline, .ws-empty-note') && !child.hidden) {
+        chromeHeight += child.getBoundingClientRect().height + 10;
+      }
+    });
+    this.container.style.setProperty('--ws-controls-height', chromeHeight + 'px');
+    if (this._fitMode) this.fitScheme();
+    else this.setZoom(this.zoom);
+  };
+
+  WorkSchemeView.prototype.attachViewerEvents = function () {
+    var self = this;
+    self._onResize = function () { if (!self._destroyed) self.layoutViewport(); };
+    self._onFullscreen = function () {
+      if (document.fullscreenElement !== self.container && !self._fallbackFullscreen) self.setFullscreenState(false);
+      self.layoutViewport();
+    };
+    self._onEscape = function (event) {
+      if (event.key === 'Escape' && self._fallbackFullscreen) self.leaveFullscreen();
+    };
+    self._onVisibility = function () {
+      clearTimeout(self._countsTimer);
+      if (!document.hidden) self.scheduleCounts();
+    };
+    window.addEventListener('resize', self._onResize);
+    document.addEventListener('fullscreenchange', self._onFullscreen);
+    document.addEventListener('keydown', self._onEscape);
+    document.addEventListener('visibilitychange', self._onVisibility);
+    if (window.ResizeObserver) {
+      self._resizeObserver = new window.ResizeObserver(self._onResize);
+      self._resizeObserver.observe(self.container);
+    }
+  };
+
+  WorkSchemeView.prototype.setFullscreenState = function (enabled) {
+    this.container.classList.toggle('ws-fullscreen', enabled);
+    var button = this.container.querySelector('.ws-fullscreen-toggle');
+    if (button) {
+      button.textContent = enabled ? this.label('fullscreen-exit', 'Выйти из полного экрана') : this.label('fullscreen', 'На весь экран');
+      button.setAttribute('aria-pressed', String(enabled));
+    }
+    this.layoutViewport();
+  };
+
+  WorkSchemeView.prototype.leaveFullscreen = function () {
+    this._fullscreenRequest = false;
+    if (document.fullscreenElement === this.container && document.exitFullscreen) {
+      var result = document.exitFullscreen();
+      if (result && result.catch) result.catch(function () {});
+    }
+    if (this._fallbackFullscreen) {
+      document.body.style.overflow = this._bodyOverflow || '';
+      this._fallbackFullscreen = false;
+    }
+    this.setFullscreenState(false);
+  };
+
+  WorkSchemeView.prototype.toggleFullscreen = function () {
+    var self = this;
+    if (self.container.classList.contains('ws-fullscreen')) return self.leaveFullscreen();
+    function fallback() {
+      if (self._destroyed || !self._fullscreenRequest) return;
+      Array.prototype.forEach.call(document.querySelectorAll('.ws-fullscreen'), function (container) {
+        if (container.__wsViewInstance) container.__wsViewInstance.leaveFullscreen();
+      });
+      self._bodyOverflow = document.body.style.overflow;
+      document.body.style.overflow = 'hidden';
+      self._fallbackFullscreen = true;
+      self.setFullscreenState(true);
+      self.fitScheme();
+    }
+    self._fullscreenRequest = true;
+    if (self.container.requestFullscreen && document.fullscreenEnabled !== false) {
+      try {
+        var request = self.container.requestFullscreen();
+        if (request && request.then) request.then(function () {
+          if (self._destroyed || !self._fullscreenRequest) return self.leaveFullscreen();
+          self.setFullscreenState(true);
+          self.fitScheme();
+        }).catch(fallback);
+        else { self.setFullscreenState(true); self.fitScheme(); }
+      } catch (e) { fallback(); }
+    } else fallback();
+  };
+
+  // Нативный touch-scroll сохраняет прокрутку страницы у границы полотна.
+  // После движения блокируем только синтетический click; обычный тап остаётся.
+  WorkSchemeView.prototype.attachPan = function () {
+    var self = this;
+    var viewport = self.viewport;
+    var start = null;
+    viewport.addEventListener('touchstart', function (event) {
+      var touch = event.touches[0];
+      start = touch ? { x: touch.clientX, y: touch.clientY } : null;
+      self._panMoved = false;
+      self._suppressTapUntil = 0;
+    }, { passive: true });
+    viewport.addEventListener('touchmove', function (event) {
+      var touch = event.touches[0];
+      if (start && touch && (Math.abs(touch.clientX - start.x) > 8 || Math.abs(touch.clientY - start.y) > 8)) {
+        self._panMoved = true;
+        self._suppressTapUntil = Date.now() + 800;
+        var tooltip = self.container.querySelector('.ws-tooltip');
+        if (tooltip) tooltip.style.display = 'none';
+      }
+    }, { passive: true });
+    viewport.addEventListener('touchend', function () {
+      if (self._panMoved) self._suppressTapUntil = Date.now() + 800;
+      start = null;
+    }, { passive: true });
+    viewport.addEventListener('touchcancel', function () { start = null; }, { passive: true });
+    viewport.addEventListener('click', function (event) {
+      if (Date.now() < (self._suppressTapUntil || 0)) {
+        event.preventDefault();
+        event.stopImmediatePropagation();
+      }
+    }, true);
+  };
+
+  WorkSchemeView.prototype.buildViewerControls = function (controls) {
+    var self = this;
+    var level = document.createElement('span');
+    level.className = 'ws-zoom-level';
+    level.textContent = Math.round(self.zoom * 100) + '%';
+    controls.querySelector('.ws-zoom-controls').appendChild(level);
+    var fullscreen = document.createElement('button');
+    fullscreen.type = 'button';
+    fullscreen.className = 'ws-fullscreen-toggle';
+    var expanded = self.container.classList.contains('ws-fullscreen');
+    fullscreen.textContent = expanded ? self.label('fullscreen-exit', 'Выйти из полного экрана') : self.label('fullscreen', 'На весь экран');
+    fullscreen.setAttribute('aria-pressed', String(expanded));
+    fullscreen.addEventListener('click', function () { self.toggleFullscreen(); });
+    controls.appendChild(fullscreen);
+    if (!self.countsUrl || !self.nodes.some(function (node) { return parseInt(node.queryId, 10) > 0; })) return;
+    var refresh = document.createElement('button');
+    refresh.type = 'button';
+    refresh.className = 'ws-counts-refresh';
+    refresh.textContent = self.label('counts-refresh', 'Обновить счётчики');
+    refresh.addEventListener('click', function () { self.loadCounts(true); });
+    controls.appendChild(refresh);
+    var label = document.createElement('label');
+    label.className = 'ws-counts-auto-label';
+    label.appendChild(document.createTextNode(self.label('counts-auto', 'Обновление')));
+    var interval = document.createElement('select');
+    interval.className = 'ws-counts-interval';
+    interval.setAttribute('aria-label', self.label('counts-auto', 'Обновление'));
+    [[0, 'counts-manual', 'Вручную'], [30, 'counts-30s', '30 с'], [60, 'counts-1m', '1 мин'], [300, 'counts-5m', '5 мин']].forEach(function (entry) {
+      var option = document.createElement('option');
+      option.value = String(entry[0]);
+      option.textContent = self.label(entry[1], entry[2]);
+      option.selected = self.refreshSeconds === entry[0];
+      interval.appendChild(option);
+    });
+    interval.addEventListener('change', function () {
+      self.refreshSeconds = Number(interval.value);
+      self.scheduleCounts();
+    });
+    label.appendChild(interval);
+    controls.appendChild(label);
+    var status = document.createElement('span');
+    status.className = 'ws-counts-status';
+    status.setAttribute('aria-live', 'polite');
+    controls.appendChild(status);
+    self.updateCountsStatus();
+  };
+
+  WorkSchemeView.prototype.updateCountsStatus = function () {
+    var status = this.container.querySelector('.ws-counts-status');
+    if (status) {
+      var time = this.countsUpdatedAt ? this.countsUpdatedAt.toLocaleTimeString() : '';
+      status.textContent = this.countsError ? this.label('counts-error', 'Не удалось обновить') + (time ? ' · ' + this.label('counts-updated', 'Обновлено') + ' ' + time : '') :
+        (time ? this.label('counts-updated', 'Обновлено') + ' ' + time : '');
+    }
+    var button = this.container.querySelector('.ws-counts-refresh');
+    if (button) button.disabled = !!this._countsLoading;
+  };
+
+  WorkSchemeView.prototype.scheduleCounts = function () {
+    var self = this;
+    clearTimeout(self._countsTimer);
+    if (!self.viewerMode || self._destroyed || self._countsLoading || !self.refreshSeconds || document.hidden ||
+        !self.countsUrl || !self.nodes.some(function (node) { return parseInt(node.queryId, 10) > 0; })) return;
+    self._countsTimer = setTimeout(function () {
+      if (self.container.isConnected) self.loadCounts(true);
+    }, self.refreshSeconds * 1000);
   };
 
   WorkSchemeView.prototype.playbackDelay = function (ms) {
@@ -1085,14 +1324,16 @@
   // по стрелке», подсветка цели «убегала» вперёд, а цепочка плавных
   // прокруток на каждом шаге подвешивала анимацию.
   WorkSchemeView.prototype.focusPlaybackNode = function (node) {
-    if (!node || !this.container || !this.container.scrollTo) return;
+    var scroller = this.viewport || this.container;
+    if (!node || !scroller || !scroller.scrollTo) return;
     var svg = this.container.querySelector('svg');
     if (!svg || !svg.viewBox || !svg.viewBox.baseVal.width) return;
     var view = svg.viewBox.baseVal;
     var rect = svg.getBoundingClientRect();
     var scale = rect.width / view.width;
     var target = (node.x + node.w / 2 - view.x) * scale;
-    this.container.scrollTo({ left: Math.max(0, target - this.container.clientWidth / 2) });
+    scroller.scrollTo({ left: Math.max(0, target - scroller.clientWidth / 2),
+      top: this.viewport ? Math.max(0, (node.y + node.h / 2 - view.y) * scale - scroller.clientHeight / 2) : scroller.scrollTop });
   };
 
   WorkSchemeView.prototype.showSuccessBubble = function (node) {
@@ -1340,40 +1581,81 @@
 
   /* ---- Живые счётчики задач по query_id ---- */
 
-  WorkSchemeView.prototype.loadCounts = function () {
+  WorkSchemeView.prototype.loadCounts = function (force) {
     var self = this;
+    clearTimeout(self._countsTimer);
     if (!self.countsUrl || !window.fetch) return;
     var ids = {};
     self.nodes.forEach(function (node) {
       var id = parseInt(node.queryId, 10);
       if (id > 0) ids[id] = true;
     });
-    var list = Object.keys(ids);
+    var list = Object.keys(ids).sort(function (a, b) { return Number(a) - Number(b); });
     if (!list.length) return;
     var cacheKey = self.countsUrl + '?ids=' + list.join(',');
-    if (Object.prototype.hasOwnProperty.call(countsCache, cacheKey)) {
-      self.counts = countsCache[cacheKey];
+    if (self._countsLoading && self._countsScheme === self.scheme) return;
+    var sequence = ++self._countsSequence;
+    self._countsLoading = false;
+    if (self._countsAbort) self._countsAbort.abort();
+    clearTimeout(self._countsTimeout);
+    if (!force && Object.prototype.hasOwnProperty.call(countsCache, cacheKey)) {
+      self.counts = countsCache[cacheKey].counts;
+      self.countsUpdatedAt = countsCache[cacheKey].updatedAt;
+      self.countsError = false;
       self.renderBadges();
+      self.updateCountsStatus();
+      self.scheduleCounts();
       return;
     }
     var requestedScheme = self.scheme;
-    fetch(self.countsUrl + '?ids=' + encodeURIComponent(list.join(',')), {
+    self._countsScheme = requestedScheme;
+    self._countsLoading = true;
+    self.updateCountsStatus();
+    var requestId = ++countsSerial;
+    countsRequests[cacheKey] = requestId;
+    var controller = window.AbortController ? new window.AbortController() : null;
+    self._countsAbort = controller;
+    var timeout;
+    var request = window.fetch(self.countsUrl + '?ids=' + encodeURIComponent(list.join(',')), {
       credentials: 'same-origin',
+      cache: 'no-store',
+      signal: controller ? controller.signal : undefined,
       headers: { 'Accept': 'application/json' }
     }).then(function (response) {
-      return response.ok ? response.json() : {};
-    }).then(function (data) {
-      var counts = data && data.counts ? data.counts : {};
-      countsCache[cacheKey] = counts;
-      if (self.scheme !== requestedScheme || self.container.__wsViewInstance !== self) return;
+      if (!response.ok) throw new Error('counts response');
+      return response.json();
+    });
+    var deadline = new Promise(function (resolve, reject) {
+      timeout = setTimeout(function () {
+        if (controller) controller.abort();
+        reject(new Error('counts timeout'));
+      }, 15000);
+      self._countsTimeout = timeout;
+    });
+    function current() {
+      return !self._destroyed && self._countsSequence === sequence && self.scheme === requestedScheme &&
+        self.container.__wsViewInstance === self && self.container.contains(self.canvas);
+    }
+    function settled() {
+      clearTimeout(timeout);
+      if (!current()) return;
+      self._countsLoading = false;
+      self.updateCountsStatus();
+      self.scheduleCounts();
+    }
+    return Promise.race([request, deadline]).then(function (data) {
+      if (!data || !data.counts || typeof data.counts !== 'object' || Array.isArray(data.counts)) throw new Error('counts data');
+      var counts = data.counts;
+      var updatedAt = new Date();
+      if (countsRequests[cacheKey] === requestId) countsCache[cacheKey] = { counts: counts, updatedAt: updatedAt };
+      if (!current()) return;
       self.counts = counts;
-      // если View уже пересоздан (undo/redo редактора), его canvas отцеплён —
-      // поздний ответ прежнего экземпляра не должен сносить бейджи нового
-      if (!self.canvas || self.canvas.parentNode !== self.container) return;
+      self.countsUpdatedAt = updatedAt;
+      self.countsError = false;
       self.renderBadges();
     }).catch(function () {
-      // ошибка счётчиков не должна ломать схему — бейджи просто не рисуются
-    });
+      if (current()) self.countsError = true;
+    }).then(settled);
   };
 
   WorkSchemeView.prototype.renderBadges = function () {
@@ -1528,6 +1810,7 @@
       var node = self.byId[id];
       if (!node) return;
       group.addEventListener('mouseenter', function (event) {
+        if (touchMode) return;
         cancelHide();
         show(node, event);
       });

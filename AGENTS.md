@@ -1009,3 +1009,27 @@ redmine-plugin-dev и правила PLAN/AGENTS действуют.
   неотслеживаемую служебную `.zcode/` — оставлена без изменения.
 - Живой сервер не изменён. Пользователю: git pull + рестарт, проверить
   Nextouch и мульти-схемы. Нереализованные свободные треки остаются прежними.
+
+## Текущая точка — 2026-10-28 (v0.5.6: просмотр для ТВ)
+
+- По запросу пользователя реализованы пункты 1–4: fit по обеим размерностям,
+  fullscreen (API + fallback), native touch-pan, ручной/периодический refresh
+  счётчиков с последним временем успеха. Auto-refresh выключен по умолчанию;
+  выбор 30/60/300 с действует до перезагрузки и переживает смену вкладок.
+- Canvas просмотрщика теперь внутри `.ws-viewport`, controls/вкладки снаружи.
+  В редакторе DOM прежний. Гвард counts использует `container.contains(canvas)`;
+  камера проигрывания прокручивает viewport, редактор — прежний container.
+- Fit учитывает полную область без scrollbar; размеры canvas задаются в px,
+  SVG и overlay совпадают. В fallback-fullscreen нужны 100vw/100vh: height:100%
+  в реальном браузере дал схлопнутый контейнер (22px).
+- Touch-scroll нативный, passive; подавляется synthetic click после свайпа,
+  новый touchstart разрешает свежий тап; mouseenter на touch не показывает
+  подсказку. ResizeObserver/resize обновляют fit; destroy снимает глобальные
+  handlers, observer, таймеры и отменяет fetch. Counts: no-store, timeout 15 с,
+  sequence/instance/scheme guard; HTTP/network/timeout сохраняют прежние числа.
+- Проверки: jsdom 102/102; standalone unit 40 тестов / 208 assertions;
+  Ruby/JS syntax и ru/en parity. Dev v=107: dashboard 420px, full-window
+  fallback IAB и выход, scroll полотна, refresh/вкладки, overlay Δ=0, console
+  без ошибок. Native fullscreen — jsdom, Nextouch требует живой проверки.
+- Код подготовлен к коммиту/push; CI ожидается. Живой сервер не изменён.
+  `.zcode/` не трогалась и не коммитится.

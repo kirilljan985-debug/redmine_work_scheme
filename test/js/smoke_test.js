@@ -227,7 +227,7 @@ function runEditorSuite() {
   w2.document.body.dispatchEvent(new w2.MouseEvent('click', { bubbles: true }));
   check('touch: tap outside hides tooltip', !!tTooltip && tTooltip.style.display === 'none');
 
-  runMultiSuite().then(finish).catch(function (error) { console.error(error); process.exit(1); });
+  runMultiSuite().then(runViewerToolsSuite).then(finish).catch(function (error) { console.error(error); process.exit(1); });
 }
 
 async function runMultiSuite() {
@@ -244,10 +244,12 @@ async function runMultiSuite() {
   const container = w.document.querySelector('[data-work-scheme]');
   const view = container.__wsViewInstance;
   check('multi viewer: two tabs before controls', container.querySelectorAll('.ws-scheme-tab').length === 2 && container.firstElementChild.classList.contains('ws-scheme-tabs'));
+  view.refreshSeconds = 60;
   view.play('success');
   container.querySelectorAll('.ws-scheme-tab')[1].click();
   check('multi viewer: switch resets playback', !view.playing && view.timers.length === 0);
   check('multi viewer: switch changes nodes and theme', view.nodes.length === 2 && container.getAttribute('data-ws-theme') === 'graphite');
+  check('multi viewer: refresh interval survives switching', container.querySelector('.ws-counts-interval').value === '60');
   check('multi viewer: scoped page URL', view.pageTarget(view.nodes[0]) === '/work_scheme/stages/support/request');
   check('multi viewer: query target remains global', view.stageTarget(view.nodes[0]) === '/issues?query_id=502');
   check('multi viewer: counts requested for selected scheme', pending.length === 2 && pending[1].url.includes('502'));
@@ -322,6 +324,144 @@ async function runMultiSuite() {
   check('multi editor: deleting extras restores plain JSON', !!editor.serialize().nodes && !editor.serialize().schemes);
   w.close();
   ew.close();
+}
+
+async function runViewerToolsSuite() {
+  const w = makeWindow(viewerHtml);
+  w.ontouchstart = null;
+  w.eval(viewerSource);
+  const pending = [];
+  w.fetch = function (url, options) { return new Promise(resolve => pending.push({ url, options, resolve })); };
+  w.WorkScheme.init();
+  const container = w.document.querySelector('[data-work-scheme]');
+  const view = container.__wsViewInstance;
+  const viewport = view.viewport;
+  Object.defineProperty(viewport, 'clientWidth', { value: 800, configurable: true });
+  Object.defineProperty(viewport, 'clientHeight', { value: 200, configurable: true });
+  view.canvasRatio = 1;
+  container.querySelector('.ws-zoom-fit').click();
+  check('fit: tall scheme fits height as well as width', view.zoom === 0.25 && view.canvas.style.height === '200px');
+  viewport.scrollLeft = 90;
+  viewport.scrollTop = 60;
+  view.fitScheme();
+  check('fit: resets both scroll offsets', viewport.scrollLeft === 0 && viewport.scrollTop === 0);
+  Object.defineProperty(viewport, 'clientWidth', { value: 400, configurable: true });
+  view.layoutViewport();
+  check('fit: follows viewport resize while fitted', view.zoom === 0.5);
+  view.setZoom(2);
+  view.layoutViewport();
+  check('zoom: manual scale survives resize', view.zoom === 2 && view.canvas.style.height === '800px');
+  check('viewport: controls stay outside scroller', !viewport.contains(container.querySelector('.ws-controls')));
+
+  const full = container.querySelector('.ws-fullscreen-toggle');
+  full.click();
+  check('fullscreen: fallback expands and keeps exit button', container.classList.contains('ws-fullscreen') && full.getAttribute('aria-pressed') === 'true');
+  check('fullscreen: tabs and controls stay inside expanded container', container.contains(full) && container.contains(viewport));
+  w.document.dispatchEvent(new w.KeyboardEvent('keydown', { key: 'Escape' }));
+  check('fullscreen: Escape exits fallback and restores scrolling', !container.classList.contains('ws-fullscreen') && w.document.body.style.overflow === '');
+  container.requestFullscreen = function () { return Promise.reject(new Error('denied')); };
+  full.click();
+  await new Promise(resolve => setTimeout(resolve, 0));
+  check('fullscreen: rejected API falls back safely', container.classList.contains('ws-fullscreen'));
+  full.click();
+  check('fullscreen: visible button exits', !container.classList.contains('ws-fullscreen'));
+  container.requestFullscreen = function () {
+    Object.defineProperty(w.document, 'fullscreenElement', { value: container, configurable: true });
+    return Promise.resolve();
+  };
+  w.document.exitFullscreen = function () {
+    Object.defineProperty(w.document, 'fullscreenElement', { value: null, configurable: true });
+    w.document.dispatchEvent(new w.Event('fullscreenchange'));
+    return Promise.resolve();
+  };
+  full.click();
+  await new Promise(resolve => setTimeout(resolve, 0));
+  check('fullscreen: native API supported', container.classList.contains('ws-fullscreen') && w.document.fullscreenElement === container);
+  await w.document.exitFullscreen();
+  check('fullscreen: browser exit updates button and layout', !container.classList.contains('ws-fullscreen') && full.getAttribute('aria-pressed') === 'false');
+
+  const node = container.querySelector('.ws-node');
+  function touch(type, x, y) {
+    const event = new w.Event(type, { bubbles: true });
+    Object.defineProperty(event, 'touches', { value: type === 'touchend' ? [] : [{ clientX: x, clientY: y }] });
+    node.dispatchEvent(event);
+  }
+  touch('touchstart', 100, 100);
+  touch('touchmove', 30, 30);
+  touch('touchend');
+  node.dispatchEvent(new w.MouseEvent('click', { bubbles: true, cancelable: true }));
+  check('pan: swipe does not open tooltip', container.querySelector('.ws-tooltip').style.display !== 'block');
+  touch('touchstart', 20, 20);
+  touch('touchend');
+  // Новый неподвижный тап не должен ждать истечения подавления старого свайпа.
+  node.dispatchEvent(new w.MouseEvent('click', { bubbles: true, cancelable: true }));
+  check('pan: fresh tap after swipe opens tooltip', container.querySelector('.ws-tooltip').style.display === 'block');
+
+  const refresh = container.querySelector('.ws-counts-refresh');
+  check('counts: initial request disables duplicate refresh', refresh.disabled && pending.length === 1);
+  view.loadCounts(true);
+  check('counts: in-flight request is not duplicated', pending.length === 1);
+  pending[0].resolve({ ok: true, json: () => Promise.resolve({ counts: { '17': 4 } }) });
+  await new Promise(resolve => setTimeout(resolve, 0));
+  const updated = view.countsUpdatedAt;
+  check('counts: success shows time and badge', !!updated && !refresh.disabled && container.querySelector('.ws-counts-status').textContent.includes(updated.toLocaleTimeString()) && container.querySelector('.ws-badge text').textContent === '4');
+  refresh.click();
+  check('counts: manual refresh bypasses cache', pending.length === 2 && pending[1].options.cache === 'no-store');
+  pending[1].resolve({ ok: false });
+  await new Promise(resolve => setTimeout(resolve, 0));
+  check('counts: HTTP failure retains previous values and success time', view.counts['17'] === 4 && view.countsUpdatedAt === updated && view.countsError && !refresh.disabled);
+  refresh.click();
+  pending[2].resolve({ ok: true, json: () => Promise.resolve({ counts: { '17': 0 } }) });
+  await new Promise(resolve => setTimeout(resolve, 0));
+  check('counts: recovery clears error and displays zero', !view.countsError && container.querySelector('.ws-badge text').textContent === '0');
+
+  const scheduled = new Map();
+  const originalTimeout = w.setTimeout.bind(w);
+  const originalClear = w.clearTimeout.bind(w);
+  let deadlineCallback;
+  w.setTimeout = function (callback, ms) {
+    if (ms === 15000) deadlineCallback = callback;
+    if ([30000, 60000, 300000].includes(ms)) { const id = 100000 + scheduled.size; scheduled.set(id, { callback, ms }); return id; }
+    return originalTimeout(callback, ms);
+  };
+  w.clearTimeout = function (id) { scheduled.delete(id); originalClear(id); };
+  const interval = container.querySelector('.ws-counts-interval');
+  check('counts: automatic refresh defaults to off', interval.value === '0' && !view._countsTimer);
+  interval.value = '30';
+  interval.dispatchEvent(new w.Event('change'));
+  check('counts: interval schedules one timer', scheduled.size === 1 && [...scheduled.values()][0].ms === 30000);
+  Object.defineProperty(w.document, 'hidden', { value: true, configurable: true });
+  w.document.dispatchEvent(new w.Event('visibilitychange'));
+  check('counts: hidden page stops polling', scheduled.size === 0);
+  Object.defineProperty(w.document, 'hidden', { value: false, configurable: true });
+  w.document.dispatchEvent(new w.Event('visibilitychange'));
+  const tick = [...scheduled.values()][0].callback;
+  scheduled.clear();
+  tick();
+  check('counts: timer requests fresh data', pending.length === 4 && refresh.disabled);
+  pending[3].resolve({ ok: true, json: () => Promise.resolve({ counts: { '17': 6 } }) });
+  await new Promise(resolve => setTimeout(resolve, 0));
+  check('counts: poll reschedules after success', scheduled.size === 1 && view.counts['17'] === 6);
+  refresh.click();
+  deadlineCallback();
+  await new Promise(resolve => setTimeout(resolve, 0));
+  check('counts: timeout unlocks controls and retains values', !refresh.disabled && view.countsError && view.counts['17'] === 6 && scheduled.size === 1);
+  pending[4].resolve({ ok: true, json: () => Promise.resolve({ counts: { '17': 900 } }) });
+  await new Promise(resolve => setTimeout(resolve, 0));
+  check('counts: response after timeout is ignored', view.counts['17'] === 6);
+  interval.value = '0';
+  interval.dispatchEvent(new w.Event('change'));
+  check('counts: manual mode cancels interval', scheduled.size === 0);
+  interval.value = '300';
+  interval.dispatchEvent(new w.Event('change'));
+  check('counts: five minute option schedules correct interval', scheduled.size === 1 && [...scheduled.values()][0].ms === 300000);
+  full.click();
+  await new Promise(resolve => setTimeout(resolve, 0));
+  view.destroy();
+  check('lifecycle: destroy clears interval and fullscreen', scheduled.size === 0 && !container.classList.contains('ws-fullscreen'));
+  w.document.dispatchEvent(new w.Event('visibilitychange'));
+  check('lifecycle: destroyed view does not restart polling', scheduled.size === 0);
+  w.close();
 }
 
 function finish() {

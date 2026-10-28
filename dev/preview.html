@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <title>Work Scheme preview (dev)</title>
-<link rel="stylesheet" href="../assets/stylesheets/work_scheme.css?v=103">
+<link rel="stylesheet" href="../assets/stylesheets/work_scheme.css?v=107">
 <style>
   body { font-family: system-ui, sans-serif; margin: 20px; max-width: 1100px; background: #dbe7fb; color: #14245c; }
 </style>
@@ -22,14 +22,20 @@
      data-label-no-scenarios="Сценарии проигрывания пока не добавлены."
      data-label-tasks="Задач" data-label-progress="Прогресс сценария"
      data-label-speed="Скорость"
+     data-label-fullscreen="На весь экран" data-label-fullscreen-exit="Выйти из полного экрана"
+     data-label-pan="Область схемы: перемещение пальцем"
+     data-label-counts-refresh="Обновить счётчики" data-label-counts-auto="Обновление"
+     data-label-counts-manual="Вручную" data-label-counts-30s="30 с"
+     data-label-counts-1m="1 мин" data-label-counts-5m="5 мин"
+     data-label-counts-updated="Обновлено" data-label-counts-error="Не удалось обновить"
      data-label-zoom-out="Уменьшить" data-label-zoom-in="Увеличить" data-label-zoom-fit="Вписать в блок"
      data-more-label="Подробнее">
   <script type="application/json" class="ws-data"></script>
 </div>
-<script src="../assets/javascripts/work_scheme.js?v=103"></script>
+<script src="../assets/javascripts/work_scheme.js?v=107"></script>
 <script>
   // dev-обвязка: схема из scheme.json + демо-стрелка elbow + демо query_id; инициализация
-  fetch(new URLSearchParams(location.search).has('multi') ? 'schemes.json?v=103' : 'scheme.json?v=103')
+  fetch(new URLSearchParams(location.search).has('multi') ? 'schemes.json?v=107' : 'scheme.json?v=107')
     .then(function (r) { return r.text(); })
     .then(function (text) {
       var data = JSON.parse(text);
