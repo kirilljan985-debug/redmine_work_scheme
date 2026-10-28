@@ -1031,8 +1031,10 @@ redmine-plugin-dev и правила PLAN/AGENTS действуют.
   Ruby/JS syntax и ru/en parity. Dev v=108: dashboard 420px, full-window
   fallback IAB и выход, scroll полотна, refresh/вкладки, overlay Δ=0, console
   без ошибок. Native fullscreen — jsdom, Nextouch требует живой проверки.
-- Код подготовлен к коммиту/push; CI ожидается. Живой сервер не изменён.
+- Код `f1139f9` + `2e55533` отправлен в origin/main. CI **40682914913** на
+  `2e55533` — **success, все 5 джоб**, включая integration и eager-load.
+  Живой сервер не изменён; дальше git pull + рестарт и проверка на Nextouch.
   `.zcode/` не трогалась и не коммитится.
-- Код отправлен как `f1139f9`; при контрольном чтении исправлена блокировка
+- При контрольном чтении исправлена блокировка
   refresh после перехода на вкладку без query_id во время fetch: switch всегда
   сбрасывает loading/sequence и отменяет таймеры/запрос. Две новые регрессии.

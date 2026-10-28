@@ -1,7 +1,23 @@
-# Передача Redmine Work Scheme — v0.5.5 (2026-10-28)
+# Передача Redmine Work Scheme — v0.5.6 (2026-10-28)
 
 Сначала читать AGENTS.md, PLAN.md и git status/log. Полный навык установлен
 в `~/.codex/skills/redmine-plugin-dev/SKILL.md`; CODEX_REDMINE_SKILL.md — выжимка.
+
+## Последний результат: v0.5.6
+
+Реализованы fit по ширине/высоте, полноэкранный режим (Fullscreen API + fallback),
+native touch-pan, ручной и периодический refresh counts (off/30/60/300 с) с
+временем успеха. Viewport оборачивает canvas только в просмотре; controls и
+вкладки снаружи, редактор прежний. Удалять handlers/timers/observer через destroy.
+При switch всегда сбрасывать counts loading, даже если новая вкладка без query_id.
+
+Код `f1139f9` + `2e55533` отправлен. CI **40682914913** на `2e55533` — success
+по всем 5 джобам. JS smoke 104/104; standalone unit 40/208. Dev v=108, проверены
+dashboard 420px, fullscreen fallback, scroll, refresh/вкладки; overlay Δ=0.
+На живом сервере ничего не меняли: пользователь git pull + рестарт, Nextouch
+проверить отдельно. Интервал обновления — настройка просмотра до перезагрузки.
+
+Далее — сохранённые сведения об устройстве мульти-схем v0.5.5.
 
 ## Фактическое состояние
 
