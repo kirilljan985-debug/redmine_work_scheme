@@ -27,8 +27,8 @@
 [data-ws-theme="warm"] { --ws-surface: #fffdf8; --ws-surface-muted: #f8f0e6; --ws-canvas: #fbf3e9; --ws-text: #40332a; --ws-muted: #806e60; --ws-border: #dfcdbb; --ws-border-strong: #c9ad93; --ws-primary: #b4623e; --ws-primary-dark: #8e482e; --ws-primary-soft: #f7e2d6; --ws-node-start: #f7e2d6; --ws-node-process: #fffdf8; --ws-node-decision: #fff1c9; --ws-node-end: #e6f2e5; --ws-node-text: #40332a; --ws-radius: 9px; --ws-shadow: 0 6px 18px rgba(117,75,42,.13); }
 [data-ws-theme="paper"] { --ws-surface: #fffefb; --ws-surface-muted: #f3f0e8; --ws-canvas: #f4f1e8; --ws-text: #3f3d39; --ws-muted: #77736b; --ws-border: #d6d1c6; --ws-border-strong: #b8b1a3; --ws-primary: #5f7565; --ws-primary-dark: #465b4d; --ws-primary-soft: #e5eee6; --ws-node-start: #e5eee6; --ws-node-process: #fffefb; --ws-node-decision: #f4ebcf; --ws-node-end: #e3eee4; --ws-node-text: #3f3d39; --ws-radius: 3px; --ws-shadow: 0 2px 7px rgba(70,63,50,.1); }
 [data-ws-theme="graphite"] .ws-node-process rect { fill: #26313a; stroke: #94a3ad; }
-[data-ws-theme="graphite"] .ws-node text { fill: #edf3f7; }
-[data-ws-theme="graphite"] .ws-edge-label { fill: #e7eef3; stroke: #1f2933; }
+[data-ws-theme="graphite"] .ws-edge-label { stroke: var(--ws-surface); }
+[data-ws-theme="graphite"] .ws-edge-label:not([fill]) { fill: var(--ws-edge-label, #e7eef3); }
 [data-ws-theme="graphite"] .ws-speed-label { color: #aebbc5; }
 
 .ws-container {
@@ -154,9 +154,18 @@
 }
 
 .ws-process-background {
-  stroke: #d7e2e8;
+  fill: var(--ws-canvas);
+  stroke: var(--ws-canvas-border, #d7e2e8);
   stroke-width: 1;
 }
+
+.ws-grid-line {
+  stroke: var(--ws-grid, #8aa0ad);
+  stroke-width: .6;
+  opacity: .14;
+}
+
+.ws-edge-arrow { fill: var(--ws-edge, #7a8691); }
 
 .ws-node rect,
 .ws-node polygon {
@@ -170,8 +179,9 @@
 
 .ws-node text {
   font-size: 12px;
-  fill: var(--ws-node-text);
 }
+
+.ws-node text:not([fill]) { fill: var(--ws-node-text); }
 
 .ws-node-icon { color: #55738b; opacity: .9; }
 .ws-node-start .ws-node-icon { color: #3569a8; }
@@ -199,7 +209,7 @@
 .ws-node:focus { outline: none; }
 
 .ws-edge {
-  stroke: #7a8691;
+  stroke: var(--ws-edge, #7a8691);
   stroke-width: 1.4;
   fill: none;
 }
@@ -208,11 +218,12 @@
 
 .ws-edge-label {
   font-size: 11px;
-  fill: #45505a;
   paint-order: stroke;
-  stroke: #ffffff;
+  stroke: var(--ws-edge-label-outline, #fff);
   stroke-width: 3px;
 }
+
+.ws-edge-label:not([fill]) { fill: var(--ws-edge-label, #45505a); }
 
 .ws-tooltip {
   position: absolute;
@@ -391,8 +402,8 @@
 .ws-playback-focus .ws-node:not(.ws-node-active):not(.ws-node-complete):not(.ws-node-rework), .ws-playback-focus .ws-edge:not(.ws-edge-active):not(.ws-edge-complete):not(.ws-edge-rework) { opacity: .62; transition: opacity .25s ease; }
 
 @keyframes ws-pulse {
-  from { fill: #fdeee2; }
-  to { fill: #f9dcc4; }
+  from { fill: var(--ws-node-active, #fdeee2); }
+  to { fill: var(--ws-node-active-pulse, #f9dcc4); }
 }
 
 @keyframes ws-rework-flow { to { stroke-dashoffset: -12; } }
@@ -1165,3 +1176,110 @@
 /* После modern-правил: размер целей касания не должен уменьшаться темой. */
 .ws-container.ws-touch .ws-controls button,
 .ws-container.ws-touch .ws-controls select { min-height: 44px; }
+
+/* On Redmine pages, the host theme controls surfaces and the preset supplies an accent. */
+html[data-mui-theme] :is(.ws-container, #ws-editor) {
+  --ws-surface: var(--mui-surface, #fff);
+  --ws-surface-muted: var(--mui-surface-2, #f5f8fb);
+  --ws-canvas: var(--mui-bg, #f3f7fa);
+  --ws-border: var(--mui-border, #d6e0e8);
+  --ws-border-strong: var(--mui-border-strong, #b8c8d4);
+  --ws-text: var(--mui-text, #1f2d38);
+  --ws-muted: var(--mui-muted, #647482);
+  --ws-primary: color-mix(in srgb, var(--ws-preset-accent, var(--mui-accent, #356fa8)) var(--ws-preset-accent-weight, 53%), var(--ws-text));
+  --ws-primary-dark: color-mix(in srgb, var(--ws-primary) 82%, var(--ws-text));
+  --ws-primary-soft: color-mix(in srgb, var(--ws-primary) 14%, var(--ws-surface));
+  --ws-button-text: var(--ws-text);
+  --ws-primary-contrast: var(--ws-surface);
+  --ws-node-start: var(--ws-primary-soft);
+  --ws-node-process: var(--ws-surface);
+  --ws-node-decision: color-mix(in srgb, #c9a75a 17%, var(--ws-surface));
+  --ws-node-end: color-mix(in srgb, #6aa57a 17%, var(--ws-surface));
+  --ws-node-text: var(--ws-text);
+  --ws-node-active: color-mix(in srgb, #d66f2c 20%, var(--ws-surface));
+  --ws-node-active-pulse: color-mix(in srgb, #d66f2c 38%, var(--ws-surface));
+  --ws-node-complete: color-mix(in srgb, #6aa57a 20%, var(--ws-surface));
+  --ws-node-rework: color-mix(in srgb, #b34a4a 20%, var(--ws-surface));
+  --ws-canvas-border: var(--ws-border);
+  --ws-grid: var(--ws-muted);
+  --ws-edge: var(--ws-muted);
+  --ws-edge-label: var(--ws-text);
+  --ws-edge-label-outline: var(--ws-canvas);
+  --ws-glass: var(--ws-surface);
+  --ws-glass-strong: var(--ws-surface-muted);
+  --ws-glass-border: var(--ws-border);
+  --ws-glass-shadow: var(--mui-shadow, none);
+}
+
+html[data-mui-theme] [data-ws-theme="ocean"] { --ws-preset-accent: #1976a8; }
+html[data-mui-theme] [data-ws-theme="graphite"] { --ws-preset-accent: #6ea8dc; }
+html[data-mui-theme] [data-ws-theme="warm"] { --ws-preset-accent: #b4623e; }
+html[data-mui-theme] [data-ws-theme="paper"] { --ws-preset-accent: #5f7565; }
+html[data-mui-theme="dark"] :is(.ws-container, #ws-editor) { --ws-preset-accent-weight: 68%; }
+
+html[data-mui-theme] :is(.ws-container, .ws-editor-main, .ws-editor-side) {
+  box-shadow: var(--ws-glass-shadow);
+}
+
+html[data-mui-theme] .ws-container > .ws-controls {
+  background: var(--ws-surface);
+  border-bottom-color: var(--ws-border);
+}
+
+html[data-mui-theme] :is(.ws-palette, .ws-scenarios-block, .ws-properties, .ws-help, .ws-action-section) {
+  background: var(--ws-surface-muted);
+  border-color: var(--ws-border);
+  box-shadow: var(--ws-glass-shadow);
+}
+
+html[data-mui-theme] :is(.ws-palette-item, .ws-controls button, .ws-controls select, .ws-editor-actions button, #ws-add-scenario, .ws-edit-link) {
+  border-color: var(--ws-border-strong);
+  box-shadow: none;
+}
+
+html[data-mui-theme] .ws-palette-item { background: var(--ws-surface); }
+
+html[data-mui-theme] :is(.ws-title-control input, .ws-field input[type="text"], .ws-field input[type="number"], .ws-field select, .ws-field textarea, .ws-scenario-row input) {
+  background: var(--ws-surface);
+  color: var(--ws-text);
+  border-color: var(--ws-border-strong);
+}
+
+html[data-mui-theme] :is(.ws-palette > summary, .ws-scenarios-block > summary, .ws-properties summary, .ws-action-section summary, .ws-action-title) {
+  color: var(--ws-text);
+}
+
+html[data-mui-theme] :is(.ws-edit-link, .ws-controls .ws-play, #ws-save) {
+  color: var(--ws-primary-contrast);
+  background: var(--ws-primary);
+  border-color: var(--ws-primary);
+}
+html[data-mui-theme] :is(.ws-edit-link, .ws-controls .ws-play, #ws-save):hover {
+  background: var(--ws-primary-dark);
+  border-color: var(--ws-primary-dark);
+}
+html[data-mui-theme] .ws-timeline-current { color: var(--ws-primary-contrast); }
+html[data-mui-theme] :is(.ws-controls, .ws-editor-actions, .ws-editor-side) :focus-visible {
+  outline: 2px solid var(--ws-primary);
+  outline-offset: 1px;
+}
+html[data-mui-theme] .ws-edge-label { stroke: var(--ws-edge-label-outline); }
+html[data-mui-theme] .ws-edge-label:not([fill]) { fill: var(--ws-edge-label); }
+html[data-mui-theme] .ws-node-process rect { fill: var(--ws-node-process); }
+html[data-mui-theme] .ws-node-active :is(rect, polygon) { fill: var(--ws-node-active); }
+html[data-mui-theme] .ws-node-complete :is(rect, polygon) { fill: var(--ws-node-complete); }
+html[data-mui-theme] .ws-node-rework :is(rect, polygon) { fill: var(--ws-node-rework); }
+
+html[data-mui-theme] :is(.ws-tooltip, .ws-tooltip-close) {
+  color: var(--ws-text);
+  background: var(--ws-surface);
+  border-color: var(--ws-border-strong);
+}
+html[data-mui-theme] .ws-tooltip-desc { color: var(--ws-text); }
+html[data-mui-theme] :is(.ws-tooltip-dept, .ws-speed-label) { color: var(--ws-muted); }
+html[data-mui-theme] :is(.ws-tooltip-count, .ws-tooltip-more) { color: var(--ws-primary); }
+html[data-mui-theme] .ws-tooltip-more { border-color: var(--ws-border-strong); }
+html[data-mui-theme] .ws-node-icon { color: var(--ws-primary); }
+html[data-mui-theme="dark"] #ws-save-status .ok { color: #86efac; }
+html[data-mui-theme="dark"] :is(#ws-save-status .err, .ws-scenario-row button:not(.ws-scenario-capture-button)) { color: #fca5a5; }
+html[data-mui-theme="dark"] #ws-save-status :is(.warn, .dirty) { color: #fcd34d; }
