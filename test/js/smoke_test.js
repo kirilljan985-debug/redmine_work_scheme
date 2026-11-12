@@ -421,7 +421,11 @@ async function runViewerToolsSuite() {
   refresh.click();
   pending[2].resolve({ ok: true, json: () => Promise.resolve({ counts: { '17': 0 } }) });
   await new Promise(resolve => setTimeout(resolve, 0));
-  check('counts: recovery clears error and displays zero', !view.countsError && container.querySelector('.ws-badge text').textContent === '0');
+  check('counts: recovery clears error and hides zero', !view.countsError && !container.querySelector('.ws-badge'));
+  node.dispatchEvent(new w.MouseEvent('click', { bubbles: true, cancelable: true }));
+  const emptyTooltip = container.querySelector('.ws-tooltip');
+  check('counts: tooltip hides zero and keeps the task link', !emptyTooltip.querySelector('.ws-tooltip-count') &&
+    emptyTooltip.querySelector('.ws-tooltip-tasks').textContent === 'Задач');
 
   const scheduled = new Map();
   const originalTimeout = w.setTimeout.bind(w);
@@ -449,7 +453,8 @@ async function runViewerToolsSuite() {
   check('counts: timer requests fresh data', pending.length === 4 && refresh.disabled);
   pending[3].resolve({ ok: true, json: () => Promise.resolve({ counts: { '17': 6 } }) });
   await new Promise(resolve => setTimeout(resolve, 0));
-  check('counts: poll reschedules after success', scheduled.size === 1 && view.counts['17'] === 6);
+  check('counts: poll reschedules and restores a nonzero badge', scheduled.size === 1 &&
+    view.counts['17'] === 6 && container.querySelector('.ws-badge text').textContent === '6');
   refresh.click();
   deadlineCallback();
   await new Promise(resolve => setTimeout(resolve, 0));

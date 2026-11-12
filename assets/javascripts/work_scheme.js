@@ -1659,7 +1659,7 @@
     self.nodes.forEach(function (node) {
       var queryId = parseInt(node.queryId, 10);
       var count = queryId > 0 ? self.counts[String(queryId)] : null;
-      if (count === null || count === undefined) return;
+      if (!(count > 0)) return;
       var badge = svgEl('g', { 'class': 'ws-badge' });
       badge.appendChild(svgEl('circle', {
         cx: node.x + node.w - 8, cy: node.y - 8, r: 11
@@ -1730,7 +1730,7 @@
       }
       var queryId = parseInt(node.queryId, 10);
       var count = queryId > 0 ? self.counts[String(queryId)] : null;
-      if (count !== null && count !== undefined) {
+      if (count > 0) {
         var countLine = document.createElement('div');
         countLine.className = 'ws-tooltip-count';
         countLine.textContent = self.label('tasks', 'Задач') + ': ' + count;
@@ -1742,7 +1742,7 @@
         tasksLink.className = 'ws-tooltip-tasks';
         tasksLink.href = self.queryBase + '?query_id=' + queryId;
         tasksLink.textContent = self.label('tasks', 'Задач') +
-          (count !== null && count !== undefined ? ': ' + count : '');
+          (count > 0 ? ': ' + count : '');
         tooltip.appendChild(tasksLink);
       }
       var target = self.pageTarget(node);
